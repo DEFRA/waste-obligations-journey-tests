@@ -1,4 +1,4 @@
-# CDP Node.js Environment Test Suite Template
+waste-obligations-journey-tests
 
 The template to create a service that runs WDIO tests against an environment.
 
