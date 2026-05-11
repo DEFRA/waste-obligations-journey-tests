@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import fs from 'node:fs'
 import { ProxyAgent, setGlobalDispatcher } from 'undici'
 import { bootstrap } from 'global-agent'
@@ -29,7 +30,7 @@ export const config = {
   // with `/`, the base url gets prepended, not including the path portion of your baseUrl.
   // If your `url` parameter starts without a scheme or `/` (like `some/path`), the base url
   // gets prepended directly.
-  baseUrl: `https://waste-obligations-journey-tests.${process.env.ENVIRONMENT}.cdp-int.defra.cloud`,
+  baseUrl: 'https://rwd-dev9.azure.defra.cloud',
 
   // You will need to provide your own BrowserStack credentials.
   // These should be added as secrets to the test suite.

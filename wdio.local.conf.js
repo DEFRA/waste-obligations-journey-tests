@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import allure from 'allure-commandline'
 
 const debug = process.env.DEBUG
@@ -63,17 +64,19 @@ export const config = {
   //
 
   capabilities: debug
-    ? [{ browserName: 'chrome' }]
+    ? [{ browserName: 'chrome', acceptInsecureCerts: true }]
     : [
         {
           maxInstances: 1,
           browserName: 'chrome',
+          acceptInsecureCerts: true,
           'goog:chromeOptions': {
             args: [
               '--no-sandbox',
               '--disable-infobars',
               '--disable-gpu',
-              '--window-size=1920,1080'
+              '--window-size=1920,1080',
+              '--ignore-certificate-errors'
             ]
           }
         }
@@ -117,7 +120,7 @@ export const config = {
   // with `/`, the base url gets prepended, not including the path portion of your baseUrl.
   // If your `url` parameter starts without a scheme or `/` (like `some/path`), the base url
   // gets prepended directly.
-  baseUrl: 'http://localhost:3000',
+  baseUrl: 'https://rwd-dev9.azure.defra.cloud',
   //
   // Default timeout for all waitFor* commands.
   waitforTimeout: 10000,
