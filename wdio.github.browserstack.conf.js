@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import allure from 'allure-commandline'
 
 const oneMinute = 60 * 1000
@@ -14,7 +15,7 @@ export const config = {
   // with `/`, the base url gets prepended, not including the path portion of your baseUrl.
   // If your `url` parameter starts without a scheme or `/` (like `some/path`), the base url
   // gets prepended directly.
-  baseUrl: `http://localhost:3000`,
+  baseUrl: process.env.EPR_BASE_URL || `http://localhost:3000`,
 
   user: process.env.BROWSERSTACK_USER,
   key: process.env.BROWSERSTACK_KEY,

@@ -44,6 +44,21 @@ Start application you are testing on the url specified in `baseUrl` [wdio.local.
 npm run test:local
 ```
 
+#### EPR obligations journey
+
+The CSOC submission journey (`test/specs/csoc-submission.e2e.js`) requires a signed-in user. Copy the example env file and provide credentials:
+
+```bash
+cp .env.example .env
+# then edit .env to set EPR_USER_EMAIL and EPR_USER_PASSWORD
+```
+
+`EPR_BASE_URL` overrides the configured `baseUrl` in every wdio config. The local default is `https://localhost:7084` (the EPR app).
+
+```bash
+npm run test:local
+```
+
 ### Debugging local tests
 
 ```bash

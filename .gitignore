@@ -11,3 +11,5 @@ coverage
 allure-report/
 allure-results/
 FAILED
+.env
+.env.local
