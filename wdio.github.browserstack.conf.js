@@ -15,7 +15,7 @@ export const config = {
   // with `/`, the base url gets prepended, not including the path portion of your baseUrl.
   // If your `url` parameter starts without a scheme or `/` (like `some/path`), the base url
   // gets prepended directly.
-  baseUrl: process.env.EPR_BASE_URL || `http://localhost:3000`,
+  baseUrl: 'https://rwd-dev9.azure.defra.cloud',
 
   user: process.env.BROWSERSTACK_USER,
   key: process.env.BROWSERSTACK_KEY,

@@ -53,7 +53,7 @@ cp .env.example .env
 # then edit .env to set EPR_USER_EMAIL and EPR_USER_PASSWORD
 ```
 
-`EPR_BASE_URL` overrides the configured `baseUrl` in every wdio config. The local default is `https://localhost:7084` (the EPR app).
+The target environment is hardcoded in each wdio config (`baseUrl`). Edit the relevant config to point at a different environment.
 
 ```bash
 npm run test:local
