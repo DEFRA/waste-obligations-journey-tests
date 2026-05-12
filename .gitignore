@@ -7,9 +7,11 @@ node_modules
 npm-debug.log
 coverage
 .cache
-.png
-allure-report/
-allure-results/
-FAILED
 .env
 .env.local
+playwright/.auth
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+FAILED

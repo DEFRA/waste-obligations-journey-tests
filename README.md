@@ -1,111 +1,129 @@
-waste-obligations-journey-tests
+# waste-obligations-journey-tests
 
-The template to create a service that runs WDIO tests against an environment.
+End-to-end Playwright tests for the EPR waste obligations CSOC submission journey, packaged for the DEFRA CDP Portal.
 
-- [Local](#local)
+- [Local development](#local-development)
   - [Requirements](#requirements)
-    - [Node.js](#nodejs)
   - [Setup](#setup)
-  - [Running local tests](#running-local-tests)
-  - [Debugging local tests](#debugging-local-tests)
-- [Production](#production)
-  - [Debugging tests](#debugging-tests)
+  - [Running locally](#running-locally)
+  - [Debugging locally](#debugging-locally)
+  - [Running locally in Docker](#running-locally-in-docker)
+- [Production (CDP Portal)](#production-cdp-portal)
+- [Running on GitHub](#running-on-github)
+- [Reporting](#reporting)
 - [Licence](#licence)
-  - [About the licence](#about-the-licence)
 
-## Local Development
+## Local development
 
 ### Requirements
 
-#### Node.js
-
-Please install [Node.js](http://nodejs.org/) `>= v20` and [npm](https://nodejs.org/) `>= v9`. You will find it
-easier to use the Node Version Manager [nvm](https://github.com/creationix/nvm)
-
-To use the correct version of Node.js for this application, via nvm:
+Node.js `>= 22.13.1` (matching `.nvmrc`). Use [nvm](https://github.com/creationix/nvm) to pick up the pinned version:
 
 ```bash
 nvm use
 ```
 
+Docker is required for the containerised flows (`docker:test:local`, building the CDP image).
+
 ### Setup
 
-Install application dependencies:
+Install dependencies and download the Chromium binary used by Playwright:
 
 ```bash
 npm install
+npm run install:browsers
 ```
 
-### Running local tests
-
-Start application you are testing on the url specified in `baseUrl` [wdio.local.conf.js](wdio.local.conf.js)
-
-```bash
-npm run test:local
-```
-
-#### EPR obligations journey
-
-The CSOC submission journey (`test/specs/csoc-submission.e2e.js`) requires a signed-in user. Copy the example env file and provide credentials:
+Copy the example env file and fill in test credentials:
 
 ```bash
 cp .env.example .env
-# then edit .env to set EPR_USER_EMAIL and EPR_USER_PASSWORD
+# edit .env to set EPR_USER_EMAIL, EPR_USER_PASSWORD, and optionally EPR_BASE_URL
 ```
 
-The target environment is hardcoded in each wdio config (`baseUrl`). Edit the relevant config to point at a different environment.
+The local config (`playwright.local.config.js`) reads `EPR_BASE_URL` and defaults to `https://localhost:7084` when not set.
+
+### Running locally
+
+Headed (recommended for development):
 
 ```bash
 npm run test:local
 ```
 
-### Debugging local tests
+Headless against the local config:
 
 ```bash
-npm run test:local:debug
+npx playwright test --config=playwright.local.config.js
 ```
 
-## Production
+Open the most recent Allure report after a run:
 
-### Running the tests
+```bash
+npm run report
+```
 
-Tests are run from the CDP-Portal under the Test Suites section. Before any changes can be run, a new docker image must be built, this will happen automatically when a pull request is merged into the `main` branch.
-You can check the progress of the build under the actions section of this repository. Builds typically take around 1-2 minutes.
+### Debugging locally
 
-The results of the test run are made available in the portal.
+Step through tests in the Playwright Inspector:
 
-## Requirements of CDP Environment Tests
+```bash
+npm run test:debug
+```
 
-1. Your service builds as a docker container using the `.github/workflows/publish.yml`
-   The workflow tags the docker images allowing the CDP Portal to identify how the container should be run on the platform.
-   It also ensures its published to the correct docker repository.
+Or use the interactive UI mode:
 
-2. The Dockerfile's entrypoint script should return exit code of 0 if the test suite passes or 1/>0 if it fails
+```bash
+npm run test:ui
+```
 
-3. Test reports should be published to S3 using the script in `./bin/publish-tests.sh`
+### Running locally in Docker
+
+Build the container and run the suite end-to-end (skipping the S3 publish step):
+
+```bash
+npm run docker:test:local
+```
+
+Allure results and report are volume-mounted into `./allure-results` and `./allure-report` so you can browse them after the run.
+
+## Production (CDP Portal)
+
+Tests run from the CDP Portal under **Test Suites**. Each push to `main` builds a new Docker image via `.github/workflows/publish.yml`. The portal pulls the latest image when you trigger a run.
+
+The container's flow (`entrypoint.sh`):
+
+1. Runs `npm test` (Playwright headless against the configured `baseURL`).
+2. Runs `npm run report:publish`, which generates `allure-report/` and uploads it to S3 via `bin/publish-tests.sh`.
+3. Exits with Playwright's exit code so the portal shows pass/fail correctly.
+
+`baseURL` is built from the portal-injected `ENVIRONMENT` variable in `playwright.config.js`:
+
+```js
+const baseURL = `https://waste-obligations-journey-tests.${process.env.ENVIRONMENT}.cdp-int.defra.cloud`
+```
+
+> **Important:** the host segment is currently `waste-obligations-journey-tests` (the test-suite repo name). Swap this for the deployed frontend service name when the EPR app is in CDP.
+
+Outbound HTTP from the container goes through the CDP proxy at `localhost:3128`. Any target host outside CDP-internal must be on your test suite's outbound allowlist; otherwise Chromium fails with `ERR_TUNNEL_CONNECTION_FAILED`.
 
 ## Running on GitHub
 
-Alternatively you can run the test suite as a GitHub workflow.
-Test runs on GitHub are not able to connect to the CDP Test environments. Instead, they run the tests agains a version of the services running in docker.
-A docker compose `compose.yml` is included as a starting point, which includes the databases (mongodb, redis) and infrastructure (localstack) pre-setup.
+`compose.yml` is a single test-runner service built from this repo's `Dockerfile`. Playwright runs the browser inside the runner itself — no separate Selenium service required.
 
-Steps:
+For PR-triggered runs from another service repo, see `run-journey-tests/action.yml` and the example workflow in `.github/workflows/journey-tests.yml`.
 
-1. Edit the compose.yml to include your services.
-2. Modify the scripts in docker/scripts to pre-populate the database, if required and create any localstack resources.
-3. Test the setup locally with `docker compose up` and `npm run test:github`
-4. Set up the workflow trigger in `.github/workflows/journey-tests`.
+## Reporting
 
-By default, the provided workflow will run when triggered manually from GitHub or when triggered by another workflow.
+The suite uses Allure to match the CDP Portal's canonical reporting pipeline:
 
-If you want to use the repository exclusively for running docker composed based test suites consider displaying the publish.yml workflow.
+| Step              | Tool                                              | Output                                                |
+| ----------------- | ------------------------------------------------- | ----------------------------------------------------- |
+| Test run          | `allure-playwright` reporter                      | `allure-results/` (raw)                               |
+| Report generation | `allure-commandline` (`npm run report`)           | `allure-report/index.html`                            |
+| Publish           | `bin/publish-tests.sh` (`npm run report:publish`) | Uploads `allure-report/` to `$RESULTS_OUTPUT_S3_PATH` |
 
-## BrowserStack
-
-Two wdio configuration files are provided to help run the tests using BrowserStack in both a GitHub workflow (`wdio.github.browserstack.conf.js`) and from the CDP Portal (`wdio.browserstack.conf.js`).
-They can be run from npm using the `npm run test:browserstack` (for running via portal) and `npm run test:github:browserstack` (from GitHib runner).
-See the CDP Documentation for more details.
+The CDP Portal expects the published directory to contain an `index.html` at the root, which `allure generate --single-file` produces.
 
 ## Licence
 
@@ -119,8 +137,6 @@ The following attribution statement MUST be cited in your products and applicati
 
 ### About the licence
 
-The Open Government Licence (OGL) was developed by the Controller of Her Majesty's Stationery Office (HMSO) to enable
-information providers in the public sector to license the use and re-use of their information under a common open
-licence.
+The Open Government Licence (OGL) was developed by the Controller of Her Majesty's Stationery Office (HMSO) to enable information providers in the public sector to license the use and re-use of their information under a common open licence.
 
 It is designed to encourage use and re-use of information freely and flexibly, with only a few conditions.
