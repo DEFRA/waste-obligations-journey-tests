@@ -5,20 +5,32 @@ ENV TZ="Europe/London"
 USER root
 
 RUN apt-get update -qq \
-    && apt-get install -qqy \
-    curl \
-    zip \
-    openjdk-17-jre-headless
+    && apt-get install -qqy --no-install-recommends \
+        curl \
+        zip \
+        unzip \
+        ca-certificates \
+        openjdk-17-jre-headless
 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
-    && ./aws/install
+    && ./aws/install \
+    && rm -rf awscliv2.zip aws \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY . .
+# Copy manifest first for better Docker layer caching
+COPY package*.json .
 RUN npm install
+
+# Install Playwright browsers after npm install to keep version compatibility
+RUN npx playwright install --with-deps chromium
+
+# Copy the rest of the test code
+COPY . .
 
 ENTRYPOINT [ "./entrypoint.sh" ]
 
-# This is downloading the linux amd64 aws cli. For M1 macs build and run with the --platform=linux/amd64 argument. eg docker build . --platform=linux/amd64
+# Image built for linux/amd64. On Apple Silicon, build/run with --platform=linux/amd64.

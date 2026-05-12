@@ -1,6 +1,6 @@
 const MATERIALS = ['Plastic', 'Paper', 'Glass', 'Aluminium', 'Steel', 'Wood']
 
-function buildCsocPayload(overrides = {}) {
+export function buildCsocPayload(overrides = {}) {
   return {
     material: 'Plastic',
     tonnage: 100,
@@ -9,4 +9,4 @@ function buildCsocPayload(overrides = {}) {
   }
 }
 
-export { MATERIALS, buildCsocPayload }
+export { MATERIALS }
