@@ -15,7 +15,7 @@ setup('authenticate', async ({ page }) => {
     )
   }
 
-  await page.goto('/report-data/error')
+  await page.goto('/report-data', { timeout: 60_000 })
   await page.getByRole('link', { name: 'Sign in' }).click()
 
   await page.getByLabel(/email/i).fill(email)
