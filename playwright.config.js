@@ -8,6 +8,7 @@ const baseURL = `https://rwd-dev9.azure.defra.cloud`
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './globalSetup.js',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
