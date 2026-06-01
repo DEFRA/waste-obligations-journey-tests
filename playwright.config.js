@@ -1,10 +1,10 @@
 import 'dotenv/config'
 import { defineConfig, devices } from '@playwright/test'
 
-// TODO: replace `waste-obligations-journey-tests` with the actual deployed
-// frontend service name in CDP. ENVIRONMENT is injected by the CDP Portal at
-// run time (dev / test / perf-test).
-const baseURL = `https://rwd-dev9.azure.defra.cloud`
+const baseURL =
+  process.env.ENVIRONMENT === 'dev'
+    ? 'https://rwd-dev9.azure.defra.cloud'
+    : 'https://rwd-tst1.azure.defra.cloud'
 
 export default defineConfig({
   testDir: './tests',
