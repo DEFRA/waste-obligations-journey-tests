@@ -1,65 +1,56 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import {
+  EXPECTED_ORG,
+  REGULATOR_EMAIL,
+  OBLIGATIONS_MET_STATUS
+} from '../data/csoc.data.js'
 
 export class CsocSubmissionPage extends BasePage {
   constructor(page) {
     super(page)
-    this.heading = page.getByTestId('app-heading-title')
-    this.materialSelect = page.getByLabel(/material/i)
-    this.tonnageInput = page.getByLabel(/tonnage|weight/i)
-    this.reportingPeriodSelect = page.getByLabel(/period|reporting year|year/i)
-    this.declarationCheckbox = page.getByRole('checkbox', {
-      name: /confirm|declaration|i agree/i
+    this.heading = page.getByRole('heading', {
+      name: /Check and submit your \d{4} certificate of compliance/i
     })
-    this.submitButton = page.getByRole('button', {
-      name: /^submit$|confirm and submit|submit certificate/i
+    this.fullNameInput = page.getByLabel(/full name/i)
+    this.confirmAndSubmitButton = page.getByRole('button', {
+      name: /confirm and submit/i
     })
-    this.continueButton = page.getByRole('button', { name: /^continue$/i })
-    this.errorSummary = page.getByRole('alert')
+    this.regulatorEmail = page.getByText(REGULATOR_EMAIL)
+    this.obligationsMetStatus = page.getByText(OBLIGATIONS_MET_STATUS)
+    this.materialObligationsTable = page
+      .locator('table.govuk-table')
+      .filter({
+        has: page.getByRole('columnheader', {
+          name: /Recycling obligations to meet/i
+        })
+      })
+      .first()
   }
 
-  async expectFormVisible() {
+  async expectLoaded() {
     await expect(this.heading).toBeVisible()
   }
 
-  async fillForm({ material, tonnage, period }) {
-    await this.selectIfPresent(this.materialSelect, material)
-    await this.fillIfPresent(this.tonnageInput, String(tonnage))
-    await this.selectIfPresent(this.reportingPeriodSelect, period)
-
-    if (await this.declarationCheckbox.count()) {
-      await this.declarationCheckbox.check()
-    }
+  async expectOrganisationDetails() {
+    await expect(this.page.getByText(EXPECTED_ORG.name).first()).toBeVisible()
+    await expect(this.page.getByText(EXPECTED_ORG.address)).toBeVisible()
+    await expect(
+      this.page.getByText(EXPECTED_ORG.regulator).first()
+    ).toBeVisible()
+    await expect(this.regulatorEmail.first()).toBeVisible()
   }
 
-  async submit() {
-    const submit = (await this.submitButton.count())
-      ? this.submitButton
-      : this.continueButton
-    await Promise.all([
-      this.page.waitForLoadState('networkidle'),
-      submit.first().click()
-    ])
-    await expect(this.errorSummary).toHaveCount(0)
+  async expectObligationsMet() {
+    await expect(this.obligationsMetStatus).toBeVisible()
   }
 
-  async selectIfPresent(locator, value) {
-    if (!value || !(await locator.count())) return
-    const tag = await locator.first().evaluate((el) => el.tagName.toLowerCase())
-    if (tag === 'select') {
-      await locator
-        .first()
-        .selectOption({ label: value })
-        .catch(async () => {
-          await locator.first().selectOption(value)
-        })
-    } else {
-      await locator.first().fill(value)
-    }
+  async readObligationsTable() {
+    return this.readGovukTable(this.materialObligationsTable)
   }
 
-  async fillIfPresent(locator, value) {
-    if (!value || !(await locator.count())) return
-    await locator.first().fill(value)
+  async submit(fullName) {
+    await this.fullNameInput.fill(fullName)
+    await this.confirmAndSubmitButton.click()
   }
 }

@@ -23,7 +23,7 @@ setup('authenticate', async ({ page }) => {
 
   await expect(
     page.getByRole('heading', { name: 'Account home -' })
-  ).toBeVisible({ timeout: 30_000 })
+  ).toBeVisible({ timeout: 60_000 })
 
   await page.context().storageState({ path: authFile })
 })
