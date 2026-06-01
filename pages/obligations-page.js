@@ -8,14 +8,17 @@ export class ObligationsPage extends BasePage {
     this.heading = page.getByRole('heading', {
       name: /manage your \d{4} recycling/i
     })
-    this.submitStatementButton = page.getByRole('button', {
-      name: 'Submit statement'
+    this.submitCertificateButton = page.getByRole('button', {
+      name: /submit (certificate|statement)/i
     })
-    this.viewSubmittedStatementLink = page
-      .getByRole('link', {
-        name: /view.*statement|submitted.*statement|view.*csoc/i
+    this.materialObligationsTable = page
+      .locator('table.govuk-table')
+      .filter({
+        has: page.getByRole('columnheader', {
+          name: /Recycling obligations to meet/i
+        })
       })
-      .or(page.getByRole('link', { name: /view submitted/i }))
+      .first()
   }
 
   async goto() {
@@ -28,10 +31,10 @@ export class ObligationsPage extends BasePage {
   }
 
   async startCsocSubmission() {
-    await this.submitStatementButton.click()
+    await this.submitCertificateButton.click()
   }
 
-  async openSubmittedCsoc() {
-    await this.viewSubmittedStatementLink.first().click()
+  async readObligationsTable() {
+    return this.readGovukTable(this.materialObligationsTable)
   }
 }

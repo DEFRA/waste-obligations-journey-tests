@@ -16,6 +16,8 @@
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --config=playwright.local.config.js --debug",
     "test:local": "playwright test --config=playwright.local.config.js --headed",
+    "test:accessibility": "RUN_ACCESSIBILITY=1 playwright test accessibility",
+    "test:local:accessibility": "RUN_ACCESSIBILITY=1 playwright test accessibility --config=playwright.local.config.js --headed",
     "install:browsers": "playwright install --with-deps chromium",
     "report": "allure generate allure-results --single-file --clean -o allure-report",
     "report:publish": "npm run report; ./bin/publish-tests.sh",
