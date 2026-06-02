@@ -22,7 +22,7 @@ export default defineConfig({
   use: {
     baseURL,
     proxy: {
-      server: process.env.CDP_HTTPS_PROXY
+      server: process.env.HTTP_PROXY || process.env.CDP_HTTPS_PROXY
     },
     launchOptions: {
       args: ['--disable-http2']
