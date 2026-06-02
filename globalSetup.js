@@ -44,17 +44,22 @@ export default async function globalSetup() {
     console.log(`[startup] public_ip: unavailable (${err.message})`)
   }
 
+  const proxy = process.env.HTTP_PROXY || process.env.CDP_HTTPS_PROXY || ''
+  const proxyFlag = proxy ? `--proxy "${proxy}"` : ''
+
   runProbe('proxy_env', 'env | grep -i proxy || true')
   runProbe(
     'ipify_curl',
-    'curl -sS -v --max-time 10 https://api.ipify.org 2>&1 | tail -n 40'
+    `curl -sS -v ${proxyFlag} --max-time 10 https://api.ipify.org 2>&1 | tail -n 40`
   )
   runProbe(
     `target_curl (${TARGET_HOST})`,
-    `curl -sS -vk --max-time 10 https://${TARGET_HOST}/report-data 2>&1 | tail -n 40`
+    `curl -sS -vk ${proxyFlag} --max-time 10 https://${TARGET_HOST}/report-data 2>&1 | tail -n 40`
   )
   runProbe(`dns (${TARGET_HOST})`, `nslookup ${TARGET_HOST}`)
-  runProbe('nc (4.158.59.150:443)', 'nc -vz 4.158.59.150 443 2>&1', {
-    timeout: 90_000
-  })
+  runProbe(
+    'nc (via proxy → 4.158.59.150:443)',
+    'nc -x 127.0.0.1:3128 -X connect -vz 4.158.59.150 443 2>&1',
+    { timeout: 30_000 }
+  )
 }
