@@ -21,6 +21,9 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL,
+    proxy: {
+      server: process.env.CDP_HTTPS_PROXY
+    },
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

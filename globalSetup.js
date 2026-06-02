@@ -31,6 +31,10 @@ export default async function globalSetup() {
     .join(', ')
   console.log(`[startup] local_ip: ${local || 'none'}`)
 
+  console.log('HTTP_PROXY=', process.env.HTTP_PROXY)
+  console.log('HTTPS_PROXY=', process.env.HTTPS_PROXY)
+  console.log('NO_PROXY=', process.env.NO_PROXY)
+
   try {
     const res = await fetch('https://api.ipify.org?format=json')
     const { ip } = await res.json()
