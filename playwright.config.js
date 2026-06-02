@@ -24,6 +24,9 @@ export default defineConfig({
     proxy: {
       server: process.env.CDP_HTTPS_PROXY
     },
+    launchOptions: {
+      args: ['--disable-http2']
+    },
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

@@ -33,6 +33,7 @@ export default async function globalSetup() {
 
   console.log('HTTP_PROXY=', process.env.HTTP_PROXY)
   console.log('HTTPS_PROXY=', process.env.HTTPS_PROXY)
+  console.log('CDP_HTTPS_PROXY=', process.env.CDP_HTTPS_PROXY)
   console.log('NO_PROXY=', process.env.NO_PROXY)
 
   try {
