@@ -5,6 +5,9 @@ const baseURL =
   process.env.ENVIRONMENT === 'dev'
     ? 'https://rwd-dev9.azure.defra.cloud'
     : 'https://rwd-tst1.azure.defra.cloud'
+const proxy = process.env.HTTP_PROXY
+  ? { server: process.env.HTTP_PROXY }
+  : undefined
 
 export default defineConfig({
   testDir: './tests',
@@ -21,19 +24,16 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL,
-    proxy: {
-      server: process.env.HTTP_PROXY || process.env.CDP_HTTPS_PROXY
-    },
-    launchOptions: {
-      args: ['--disable-http2']
-    },
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
-    viewport: { width: 1280, height: 720 }
+    viewport: { width: 1280, height: 720 },
+    launchOptions: {
+      proxy
+    }
   },
   projects: [
     {
