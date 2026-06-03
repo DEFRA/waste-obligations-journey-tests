@@ -5,8 +5,8 @@ const baseURL =
   process.env.ENVIRONMENT === 'dev'
     ? 'https://rwd-dev9.azure.defra.cloud'
     : 'https://rwd-tst1.azure.defra.cloud'
-const proxy = process.env.HTTP_PROXY
-  ? { server: process.env.HTTP_PROXY }
+const proxy = process.env.CDP_HTTPS_PROXY
+  ? { server: process.env.CDP_HTTPS_PROXY }
   : undefined
 
 export default defineConfig({
