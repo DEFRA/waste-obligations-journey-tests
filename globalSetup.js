@@ -62,4 +62,19 @@ export default async function globalSetup() {
     'nc -x 127.0.0.1:3128 -X connect -vz 4.158.59.150 443 2>&1',
     { timeout: 30_000 }
   )
+  runProbe(
+    `target_curl_upstream (${TARGET_HOST})`,
+    `curl -vk --proxy "${process.env.CDP_HTTPS_PROXY || ''}" --max-time 30 https://${TARGET_HOST}/report-data 2>&1 | tail -n 60`,
+    { timeout: 45_000 }
+  )
+  runProbe(
+    `target_curl_noproxy (${TARGET_HOST})`,
+    `curl -vk --noproxy '*' --max-time 30 https://${TARGET_HOST}/report-data 2>&1 | tail -n 60`,
+    { timeout: 45_000 }
+  )
+  runProbe(
+    `target_curl_squid (${TARGET_HOST})`,
+    `curl -vk --proxy http://localhost:3128 --max-time 30 https://${TARGET_HOST}/report-data 2>&1 | tail -n 60`,
+    { timeout: 45_000 }
+  )
 }
