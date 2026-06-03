@@ -74,7 +74,7 @@ export default async function globalSetup() {
   )
   runProbe(
     `target_curl_squid (${TARGET_HOST})`,
-    `curl -vk --proxy http://localhost:3128 --max-time 30 https://${TARGET_HOST}/report-data 2>&1 | tail -n 60`,
+    `curl -vk --proxy "${process.env.HTTP_PROXY || ''}" --max-time 30 https://${TARGET_HOST}/report-data 2>&1 | tail -n 60`,
     { timeout: 45_000 }
   )
 }
