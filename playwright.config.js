@@ -6,7 +6,7 @@ const baseURL =
     ? 'https://rwd-dev9.azure.defra.cloud'
     : 'https://rwd-tst1.azure.defra.cloud'
 const proxy = process.env.HTTP_PROXY
-  ? { server: process.env.HTTP_PROXY }
+  ? { server: process.env.HTTP_PROXY.replace(/localhost/g, '127.0.0.1') }
   : undefined
 
 export default defineConfig({
