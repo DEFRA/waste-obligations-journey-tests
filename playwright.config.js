@@ -5,24 +5,9 @@ const baseURL =
   process.env.ENVIRONMENT === 'dev'
     ? 'https://rwd-dev9.azure.defra.cloud'
     : 'https://rwd-tst1.azure.defra.cloud'
-
-function buildProxy() {
-  const cdp = process.env.CDP_HTTPS_PROXY
-  if (cdp) {
-    const u = new URL(cdp)
-    return {
-      server: `${u.protocol}//${u.host}`,
-      username: decodeURIComponent(u.username),
-      password: decodeURIComponent(u.password)
-    }
-  }
-  const local = process.env.HTTP_PROXY
-  if (local) {
-    return { server: local.replace(/localhost/g, '127.0.0.1') }
-  }
-  return undefined
-}
-const proxy = buildProxy()
+const proxy = process.env.HTTP_PROXY
+  ? { server: process.env.HTTP_PROXY }
+  : undefined
 
 export default defineConfig({
   testDir: './tests',
@@ -40,15 +25,14 @@ export default defineConfig({
   use: {
     baseURL,
     ignoreHTTPSErrors: true,
-    trace: 'on',
+    trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     viewport: { width: 1280, height: 720 },
     launchOptions: {
-      proxy,
-      args: ['--ignore-certificate-errors', '--disable-http2']
+      proxy
     }
   },
   projects: [
