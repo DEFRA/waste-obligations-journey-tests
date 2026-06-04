@@ -39,7 +39,8 @@ export default defineConfig({
     {
       name: 'setup',
       testDir: './auth',
-      testMatch: /.*\.setup\.js/
+      testMatch: /.*\.setup\.js/,
+      use: { video: 'on' }
     },
     {
       name: 'chromium',

@@ -15,7 +15,8 @@ setup('authenticate', async ({ page }) => {
     )
   }
 
-  await page.goto('/report-data', { timeout: 60_000 })
+  // https://rwd-dev9.azure.defra.cloud/create-account
+  await page.goto('/create-account', { timeout: 60_000 })
 
   // The B2C flow can resolve in two ways:
   //   - straight to the login form on b2clogin.com
