@@ -47,7 +47,8 @@ export default defineConfig({
     navigationTimeout: 30_000,
     viewport: { width: 1280, height: 720 },
     launchOptions: {
-      proxy
+      proxy,
+      args: ['--ignore-certificate-errors', '--disable-http2']
     }
   },
   projects: [
