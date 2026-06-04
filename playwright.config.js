@@ -31,7 +31,9 @@ export default defineConfig({
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     viewport: { width: 1280, height: 720 },
-    proxy
+    launchOptions: {
+      proxy
+    }
   },
   projects: [
     {
