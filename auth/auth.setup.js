@@ -1,4 +1,5 @@
 import { test as base, expect } from '@playwright/test'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -15,13 +16,23 @@ const setup = base.extend({
     if (!video) return
     try {
       await page.close()
-      const videoPath = await video.path()
+      // saveAs() waits until the page is closed AND the video is fully written,
+      // which path()/attach() do not. Without it the WebM file can be 0-byte
+      // or have a truncated container that won't play.
+      const savePath = path.join(testInfo.outputDir, 'login-video.webm')
+      await video.saveAs(savePath)
+      const stat = fs.statSync(savePath)
+      // eslint-disable-next-line no-console
+      console.log(
+        `[video] saved ${savePath} — ${stat.size} bytes (${(stat.size / 1024 / 1024).toFixed(2)} MB)`
+      )
       await testInfo.attach('login-video', {
-        path: videoPath,
+        path: savePath,
         contentType: 'video/webm'
       })
-    } catch {
-      /* best-effort */
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.log(`[video] capture failed: ${err.message}`)
     }
   }
 })
