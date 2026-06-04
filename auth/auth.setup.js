@@ -1,9 +1,30 @@
-import { test as setup, expect } from '@playwright/test'
+import { test as base, expect } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'user.json')
+
+// Override `page` so the recorded video is force-attached to the Allure result
+// regardless of whether the test passes or fails. Without this, allure-playwright
+// can omit the video (especially under --single-file report generation).
+const setup = base.extend({
+  page: async ({ page }, use, testInfo) => {
+    await use(page)
+    const video = page.video()
+    if (!video) return
+    try {
+      await page.close()
+      const videoPath = await video.path()
+      await testInfo.attach('login-video', {
+        path: videoPath,
+        contentType: 'video/webm'
+      })
+    } catch {
+      /* best-effort */
+    }
+  }
+})
 
 setup('authenticate', async ({ page }) => {
   const email = process.env.EPR_USER_EMAIL
