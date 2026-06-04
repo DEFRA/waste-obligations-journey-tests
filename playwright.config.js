@@ -25,9 +25,9 @@ export default defineConfig({
   use: {
     baseURL,
     ignoreHTTPSErrors: true,
-    trace: 'on-first-retry',
+    trace: 'on',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: 'on',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     viewport: { width: 1280, height: 720 },

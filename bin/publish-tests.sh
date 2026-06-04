@@ -12,6 +12,11 @@ if [ -n "$RESULTS_OUTPUT_S3_PATH" ]; then
       echo "$DIRECTORY is not found"
       exit 1
    fi
+
+   if [ -d "$PWD/test-results" ]; then
+      aws s3 cp --quiet "$PWD/test-results" "$RESULTS_OUTPUT_S3_PATH/test-results" --recursive
+      echo "Playwright artifacts published to $RESULTS_OUTPUT_S3_PATH/test-results"
+   fi
 else
    echo "RESULTS_OUTPUT_S3_PATH is not set"
    exit 1
