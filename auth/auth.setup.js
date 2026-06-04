@@ -1,41 +1,9 @@
-import { test as base, expect } from '@playwright/test'
-import fs from 'node:fs'
+import { test as setup, expect } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'user.json')
-
-// Override `page` so the recorded video is force-attached to the Allure result
-// regardless of whether the test passes or fails. Without this, allure-playwright
-// can omit the video (especially under --single-file report generation).
-const setup = base.extend({
-  page: async ({ page }, use, testInfo) => {
-    await use(page)
-    const video = page.video()
-    if (!video) return
-    try {
-      await page.close()
-      // saveAs() waits until the page is closed AND the video is fully written,
-      // which path()/attach() do not. Without it the WebM file can be 0-byte
-      // or have a truncated container that won't play.
-      const savePath = path.join(testInfo.outputDir, 'login-video.webm')
-      await video.saveAs(savePath)
-      const stat = fs.statSync(savePath)
-      // eslint-disable-next-line no-console
-      console.log(
-        `[video] saved ${savePath} — ${stat.size} bytes (${(stat.size / 1024 / 1024).toFixed(2)} MB)`
-      )
-      await testInfo.attach('login-video', {
-        path: savePath,
-        contentType: 'video/webm'
-      })
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.log(`[video] capture failed: ${err.message}`)
-    }
-  }
-})
 
 setup('authenticate', async ({ page }) => {
   const email = process.env.EPR_USER_EMAIL

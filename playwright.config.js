@@ -11,7 +11,6 @@ const proxy = process.env.HTTP_PROXY
 
 export default defineConfig({
   testDir: './tests',
-  globalSetup: './globalSetup.js',
   // Accessibility specs are opt-in. Default runs (`npm test`, `npm run test:local`)
   // skip them; the dedicated `test:*:accessibility` scripts set RUN_ACCESSIBILITY=1.
   testIgnore: process.env.RUN_ACCESSIBILITY ? [] : ['**/accessibility.spec.js'],
