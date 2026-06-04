@@ -40,7 +40,7 @@ export default defineConfig({
   use: {
     baseURL,
     ignoreHTTPSErrors: true,
-    trace: 'on-first-retry',
+    trace: 'on',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     actionTimeout: 15_000,
