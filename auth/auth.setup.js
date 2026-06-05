@@ -16,7 +16,7 @@ setup('authenticate', async ({ page }) => {
   }
 
   // https://rwd-dev9.azure.defra.cloud/create-account
-  await page.goto('/create-account', { timeout: 60_000 })
+  await page.goto('/report-data', { timeout: 60_000 })
 
   // The B2C flow can resolve in two ways:
   //   - straight to the login form on b2clogin.com
@@ -24,7 +24,7 @@ setup('authenticate', async ({ page }) => {
   // Wait for the redirect chain to settle, then branch on URL.
   await page.waitForLoadState('networkidle')
 
-  if (page.url().includes('/error')) {
+  if (page.url().includes('error')) {
     await page.getByRole('link', { name: /sign in/i }).click()
   }
 
