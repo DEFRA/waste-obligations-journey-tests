@@ -1,7 +1,3 @@
-export function getEnvPrefix() {
-  return process.env.ENVIRONMENT === 'dev' ? 'DEV' : 'TST'
-}
-
 export function requireEnv(name) {
   const value = process.env[name]
   if (!value) {
@@ -10,8 +6,4 @@ export function requireEnv(name) {
     )
   }
   return value
-}
-
-export function requirePrefixedEnv(suffix) {
-  return requireEnv(`${getEnvPrefix()}_${suffix}`)
 }

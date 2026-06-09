@@ -1,4 +1,4 @@
-import { requireEnv, requirePrefixedEnv } from './env.js'
+import { requireEnv } from './env.js'
 
 export function getBackendBaseUrl() {
   const env = process.env.ENVIRONMENT === 'dev' ? 'dev' : 'tst'
@@ -6,12 +6,12 @@ export function getBackendBaseUrl() {
 }
 
 export function getOrgId() {
-  return requirePrefixedEnv('WASTE_OBLIGATION_ORG_ID')
+  return requireEnv('WASTE_OBLIGATION_ORG_ID')
 }
 
 export function getBasicAuthHeader() {
-  const username = requirePrefixedEnv('WASTE_OBLIGATION_USERNAME')
-  const password = requirePrefixedEnv('WASTE_OBLIGATION_PASSWORD')
+  const username = requireEnv('WASTE_OBLIGATION_USERNAME')
+  const password = requireEnv('WASTE_OBLIGATION_PASSWORD')
   const token = Buffer.from(`${username}:${password}`).toString('base64')
   return `Basic ${token}`
 }

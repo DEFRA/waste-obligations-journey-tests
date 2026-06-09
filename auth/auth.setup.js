@@ -1,14 +1,14 @@
 import { test as setup, expect } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { requirePrefixedEnv } from '../utils/env.js'
+import { requireEnv } from '../utils/env.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'user.json')
 
 setup('authenticate', async ({ page }) => {
-  const email = requirePrefixedEnv('EPR_USER_EMAIL')
-  const password = requirePrefixedEnv('EPR_USER_PASSWORD')
+  const email = requireEnv('EPR_USER_EMAIL')
+  const password = requireEnv('EPR_USER_PASSWORD')
 
   // https://rwd-dev9.azure.defra.cloud/create-account
   await page.goto('/report-data', { timeout: 60_000 })
