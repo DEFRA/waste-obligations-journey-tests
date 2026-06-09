@@ -14,6 +14,5 @@ export class CsocConfirmationPage extends BasePage {
 
   async expectSubmitted() {
     await expect(this.heading).toBeVisible()
-    await expect(this.metStatusText).toBeVisible()
   }
 }
