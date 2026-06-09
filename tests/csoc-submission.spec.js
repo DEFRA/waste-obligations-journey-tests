@@ -1,7 +1,15 @@
 import { test, expect } from '../fixtures/pages.fixture.js'
 import { TEST_USER_NAME } from '../data/csoc.data.js'
+import {
+  cancelAllOpenDeclarations,
+  getOrgId
+} from '../utils/waste-obligations-api.js'
 
 test.describe('CSOC submission journey', () => {
+  test.beforeEach(async ({ request }) => {
+    await cancelAllOpenDeclarations(request, getOrgId())
+  })
+
   test('submits the CSOC and the obligations table is consistent end-to-end', async ({
     landingPage,
     obligationsPage,
