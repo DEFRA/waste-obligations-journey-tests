@@ -31,9 +31,9 @@ function buildHeaders() {
   }
 }
 
-export async function listDeclarations(request, orgId) {
+export async function listDeclarations(request, orgId, obligationYear) {
   const response = await request.get(
-    `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations`,
+    `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations?obligationYear=${obligationYear}`,
     { headers: buildHeaders() }
   )
   if (!response.ok()) {
@@ -42,7 +42,7 @@ export async function listDeclarations(request, orgId) {
     )
   }
   const body = await response.json()
-  return Array.isArray(body) ? body : (body.items ?? [])
+  return body.complianceDeclarations ?? []
 }
 
 export async function cancelDeclaration(request, orgId, declarationId) {
@@ -50,7 +50,11 @@ export async function cancelDeclaration(request, orgId, declarationId) {
     `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations/${declarationId}`,
     {
       headers: buildHeaders(),
-      data: { status: 'CANCELLED', user: getSubmitterUser() }
+      data: {
+        status: 'Cancelled',
+        reason: 'Journey-test reset',
+        user: getSubmitterUser()
+      }
     }
   )
   if (!response.ok()) {
@@ -61,9 +65,10 @@ export async function cancelDeclaration(request, orgId, declarationId) {
 }
 
 export async function cancelAllOpenDeclarations(request, orgId) {
-  const declarations = await listDeclarations(request, orgId)
+  const obligationYear = new Date().getFullYear()
+  const declarations = await listDeclarations(request, orgId, obligationYear)
   const open = declarations.filter(
-    (declaration) => declaration?.status !== 'CANCELLED'
+    (declaration) => declaration?.status !== 'Cancelled'
   )
   for (const declaration of open) {
     await cancelDeclaration(request, orgId, declaration.id)
