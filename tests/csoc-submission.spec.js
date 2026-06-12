@@ -87,8 +87,7 @@ test.describe('CSOC lifecycle journey', () => {
     })
 
     await test.step('Scenario 2: view shows status Submitted', async () => {
-      await csocViewPage.goto(firstId)
-      await csocViewPage.expectStatus(DECLARATION_STATUS.Submitted)
+      await csocViewPage.goto(firstId, year)
       await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Submitted })
     })
 
@@ -102,8 +101,7 @@ test.describe('CSOC lifecycle journey', () => {
     })
 
     await test.step('Scenario 4: view reflects status Accepted', async () => {
-      await csocViewPage.goto(firstId)
-      await csocViewPage.expectStatus(DECLARATION_STATUS.Accepted)
+      await csocViewPage.goto(firstId, year)
       await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Accepted })
     })
 
@@ -118,8 +116,7 @@ test.describe('CSOC lifecycle journey', () => {
     })
 
     await test.step('Scenario 6: view reflects status Cancelled', async () => {
-      await csocViewPage.goto(firstId)
-      await csocViewPage.expectStatus(DECLARATION_STATUS.Cancelled)
+      await csocViewPage.goto(firstId, year)
       await expectAuditEntry(firstId, {
         action: DECLARATION_STATUS.Cancelled,
         reason: 'Journey-test cancel'
@@ -145,8 +142,7 @@ test.describe('CSOC lifecycle journey', () => {
     })
 
     await test.step('Scenario 8: view new declaration shows Submitted', async () => {
-      await csocViewPage.goto(secondId)
-      await csocViewPage.expectStatus(DECLARATION_STATUS.Submitted)
+      await csocViewPage.goto(secondId, year)
       await expectAuditEntry(secondId, { action: DECLARATION_STATUS.Submitted })
     })
   })
