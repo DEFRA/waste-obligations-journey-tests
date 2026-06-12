@@ -4,15 +4,14 @@ import { BasePage } from './base-page.js'
 const DECLARATION_URL_PATTERN = /\/compliance\/([^/]+)\/certificate/
 
 export class CsocConfirmationPage extends BasePage {
-  constructor(page) {
-    super(page)
-    this.heading = page.getByRole('heading', {
-      name: /\d{4} certificate of compliance/i
+  headingFor(year) {
+    return this.page.getByRole('heading', {
+      name: new RegExp(`${year} certificate of compliance`, 'i')
     })
   }
 
-  async expectSubmitted() {
-    await expect(this.heading).toBeVisible()
+  async expectSubmitted(year) {
+    await expect(this.headingFor(year)).toBeVisible()
   }
 
   async getDeclarationId() {
