@@ -5,13 +5,28 @@ export class CsocViewPage extends BasePage {
   constructor(page) {
     super(page)
     this.heading = page.getByRole('heading', {
-      name: /csoc.*details|view.*csoc|certificate.*details/i
+      name: /csoc.*details|view.*csoc|certificate.*details|certificate of compliance/i
     })
     this.summaryList = page.locator('.govuk-summary-list')
+    this.statusValue = this.rowValue('status')
+  }
+
+  async goto(declarationId) {
+    const path = `/compliance/${declarationId}/certificate`
+    await this.gotoPath(path)
+    await expect(this.page).toHaveURL(new RegExp(`${path}(?:\\?|$)`))
+    await this.expectLoaded()
   }
 
   async expectLoaded() {
     await expect(this.heading).toBeVisible()
+  }
+
+  async expectStatus(status) {
+    await expect(this.statusValue).toBeVisible()
+    await expect(this.statusValue).toHaveText(
+      new RegExp(`^\\s*${status}\\s*$`, 'i')
+    )
   }
 
   rowValue(rowName) {

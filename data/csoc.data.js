@@ -10,3 +10,9 @@ export const EXPECTED_ORG = {
 }
 
 export const OBLIGATIONS_MET_STATUS = 'Recycling obligations have not been met'
+
+export const DECLARATION_STATUS = Object.freeze({
+  Submitted: 'Submitted',
+  Accepted: 'Accepted',
+  Cancelled: 'Cancelled'
+})

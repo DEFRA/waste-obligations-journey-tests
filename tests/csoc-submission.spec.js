@@ -1,61 +1,153 @@
+import { request as apiRequest } from '@playwright/test'
 import { test, expect } from '../fixtures/pages.fixture.js'
-import { TEST_USER_NAME } from '../data/csoc.data.js'
+import { DECLARATION_STATUS, TEST_USER_NAME } from '../data/csoc.data.js'
 import {
-  cancelAllOpenDeclarations,
-  getOrgId
+  deleteAllDeclarations,
+  getOrgId,
+  listDeclarations,
+  setDeclarationStatus
 } from '../utils/waste-obligations-api.js'
 
-test.describe('CSOC submission journey', () => {
-  test.beforeEach(async ({ request }) => {
-    await cancelAllOpenDeclarations(request, getOrgId())
-  })
+// Shared backend org: keep serial so a single worker owns the lifecycle state.
+test.describe.configure({ mode: 'serial' })
 
-  test('submits the CSOC and the obligations table is consistent end-to-end', async ({
+async function resetOrgDeclarations() {
+  const apiContext = await apiRequest.newContext({ ignoreHTTPSErrors: true })
+  let primaryError
+  try {
+    await deleteAllDeclarations(
+      apiContext,
+      getOrgId(),
+      new Date().getFullYear()
+    )
+  } catch (error) {
+    primaryError = error
+  }
+  try {
+    await apiContext.dispose()
+  } catch (disposeError) {
+    if (!primaryError) primaryError = disposeError
+  }
+  if (primaryError) throw primaryError
+}
+
+test.describe('CSOC lifecycle journey', () => {
+  test.beforeAll(resetOrgDeclarations)
+  test.afterAll(resetOrgDeclarations)
+
+  test('Submit → view → accept → cancel → resubmit lifecycle', async ({
+    request,
     landingPage,
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
-    csocConfirmationPage
+    csocConfirmationPage,
+    csocViewPage
   }) => {
+    const orgId = getOrgId()
+    const year = new Date().getFullYear()
+    let firstId
+    let secondId
     let obligationsRows
 
-    await test.step('1. capture obligations table from manage-your-recycling-obligations', async () => {
+    const expectAuditEntry = async (declarationId, entry) => {
+      const declarations = await listDeclarations(request, orgId, year)
+      const declaration = declarations.find((d) => d.id === declarationId)
+      expect(
+        declaration,
+        `declaration ${declarationId} missing from list`
+      ).toBeDefined()
+      expect(declaration.audit).toEqual(
+        expect.arrayContaining([expect.objectContaining(entry)])
+      )
+    }
+
+    const submitCsoc = async () => {
       await landingPage.goto()
       await landingPage.goToObligations()
       await obligationsPage.expectLoaded()
       obligationsRows = await obligationsPage.readObligationsTable()
       expect(obligationsRows.length).toBeGreaterThan(0)
-    })
-
-    await test.step('2. click submit certificate', async () => {
       await obligationsPage.startCsocSubmission()
-    })
-
-    await test.step('3. verify About page heading and regulator email', async () => {
       await csocAboutPage.expectLoaded()
       await csocAboutPage.expectRegulatorEmail()
-    })
-
-    await test.step('4. click Continue', async () => {
       await csocAboutPage.clickContinue()
-    })
-
-    await test.step('5-7. verify Check-and-submit page details, status and table', async () => {
       await csocSubmissionPage.expectLoaded()
       await csocSubmissionPage.expectOrganisationDetails()
       await csocSubmissionPage.expectObligationsMet()
-
-      // Re-enable once after 0 vs - issue is resolved
-      // const submissionRows = await csocSubmissionPage.readObligationsTable()
-      // expect(submissionRows).toEqual(obligationsRows)
-    })
-
-    await test.step('8. enter full name and submit', async () => {
+      const submissionRows = await csocSubmissionPage.readObligationsTable()
+      expect(submissionRows).toEqual(obligationsRows)
       await csocSubmissionPage.submit(TEST_USER_NAME)
+      await csocConfirmationPage.expectSubmitted()
+      return csocConfirmationPage.getDeclarationId()
+    }
+
+    await test.step('Scenario 1: submit a declaration via the UI', async () => {
+      firstId = await submitCsoc()
     })
 
-    await test.step('9. verify confirmation page', async () => {
-      await csocConfirmationPage.expectSubmitted()
+    await test.step('Scenario 2: view shows status Submitted', async () => {
+      await csocViewPage.goto(firstId)
+      await csocViewPage.expectStatus(DECLARATION_STATUS.Submitted)
+      await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Submitted })
+    })
+
+    await test.step('Scenario 3: PATCH status to Accepted', async () => {
+      await setDeclarationStatus(
+        request,
+        orgId,
+        firstId,
+        DECLARATION_STATUS.Accepted
+      )
+    })
+
+    await test.step('Scenario 4: view reflects status Accepted', async () => {
+      await csocViewPage.goto(firstId)
+      await csocViewPage.expectStatus(DECLARATION_STATUS.Accepted)
+      await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Accepted })
+    })
+
+    await test.step('Scenario 5: PATCH status to Cancelled', async () => {
+      await setDeclarationStatus(
+        request,
+        orgId,
+        firstId,
+        DECLARATION_STATUS.Cancelled,
+        'Journey-test cancel'
+      )
+    })
+
+    await test.step('Scenario 6: view reflects status Cancelled', async () => {
+      await csocViewPage.goto(firstId)
+      await csocViewPage.expectStatus(DECLARATION_STATUS.Cancelled)
+      await expectAuditEntry(firstId, {
+        action: DECLARATION_STATUS.Cancelled,
+        reason: 'Journey-test cancel'
+      })
+    })
+
+    await test.step('Scenario 7: resubmit a declaration via the UI', async () => {
+      secondId = await submitCsoc()
+      expect(secondId).not.toBe(firstId)
+      const declarations = await listDeclarations(request, orgId, year)
+      expect(declarations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: secondId,
+            status: DECLARATION_STATUS.Submitted
+          }),
+          expect.objectContaining({
+            id: firstId,
+            status: DECLARATION_STATUS.Cancelled
+          })
+        ])
+      )
+    })
+
+    await test.step('Scenario 8: view new declaration shows Submitted', async () => {
+      await csocViewPage.goto(secondId)
+      await csocViewPage.expectStatus(DECLARATION_STATUS.Submitted)
+      await expectAuditEntry(secondId, { action: DECLARATION_STATUS.Submitted })
     })
   })
 })
