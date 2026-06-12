@@ -94,7 +94,7 @@ export async function setDeclarationStatus(
 // and is gated on a separate JOURNEY_USER principal, not the submitter credentials.
 export async function deleteDeclaration(request, declarationId) {
   const response = await request.delete(
-    `${getBackendBaseUrl()}/waste-obligations/compliance-declarations/${declarationId}`,
+    `${getBackendBaseUrl()}/compliance-declarations/${declarationId}`,
     { headers: buildHeaders(getJourneyAuthHeader()) }
   )
   if (!response.ok()) {
