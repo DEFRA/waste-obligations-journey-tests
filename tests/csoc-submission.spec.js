@@ -9,8 +9,8 @@ import {
 } from '../utils/waste-obligations-api.js'
 
 // Shared backend org: keep serial so a single worker owns the lifecycle state.
-// The view page no longer renders the declaration status, so the audit trail
-// (see expectAuditEntry) is the authoritative state-change check.
+// Declaration status is not asserted in the UI; the audit trail (see
+// expectAuditEntry) is the authoritative state-change check.
 test.describe.configure({ mode: 'serial' })
 
 async function resetOrgDeclarations() {
@@ -43,6 +43,7 @@ test.describe('CSOC lifecycle journey', () => {
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
+    csocCertificateHubPage,
     csocConfirmationPage,
     csocViewPage
   }) => {
@@ -82,12 +83,22 @@ test.describe('CSOC lifecycle journey', () => {
       return csocConfirmationPage.getDeclarationId()
     }
 
+    const viewCsocViaUi = async (declarationId) => {
+      await obligationsPage.goto()
+      await obligationsPage.openCertificateHub(declarationId)
+      await csocCertificateHubPage.expectLoaded()
+      await csocCertificateHubPage.goToConfirmation()
+      await csocConfirmationPage.expectSubmitted(year)
+      await csocConfirmationPage.goToCertificateView()
+      await csocViewPage.expectLoaded(year)
+    }
+
     await test.step('Scenario 1: submit a declaration via the UI', async () => {
       firstId = await submitCsoc()
     })
 
     await test.step('Scenario 2: view declaration; audit records Submitted', async () => {
-      await csocViewPage.goto(firstId, year)
+      await viewCsocViaUi(firstId)
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Submitted })
     })
@@ -102,7 +113,7 @@ test.describe('CSOC lifecycle journey', () => {
     })
 
     await test.step('Scenario 4: view declaration; audit reflects Accepted', async () => {
-      await csocViewPage.goto(firstId, year)
+      await viewCsocViaUi(firstId)
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Accepted })
     })
@@ -117,9 +128,9 @@ test.describe('CSOC lifecycle journey', () => {
       )
     })
 
-    await test.step('Scenario 6: view declaration; audit reflects Cancelled with reason', async () => {
-      await csocViewPage.goto(firstId, year)
-      await csocViewPage.expectOrgIdentity()
+    await test.step('Scenario 6: obligations page shows resubmit; audit reflects Cancelled with reason', async () => {
+      await obligationsPage.goto()
+      await obligationsPage.expectResubmitCardVisible()
       await expectAuditEntry(firstId, {
         action: DECLARATION_STATUS.Cancelled,
         reason: 'Journey-test cancel'
@@ -145,7 +156,7 @@ test.describe('CSOC lifecycle journey', () => {
     })
 
     await test.step('Scenario 8: view resubmitted declaration; audit records Submitted', async () => {
-      await csocViewPage.goto(secondId, year)
+      await viewCsocViaUi(secondId)
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(secondId, { action: DECLARATION_STATUS.Submitted })
     })

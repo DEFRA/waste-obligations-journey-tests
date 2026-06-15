@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
 
+const escapeRegExp = (value) =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export class ObligationsPage extends BasePage {
   constructor(page) {
     super(page)
@@ -10,6 +13,12 @@ export class ObligationsPage extends BasePage {
     })
     this.submitCertificateButton = page.getByRole('button', {
       name: /submit (certificate|statement)/i
+    })
+    this.viewCertificateLink = page.getByRole('link', {
+      name: /view your certificate of compliance/i
+    })
+    this.resubmitButton = page.getByRole('button', {
+      name: /resubmit/i
     })
     this.materialObligationsTable = page
       .locator('table.govuk-table')
@@ -32,6 +41,19 @@ export class ObligationsPage extends BasePage {
 
   async startCsocSubmission() {
     await this.submitCertificateButton.click()
+  }
+
+  async openCertificateHub(expectedId) {
+    await expect(this.viewCertificateLink).toHaveAttribute(
+      'href',
+      new RegExp(`/compliance/${escapeRegExp(expectedId)}/certificate`)
+    )
+    await this.viewCertificateLink.click()
+  }
+
+  async expectResubmitCardVisible() {
+    await expect(this.resubmitButton).toBeVisible()
+    await expect(this.viewCertificateLink).toHaveCount(0)
   }
 
   async readObligationsTable() {

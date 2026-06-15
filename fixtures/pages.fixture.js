@@ -3,6 +3,7 @@ import { LandingPage } from '../pages/landing-page.js'
 import { ObligationsPage } from '../pages/obligations-page.js'
 import { CsocAboutPage } from '../pages/csoc-about-page.js'
 import { CsocSubmissionPage } from '../pages/csoc-submission-page.js'
+import { CsocCertificateHubPage } from '../pages/csoc-certificate-hub-page.js'
 import { CsocConfirmationPage } from '../pages/csoc-confirmation-page.js'
 import { CsocViewPage } from '../pages/csoc-view-page.js'
 
@@ -18,6 +19,9 @@ export const test = base.extend({
   },
   csocSubmissionPage: async ({ page }, use) => {
     await use(new CsocSubmissionPage(page))
+  },
+  csocCertificateHubPage: async ({ page }, use) => {
+    await use(new CsocCertificateHubPage(page))
   },
   csocConfirmationPage: async ({ page }, use) => {
     await use(new CsocConfirmationPage(page))
