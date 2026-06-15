@@ -35,7 +35,6 @@ async function resetOrgDeclarations() {
 
 test.describe('CSOC lifecycle journey', () => {
   test.beforeAll(resetOrgDeclarations)
-  test.afterAll(resetOrgDeclarations)
 
   test('Submit → view → accept → cancel → resubmit lifecycle', async ({
     request,
