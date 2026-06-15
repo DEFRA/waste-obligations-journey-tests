@@ -25,7 +25,7 @@ export default defineConfig({
     baseURL,
     ignoreHTTPSErrors: true,
     trace: 'on',
-    screenshot: 'only-on-failure',
+    screenshot: { mode: 'only-on-failure', fullPage: true },
     video: 'on',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,

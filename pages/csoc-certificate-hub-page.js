@@ -4,16 +4,16 @@ import { BasePage } from './base-page.js'
 export class CsocCertificateHubPage extends BasePage {
   constructor(page) {
     super(page)
-    this.viewConfirmationLink = page.getByRole('link', {
+    this.viewConfirmationButton = page.getByRole('button', {
       name: /view confirmation/i
     })
   }
 
   async expectLoaded() {
-    await expect(this.viewConfirmationLink).toBeVisible()
+    await expect(this.viewConfirmationButton).toBeVisible()
   }
 
   async goToConfirmation() {
-    await this.viewConfirmationLink.click()
+    await this.viewConfirmationButton.click()
   }
 }

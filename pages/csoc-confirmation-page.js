@@ -6,7 +6,7 @@ const DECLARATION_URL_PATTERN = /\/compliance\/([^/]+)\/certificate/
 export class CsocConfirmationPage extends BasePage {
   constructor(page) {
     super(page)
-    this.viewCertificateLink = page.getByRole('link', {
+    this.viewCertificateButton = page.getByRole('button', {
       name: /^view your certificate$/i
     })
   }
@@ -22,7 +22,7 @@ export class CsocConfirmationPage extends BasePage {
   }
 
   async goToCertificateView() {
-    await this.viewCertificateLink.click()
+    await this.viewCertificateButton.click()
   }
 
   async getDeclarationId() {

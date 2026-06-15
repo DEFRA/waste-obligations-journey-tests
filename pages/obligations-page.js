@@ -14,7 +14,7 @@ export class ObligationsPage extends BasePage {
     this.submitCertificateButton = page.getByRole('button', {
       name: /submit (certificate|statement)/i
     })
-    this.viewCertificateLink = page.getByRole('link', {
+    this.viewCertificateButton = page.getByRole('button', {
       name: /view your certificate of compliance/i
     })
     this.resubmitButton = page.getByRole('button', {
@@ -44,16 +44,16 @@ export class ObligationsPage extends BasePage {
   }
 
   async openCertificateHub(expectedId) {
-    await expect(this.viewCertificateLink).toHaveAttribute(
+    await expect(this.viewCertificateButton).toHaveAttribute(
       'href',
       new RegExp(`/compliance/${escapeRegExp(expectedId)}/certificate`)
     )
-    await this.viewCertificateLink.click()
+    await this.viewCertificateButton.click()
   }
 
   async expectResubmitCardVisible() {
     await expect(this.resubmitButton).toBeVisible()
-    await expect(this.viewCertificateLink).toHaveCount(0)
+    await expect(this.viewCertificateButton).toHaveCount(0)
   }
 
   async readObligationsTable() {
