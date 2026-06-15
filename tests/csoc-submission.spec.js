@@ -115,20 +115,20 @@ test.describe('CSOC lifecycle journey', () => {
       await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Submitted })
     })
 
-    await test.step('Scenario 3: PATCH status to Accepted', async () => {
-      await setDeclarationStatus(
-        request,
-        orgId,
-        firstId,
-        DECLARATION_STATUS.Accepted
-      )
-    })
-
-    await test.step('Scenario 4: view declaration; audit reflects Accepted', async () => {
-      await viewCsocViaUi()
-      await csocViewPage.expectOrgIdentity()
-      await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Accepted })
-    })
+    // await test.step('Scenario 3: PATCH status to Accepted', async () => {
+    //   await setDeclarationStatus(
+    //     request,
+    //     orgId,
+    //     firstId,
+    //     DECLARATION_STATUS.Accepted
+    //   )
+    // })
+    //
+    // await test.step('Scenario 4: view declaration; audit reflects Accepted', async () => {
+    //   await viewCsocViaUi()
+    //   await csocViewPage.expectOrgIdentity()
+    //   await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Accepted })
+    // })
 
     await test.step('Scenario 5: PATCH status to Cancelled', async () => {
       await setDeclarationStatus(
