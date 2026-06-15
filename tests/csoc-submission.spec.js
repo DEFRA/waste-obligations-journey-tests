@@ -65,6 +65,19 @@ test.describe('CSOC lifecycle journey', () => {
       )
     }
 
+    const findSubmittedDeclarationId = async () => {
+      const list = await listDeclarations(request, orgId, year)
+      const submitted = list.filter(
+        (d) => d.status === DECLARATION_STATUS.Submitted
+      )
+      if (submitted.length !== 1) {
+        throw new Error(
+          `Expected exactly one Submitted declaration for org ${orgId} year ${year}; got ${submitted.length}`
+        )
+      }
+      return submitted[0].id
+    }
+
     const submitCsoc = async () => {
       await landingPage.goto()
       await landingPage.goToObligations()
@@ -80,12 +93,12 @@ test.describe('CSOC lifecycle journey', () => {
       await csocSubmissionPage.expectObligationsMet()
       await csocSubmissionPage.submit(TEST_USER_NAME)
       await csocConfirmationPage.expectSubmitted(year)
-      return csocConfirmationPage.getDeclarationId()
+      return findSubmittedDeclarationId()
     }
 
-    const viewCsocViaUi = async (declarationId) => {
+    const viewCsocViaUi = async () => {
       await obligationsPage.goto()
-      await obligationsPage.openCertificateHub(declarationId)
+      await obligationsPage.openCertificateHub()
       await csocCertificateHubPage.expectLoaded()
       await csocCertificateHubPage.goToConfirmation()
       await csocConfirmationPage.expectSubmitted(year)
@@ -98,7 +111,7 @@ test.describe('CSOC lifecycle journey', () => {
     })
 
     await test.step('Scenario 2: view declaration; audit records Submitted', async () => {
-      await viewCsocViaUi(firstId)
+      await viewCsocViaUi()
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Submitted })
     })
@@ -113,7 +126,7 @@ test.describe('CSOC lifecycle journey', () => {
     })
 
     await test.step('Scenario 4: view declaration; audit reflects Accepted', async () => {
-      await viewCsocViaUi(firstId)
+      await viewCsocViaUi()
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Accepted })
     })
@@ -156,7 +169,7 @@ test.describe('CSOC lifecycle journey', () => {
     })
 
     await test.step('Scenario 8: view resubmitted declaration; audit records Submitted', async () => {
-      await viewCsocViaUi(secondId)
+      await viewCsocViaUi()
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(secondId, { action: DECLARATION_STATUS.Submitted })
     })

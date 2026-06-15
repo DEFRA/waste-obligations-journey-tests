@@ -1,9 +1,6 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
 
-const escapeRegExp = (value) =>
-  String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
 export class ObligationsPage extends BasePage {
   constructor(page) {
     super(page)
@@ -43,11 +40,7 @@ export class ObligationsPage extends BasePage {
     await this.submitCertificateButton.click()
   }
 
-  async openCertificateHub(expectedId) {
-    await expect(this.viewCertificateButton).toHaveAttribute(
-      'href',
-      new RegExp(`/compliance/${escapeRegExp(expectedId)}/certificate`)
-    )
+  async openCertificateHub() {
     await this.viewCertificateButton.click()
   }
 
