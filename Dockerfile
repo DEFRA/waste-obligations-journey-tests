@@ -25,8 +25,10 @@ WORKDIR /app
 COPY package*.json .
 RUN npm install
 
-# Install Playwright browsers after npm install to keep version compatibility
-RUN npx playwright install --with-deps chromium
+# Install every browser/channel the matrix needs so `npm test` runs all six
+# projects (chrome-mac, chrome-windows, edge-windows, safari-mac, safari-ios,
+# chrome-android) in the CDP container.
+RUN npx playwright install --with-deps chromium webkit chrome msedge
 
 # Copy the rest of the test code
 COPY . .
