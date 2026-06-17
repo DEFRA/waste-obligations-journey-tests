@@ -17,12 +17,12 @@ export class ObligationsPage extends BasePage {
     this.resubmitButton = page.getByRole('button', {
       name: /resubmit/i
     })
+    // Filter by a cell's data-header attribute rather than `getByRole('columnheader')`:
+    // the responsive-table CSS hides <thead> on mobile, removing th columnheader roles.
     this.materialObligationsTable = page
       .locator('table.govuk-table')
       .filter({
-        has: page.getByRole('columnheader', {
-          name: /Recycling obligations to meet/i
-        })
+        has: page.locator('td[data-header="Recycling obligations to meet"]')
       })
       .first()
   }
