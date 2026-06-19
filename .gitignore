@@ -15,4 +15,6 @@ test-results/
 allure-results/
 allure-report/
 reports/
+security-report/
+/index.html
 FAILED

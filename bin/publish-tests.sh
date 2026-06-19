@@ -1,12 +1,13 @@
 #!/bin/sh
 
-# Publishes test artifacts to S3. The CDP Portal's report viewer only renders
-# the index.html at the run's S3 root, so Allure always lives there. The
-# profile-specific reports (WCAG / ZAP) sit at predictable sub-paths and can
-# be downloaded from the Portal's "report folder contents" listing.
+# Publishes test artifacts to S3. The CDP Portal's report viewer renders the
+# index.html at the run's S3 root, so a profile-aware landing page is generated
+# there with links to whichever reports the profile produced. Allure and the
+# profile-specific reports (WCAG / ZAP) sit at predictable sub-paths.
 #
 # Layout:
-#   $RESULTS_OUTPUT_S3_PATH/                        — Allure (index.html, assets)
+#   $RESULTS_OUTPUT_S3_PATH/index.html              — landing page (links to reports)
+#   $RESULTS_OUTPUT_S3_PATH/allure-report/          — Allure (run summary)
 #   $RESULTS_OUTPUT_S3_PATH/test-results/           — Playwright traces, screenshots
 #   $RESULTS_OUTPUT_S3_PATH/accessibility-report/   — WCAG findings (accessibility profile)
 #   $RESULTS_OUTPUT_S3_PATH/security-report/        — ZAP HTML (security profile)
@@ -28,8 +29,8 @@ if [ ! -d "$ALLURE_DIR" ]; then
    exit 1
 fi
 
-aws s3 cp --quiet "$ALLURE_DIR" "$RESULTS_OUTPUT_S3_PATH" --recursive
-echo "Allure report published to $RESULTS_OUTPUT_S3_PATH"
+aws s3 cp --quiet "$ALLURE_DIR" "$RESULTS_OUTPUT_S3_PATH/allure-report" --recursive
+echo "Allure report published to $RESULTS_OUTPUT_S3_PATH/allure-report/"
 
 if [ -d "$PWD/test-results" ]; then
    aws s3 cp --quiet "$PWD/test-results" "$RESULTS_OUTPUT_S3_PATH/test-results" --recursive
@@ -55,3 +56,7 @@ case "$PROFILE_VAL" in
       fi
       ;;
 esac
+
+PROFILE="$PROFILE_VAL" node ./bin/generate-portal-index.js
+aws s3 cp --quiet ./index.html "$RESULTS_OUTPUT_S3_PATH/index.html"
+echo "Portal landing page published to $RESULTS_OUTPUT_S3_PATH/index.html"
