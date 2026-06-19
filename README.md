@@ -141,7 +141,7 @@ The container's flow (`entrypoint.sh`):
 2. If `PROFILE=security`, starts OWASP ZAP as a local daemon and exports `HTTP_PROXY` so Playwright routes browser traffic through it.
 3. Runs `npm test` (Playwright headless against the configured `baseURL`, with `testIgnore` driven by `PROFILE`).
 4. If `PROFILE=security`, optionally runs a ZAP active scan (when `ZAP_ACTIVE=1`), then fetches the HTML report to `./security-report/index.html` and shuts ZAP down.
-5. Runs `npm run report:publish`, which generates `allure-report/` and uploads it to S3 via `bin/publish-tests.sh`. The same script also uploads `security-report/` to `$RESULTS_OUTPUT_S3_PATH/security-report/` when present.
+5. Publishes the run's primary report (see [Reporting](#reporting) for the per-profile mapping): Allure for `e2e`/`security`, or the WCAG HTML for `accessibility`. `bin/publish-tests.sh` also uploads `security-report/index.html` (when present) and `test-results/`.
 6. Exits with Playwright's exit code so the portal shows pass/fail correctly. ZAP findings are report-only and do not affect the exit code.
 
 `baseURL` is built from the portal-injected `ENVIRONMENT` variable in `playwright.config.js`:
@@ -162,15 +162,17 @@ For PR-triggered runs from another service repo, see `run-journey-tests/action.y
 
 ## Reporting
 
-The suite uses Allure to match the CDP Portal's canonical reporting pipeline:
+The published report depends on which profile ran. The Portal's "report" link always points at `$RESULTS_OUTPUT_S3_PATH/index.html`; what lives there changes:
 
-| Step              | Tool                                              | Output                                                |
-| ----------------- | ------------------------------------------------- | ----------------------------------------------------- |
-| Test run          | `allure-playwright` reporter                      | `allure-results/` (raw)                               |
-| Report generation | `allure-commandline` (`npm run report`)           | `allure-report/index.html`                            |
-| Publish           | `bin/publish-tests.sh` (`npm run report:publish`) | Uploads `allure-report/` to `$RESULTS_OUTPUT_S3_PATH` |
+| `PROFILE`       | Primary report at S3 root            | Additional uploads                                          |
+| --------------- | ------------------------------------ | ----------------------------------------------------------- |
+| `e2e` (default) | Allure (`allure-report/index.html`)  | `test-results/` (Playwright traces/screenshots)             |
+| `accessibility` | WCAG findings (`reports/index.html`) | `test-results/`                                             |
+| `security`      | Allure (`allure-report/index.html`)  | `security-report/index.html` (ZAP HTML) and `test-results/` |
 
-The CDP Portal expects the published directory to contain an `index.html` at the root, which `allure generate --single-file` produces.
+For `e2e` and `security`, `npm run report:publish` runs `allure generate` then `bin/publish-tests.sh`. For `accessibility`, `entrypoint.sh` skips the Allure generate step entirely — `tests/accessibility-checking.js` writes the WCAG report to `./reports/` during the test's `afterAll`, and `bin/publish-tests.sh` uploads that directory instead.
+
+The CDP Portal expects the published directory to contain an `index.html` at the root — Allure's `allure generate` and the accessibility checker's `generateAccessibilityReportIndex` both produce one.
 
 ## Licence
 

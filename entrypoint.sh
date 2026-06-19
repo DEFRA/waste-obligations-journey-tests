@@ -25,11 +25,18 @@ start_zap() {
   echo "starting ZAP daemon on ${ZAP_BASE}"
   mkdir -p security-report
   # -host 127.0.0.1 keeps the API on loopback (why api.disablekey=true is safe).
-  # -silent suppresses the boot-time add-on update check; CDP egress routes
-  # through localhost:3128 which ZAP doesn't know about, so otherwise that
-  # check stalls well past our readiness window.
+  # -silent suppresses the boot-time add-on update check.
+  # connection.proxyChain.* points ZAP's outbound HTTP at the CDP egress proxy
+  # on localhost:3128 — without this, ZAP can't reach the EPR app host and
+  # serves its own "Failed to read … within 20 seconds" error page instead of
+  # the real response. timeoutInSecs bumps the 20s default to 120s so a slow
+  # cold-start page doesn't trip the same error.
   zap.sh -daemon -silent -host 127.0.0.1 -port "$ZAP_PORT" \
     -config api.disablekey=true \
+    -config connection.proxyChain.hostName=127.0.0.1 \
+    -config connection.proxyChain.port=3128 \
+    -config connection.proxyChain.enabled=true \
+    -config connection.timeoutInSecs=120 \
     > "$ZAP_LOG" 2>&1 &
   ZAP_PID=$!
 
@@ -179,7 +186,13 @@ fi
 PUBLISH_TEST_RESULTS=${PUBLISH_TEST_RESULTS:-1}
 
 if [ "$PUBLISH_TEST_RESULTS" -eq 1 ]; then
-  npm run report:publish
+  # Accessibility profile publishes ./reports/ (WCAG findings) as the primary
+  # report instead of Allure, so skip the allure-generate step entirely.
+  if [ "${PROFILE:-e2e}" = "accessibility" ]; then
+    ./bin/publish-tests.sh
+  else
+    npm run report:publish
+  fi
   publish_exit_code=$?
   if [ $publish_exit_code -ne 0 ]; then
     echo "failed to publish test results (exit $publish_exit_code)" >&2
