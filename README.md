@@ -141,7 +141,7 @@ The container's flow (`entrypoint.sh`):
 2. If `PROFILE=security`, starts OWASP ZAP as a local daemon and exports `HTTP_PROXY` so Playwright routes browser traffic through it.
 3. Runs `npm test` (Playwright headless against the configured `baseURL`, with `testIgnore` driven by `PROFILE`).
 4. If `PROFILE=security`, optionally runs a ZAP active scan (when `ZAP_ACTIVE=1`), then fetches the HTML report to `./security-report/index.html` and shuts ZAP down.
-5. Publishes the run via `bin/publish-tests.sh` (see [Reporting](#reporting) for the per-profile layout): for `e2e` the root `index.html` is Allure directly; for `accessibility`/`security` it's a small landing page linking to both Allure and the profile-specific report under `allure-report/` and `accessibility-report/` or `security-report/`. `test-results/` (Playwright traces/screenshots) uploads alongside in every case.
+5. Publishes the run via `bin/publish-tests.sh` (see [Reporting](#reporting)): Allure goes to the S3 root for every profile (the Portal report link opens it directly), and accessibility/security profiles also upload their findings to `accessibility-report/` or `security-report/`. `test-results/` (Playwright traces/screenshots) uploads alongside in every case.
 6. Exits with Playwright's exit code so the portal shows pass/fail correctly. ZAP findings are report-only and do not affect the exit code.
 
 `baseURL` is built from the portal-injected `ENVIRONMENT` variable in `playwright.config.js`:
@@ -162,19 +162,21 @@ For PR-triggered runs from another service repo, see `run-journey-tests/action.y
 
 ## Reporting
 
-The Portal's "report" link always points at `$RESULTS_OUTPUT_S3_PATH/index.html`. For `e2e` runs that file is Allure directly. For `accessibility` and `security` runs it's a small landing page that links to both the Allure run summary and the profile-specific findings, so both reports are one click away:
+The CDP Portal's report viewer only renders the `index.html` at the run's S3 root, so Allure always lives there — that's what the Portal "report" link opens for every profile. Profile-specific reports sit at predictable sub-paths and are reachable from the Portal's "report folder contents" listing (or by knowing the URL).
 
-| `PROFILE`       | `index.html` at S3 root | Sub-paths                                                                                               |
-| --------------- | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `e2e` (default) | Allure                  | `test-results/`                                                                                         |
-| `accessibility` | Landing page            | `allure-report/index.html` (Allure), `accessibility-report/index.html` (WCAG findings), `test-results/` |
-| `security`      | Landing page            | `allure-report/index.html` (Allure), `security-report/index.html` (ZAP HTML), `test-results/`           |
+| `PROFILE`       | `$RESULTS_OUTPUT_S3_PATH/` root | Additional sub-paths                                                  |
+| --------------- | ------------------------------- | --------------------------------------------------------------------- |
+| `e2e` (default) | Allure                          | `test-results/` (Playwright traces, screenshots, videos)              |
+| `accessibility` | Allure                          | `accessibility-report/index.html` (WCAG findings) and `test-results/` |
+| `security`      | Allure                          | `security-report/index.html` (ZAP HTML) and `test-results/`           |
 
-The landing page is generated inline by `bin/publish-tests.sh:write_landing_page` — change the markup or links there.
+Sources:
 
-Source of the per-profile reports: Allure comes from `allure-results/` → `allure-report/` via `npm run report` (allure-commandline). WCAG findings come from `tests/accessibility-checking.js` writing `./reports/` during the test's `afterAll`. ZAP HTML comes from `entrypoint.sh:stop_zap` pulling `/OTHER/core/other/htmlreport/` from the ZAP API.
+- **Allure** — `allure-results/` (written by `allure-playwright` during the run) → `allure-report/` (via `npm run report`, allure-commandline).
+- **WCAG findings** — `tests/accessibility-checking.js` writes `./reports/` during the accessibility spec's `afterAll`.
+- **ZAP HTML** — `entrypoint.sh:stop_zap` pulls `/OTHER/core/other/htmlreport/` from the ZAP API at end of run.
 
-If the `security` ZAP report is missing (a `REPORT_MISSING` marker is left when the fetch fails), `publish-tests.sh` skips the landing page and promotes Allure's `index.html` to the root as a fallback — so the Portal "report" link always opens something usable, never a 404 or a broken landing-page link.
+If the `security` ZAP report is missing (a `REPORT_MISSING` marker is left when the fetch fails), `bin/publish-tests.sh` logs a warning and skips the S3 upload — Allure is still published so the run's pass/fail story is intact.
 
 ## Licence
 
