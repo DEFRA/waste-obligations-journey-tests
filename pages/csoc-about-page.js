@@ -6,7 +6,7 @@ export class CsocAboutPage extends BasePage {
   constructor(page) {
     super(page)
     this.heading = page.getByRole('heading', {
-      name: /About your certificate of compliance/i
+      name: /About your \d{4} certificate of compliance/i
     })
     this.continueButton = page.getByRole('button', { name: /^continue$/i })
     this.regulatorEmailLink = page.getByRole('link', { name: REGULATOR_EMAIL })
