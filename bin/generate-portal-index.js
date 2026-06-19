@@ -143,7 +143,7 @@ const html = `<!DOCTYPE html>
         </div>
 
         <div class="footer">
-            <p>Defra DDTS — Waste Obligations Journey Tests</p>
+            <p>DEFRA EPR - Waste Obligations Journey Tests</p>
         </div>
     </body>
 </html>

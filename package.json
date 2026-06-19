@@ -31,7 +31,7 @@
     "test:local:security": "PROFILE=security playwright test --config=playwright.local.config.js --headed",
     "install:browsers": "playwright install --with-deps chromium",
     "report": "allure generate allure-results --clean -o allure-report",
-    "report:publish": "npm run report; ./bin/publish-tests.sh",
+    "report:publish": "./bin/restore-allure-history.sh && npm run report && ./bin/publish-tests.sh",
     "portal:index": "node ./bin/generate-portal-index.js",
     "docker:test:local": "npm run create:folders && docker compose run --build --rm waste-obligations-journey-tests",
     "format": "prettier --write '{pages,tests,fixtures,auth,data}/**/*.js' '**/*.{js,md,json}'",
