@@ -23,6 +23,16 @@ if (!Object.hasOwn(PROFILE_IGNORE, PROFILE)) {
   )
 }
 
+// Per-profile project allowlist. Accessibility only needs one desktop + one
+// mobile chromium variant — WCAG findings don't differ across engines, and the
+// scan is slow, so running the full matrix wastes budget. Profiles not in this
+// map keep the full browser matrix.
+const PROFILE_PROJECTS = {
+  accessibility: ['setup', 'chrome-mac', 'chrome-android']
+}
+const projectAllowed = (name) =>
+  !PROFILE_PROJECTS[PROFILE] || PROFILE_PROJECTS[PROFILE].includes(name)
+
 // entrypoint.sh sets this to 1 for the second Playwright invocation of the
 // security profile — after auth.setup.js has already been run un-proxied. The
 // browser projects then skip the setup dependency so credentials never traverse
@@ -130,5 +140,5 @@ export default defineConfig({
       },
       dependencies: authSetupDeps
     }
-  ]
+  ].filter((project) => projectAllowed(project.name))
 })
