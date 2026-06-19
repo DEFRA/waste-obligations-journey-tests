@@ -1,6 +1,7 @@
 #!/bin/sh
 
 echo "run_id: $RUN_ID"
+echo "profile: ${PROFILE:-e2e}"
 
 npm test
 test_exit_code=$?

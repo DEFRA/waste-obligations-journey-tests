@@ -11,6 +11,17 @@ const proxy = process.env.HTTP_PROXY
 
 const AUTH_STATE = 'playwright/.auth/user.json'
 
+const PROFILE = process.env.PROFILE || 'e2e'
+const PROFILE_IGNORE = {
+  e2e: ['**/accessibility.spec.js'],
+  accessibility: ['**/csoc-submission.spec.js']
+}
+if (!Object.hasOwn(PROFILE_IGNORE, PROFILE)) {
+  throw new Error(
+    `Unknown PROFILE "${PROFILE}". Expected one of: ${Object.keys(PROFILE_IGNORE).join(', ')}`
+  )
+}
+
 const galaxyS23Ultra = {
   userAgent:
     'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 ' +
@@ -30,9 +41,9 @@ const iPhone15ProMax = {
 
 export default defineConfig({
   testDir: './tests',
-  // Accessibility specs are opt-in. Default runs (`npm test`, `npm run test:local`)
-  // skip them; the dedicated `test:*:accessibility` scripts set RUN_ACCESSIBILITY=1.
-  testIgnore: process.env.RUN_ACCESSIBILITY ? [] : ['**/accessibility.spec.js'],
+  // PROFILE selects which suite runs. Unset defaults to `e2e` (back-compat with
+  // `npm test`); the CDP Portal injects PROFILE per run. Unknown values throw above.
+  testIgnore: PROFILE_IGNORE[PROFILE],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

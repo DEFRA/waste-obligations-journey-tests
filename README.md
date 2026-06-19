@@ -6,6 +6,7 @@ End-to-end Playwright tests for the EPR waste obligations CSOC submission journe
   - [Requirements](#requirements)
   - [Setup](#setup)
   - [Running locally](#running-locally)
+  - [Profiles](#profiles)
   - [Debugging locally](#debugging-locally)
   - [Running locally in Docker](#running-locally-in-docker)
 - [Production (CDP Portal)](#production-cdp-portal)
@@ -63,6 +64,26 @@ Open the most recent Allure report after a run:
 npm run report
 ```
 
+### Profiles
+
+The suite runs one profile at a time, selected by the `PROFILE` env var. The CDP Portal injects this from the **Profile** field on the test-suite run page; locally you set it yourself.
+
+| `PROFILE`       | Specs run                       |
+| --------------- | ------------------------------- |
+| `e2e` (default) | `tests/csoc-submission.spec.js` |
+| `accessibility` | `tests/accessibility.spec.js`   |
+
+Unset → `e2e` (so `npm test` and `npm run test:local` keep working as before). Any other value throws at config load and names the valid options.
+
+Convenience scripts:
+
+```bash
+npm run test:e2e                 # PROFILE=e2e (headless, CDP config)
+npm run test:accessibility       # PROFILE=accessibility (headless, CDP config)
+npm run test:local:e2e           # PROFILE=e2e (headed, local config)
+npm run test:local:accessibility # PROFILE=accessibility (headed, local config)
+```
+
 ### Debugging locally
 
 Step through tests in the Playwright Inspector:
@@ -93,9 +114,10 @@ Tests run from the CDP Portal under **Test Suites**. Each push to `main` builds 
 
 The container's flow (`entrypoint.sh`):
 
-1. Runs `npm test` (Playwright headless against the configured `baseURL`).
-2. Runs `npm run report:publish`, which generates `allure-report/` and uploads it to S3 via `bin/publish-tests.sh`.
-3. Exits with Playwright's exit code so the portal shows pass/fail correctly.
+1. Logs the portal-injected `RUN_ID` and resolved `PROFILE` (defaults to `e2e`) so the run is traceable in the container logs.
+2. Runs `npm test` (Playwright headless against the configured `baseURL`, with `testIgnore` driven by `PROFILE`).
+3. Runs `npm run report:publish`, which generates `allure-report/` and uploads it to S3 via `bin/publish-tests.sh`.
+4. Exits with Playwright's exit code so the portal shows pass/fail correctly.
 
 `baseURL` is built from the portal-injected `ENVIRONMENT` variable in `playwright.config.js`:
 

@@ -14,6 +14,7 @@ services:
     platform: linux/amd64
     environment:
       PUBLISH_TEST_RESULTS: 0
+      PROFILE: ${PROFILE:-e2e}
     volumes:
       - ./allure-results:/app/allure-results
       - ./allure-report:/app/allure-report
