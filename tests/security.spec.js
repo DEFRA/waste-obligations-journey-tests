@@ -12,12 +12,14 @@ import {
 // Single worker owns the org's declaration state across submit → cancel.
 test.describe.configure({ mode: 'serial' })
 
-// All authenticated pages of the application live on the same host. After every
-// navigation we re-assert we're still on it: a silent 302 to b2clogin or an
-// error page would otherwise be invisible (the only thing this spec relies on
-// is page-object `expectLoaded` checks, which can pass on heading-like elements
-// of an error page).
-const APP_HOST = /rwd-.*\.azure\.defra\.cloud/
+// All authenticated pages of the application live somewhere under the DEFRA
+// estate (rwd-*.azure.defra.cloud locally / on the tst environment, and
+// *.cdp-int.defra.cloud once you're inside CDP after the post-auth redirect).
+// After every navigation we re-assert we're still under defra.cloud: a silent
+// 302 to b2clogin or microsoftonline would otherwise be invisible, since the
+// page-object `expectLoaded` checks can pass on heading-like elements of an
+// error page.
+const APP_HOST = /\.defra\.cloud/
 
 test.describe('Security scan — CSOC journey', () => {
   test.beforeAll(resetOrgDeclarations)
@@ -97,7 +99,7 @@ test.describe('Security scan — CSOC journey', () => {
       )
       await obligationsPage.goto()
       await obligationsPage.expectResubmitCardVisible()
-      await expect(page).toHaveURL(/manage-your-recycling-obligations/)
+      await expect(page).toHaveURL(APP_HOST)
     })
   })
 })

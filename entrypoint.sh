@@ -186,13 +186,11 @@ fi
 PUBLISH_TEST_RESULTS=${PUBLISH_TEST_RESULTS:-1}
 
 if [ "$PUBLISH_TEST_RESULTS" -eq 1 ]; then
-  # Accessibility profile publishes ./reports/ (WCAG findings) as the primary
-  # report instead of Allure, so skip the allure-generate step entirely.
-  if [ "${PROFILE:-e2e}" = "accessibility" ]; then
-    ./bin/publish-tests.sh
-  else
-    npm run report:publish
-  fi
+  # Every profile needs Allure (run summary) generated; bin/publish-tests.sh
+  # decides what goes where on S3 and writes a landing index.html for the
+  # accessibility/security profiles that links to both Allure and the
+  # profile-specific report.
+  npm run report:publish
   publish_exit_code=$?
   if [ $publish_exit_code -ne 0 ]; then
     echo "failed to publish test results (exit $publish_exit_code)" >&2
