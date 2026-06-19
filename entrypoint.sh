@@ -24,10 +24,11 @@ target_base_url() {
 start_zap() {
   echo "starting ZAP daemon on ${ZAP_BASE}"
   mkdir -p security-report
-  # -host 127.0.0.1 restricts the listening interface to loopback, which is why
-  # api.disablekey=true is acceptable inside this container — nothing off-host
-  # can reach the unauthenticated control API.
-  zap.sh -daemon -host 127.0.0.1 -port "$ZAP_PORT" \
+  # -host 127.0.0.1 keeps the API on loopback (why api.disablekey=true is safe).
+  # -silent suppresses the boot-time add-on update check; CDP egress routes
+  # through localhost:3128 which ZAP doesn't know about, so otherwise that
+  # check stalls well past our readiness window.
+  zap.sh -daemon -silent -host 127.0.0.1 -port "$ZAP_PORT" \
     -config api.disablekey=true \
     > "$ZAP_LOG" 2>&1 &
   ZAP_PID=$!
@@ -38,10 +39,11 @@ start_zap() {
       echo "ZAP daemon up (pid $ZAP_PID)"
       return 0
     fi
-    sleep 1
+    sleep 3
     i=$((i + 1))
   done
-  echo "ZAP failed to start within 60s; see $ZAP_LOG" >&2
+  echo "ZAP failed to start within 180s; tail of $ZAP_LOG follows:" >&2
+  tail -n 100 "$ZAP_LOG" >&2 || true
   return 1
 }
 
