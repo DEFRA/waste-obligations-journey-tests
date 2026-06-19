@@ -72,6 +72,7 @@ The suite runs one profile at a time, selected by the `PROFILE` env var. The CDP
 | --------------- | ------------------------------- |
 | `e2e` (default) | `tests/csoc-submission.spec.js` |
 | `accessibility` | `tests/accessibility.spec.js`   |
+| `security`      | `tests/security.spec.js`        |
 
 Unset → `e2e` (so `npm test` and `npm run test:local` keep working as before). Any other value throws at config load and names the valid options.
 
@@ -80,9 +81,31 @@ Convenience scripts:
 ```bash
 npm run test:e2e                 # PROFILE=e2e (headless, CDP config)
 npm run test:accessibility       # PROFILE=accessibility (headless, CDP config)
+npm run test:security            # PROFILE=security (headless, CDP config)
 npm run test:local:e2e           # PROFILE=e2e (headed, local config)
 npm run test:local:accessibility # PROFILE=accessibility (headed, local config)
+npm run test:local:security      # PROFILE=security (headed, local config)
 ```
+
+#### Security profile (OWASP ZAP)
+
+`PROFILE=security` walks the same CSOC journey as the other profiles but through an OWASP ZAP daemon that runs **inside the test container** — no extra services to spin up. `entrypoint.sh` starts ZAP, points Playwright at it via `HTTP_PROXY`, and after the journey writes an HTML report to `./security-report/index.html`.
+
+Findings are **report-only**: ZAP alerts never fail the suite, only the journey itself does.
+
+| Env var      | Effect                                                                                                               |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `ZAP_ACTIVE` | Set to `1` to run a ZAP active scan against in-scope URLs after the journey. Default = passive (baseline) scan only. |
+
+Run an active scan locally:
+
+```bash
+ZAP_ACTIVE=1 PROFILE=security npm run docker:test:local
+```
+
+Active scans send attack payloads at the target environment — only enable against shared envs (`tst1`/`dev9`) after the security team has signed off.
+
+**Local outside Docker:** `npm run test:local:security` does NOT start ZAP — it just runs the security spec as a plain headed Playwright run (useful for iterating on the journey itself). Use `npm run docker:test:local` whenever you need real ZAP coverage; the entrypoint inside the container does the orchestration.
 
 ### Debugging locally
 
@@ -115,9 +138,11 @@ Tests run from the CDP Portal under **Test Suites**. Each push to `main` builds 
 The container's flow (`entrypoint.sh`):
 
 1. Logs the portal-injected `RUN_ID` and resolved `PROFILE` (defaults to `e2e`) so the run is traceable in the container logs.
-2. Runs `npm test` (Playwright headless against the configured `baseURL`, with `testIgnore` driven by `PROFILE`).
-3. Runs `npm run report:publish`, which generates `allure-report/` and uploads it to S3 via `bin/publish-tests.sh`.
-4. Exits with Playwright's exit code so the portal shows pass/fail correctly.
+2. If `PROFILE=security`, starts OWASP ZAP as a local daemon and exports `HTTP_PROXY` so Playwright routes browser traffic through it.
+3. Runs `npm test` (Playwright headless against the configured `baseURL`, with `testIgnore` driven by `PROFILE`).
+4. If `PROFILE=security`, optionally runs a ZAP active scan (when `ZAP_ACTIVE=1`), then fetches the HTML report to `./security-report/index.html` and shuts ZAP down.
+5. Runs `npm run report:publish`, which generates `allure-report/` and uploads it to S3 via `bin/publish-tests.sh`. The same script also uploads `security-report/` to `$RESULTS_OUTPUT_S3_PATH/security-report/` when present.
+6. Exits with Playwright's exit code so the portal shows pass/fail correctly. ZAP findings are report-only and do not affect the exit code.
 
 `baseURL` is built from the portal-injected `ENVIRONMENT` variable in `playwright.config.js`:
 

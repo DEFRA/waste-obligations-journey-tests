@@ -10,6 +10,7 @@ RUN apt-get update -qq \
         zip \
         unzip \
         ca-certificates \
+        jq \
         openjdk-17-jre-headless
 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
@@ -18,6 +19,14 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     && rm -rf awscliv2.zip aws \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# OWASP ZAP for the `security` profile. Pinned so image builds are reproducible.
+ENV ZAP_VERSION=2.16.1
+RUN curl -fsSL "https://github.com/zaproxy/zaproxy/releases/download/v${ZAP_VERSION}/ZAP_${ZAP_VERSION}_Linux.tar.gz" -o /tmp/zap.tar.gz \
+    && mkdir -p /opt/zap \
+    && tar -xzf /tmp/zap.tar.gz -C /opt/zap --strip-components=1 \
+    && rm /tmp/zap.tar.gz \
+    && ln -s /opt/zap/zap.sh /usr/local/bin/zap.sh
 
 WORKDIR /app
 

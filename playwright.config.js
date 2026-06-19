@@ -13,14 +13,22 @@ const AUTH_STATE = 'playwright/.auth/user.json'
 
 const PROFILE = process.env.PROFILE || 'e2e'
 const PROFILE_IGNORE = {
-  e2e: ['**/accessibility.spec.js'],
-  accessibility: ['**/csoc-submission.spec.js']
+  e2e: ['**/accessibility.spec.js', '**/security.spec.js'],
+  accessibility: ['**/csoc-submission.spec.js', '**/security.spec.js'],
+  security: ['**/csoc-submission.spec.js', '**/accessibility.spec.js']
 }
 if (!Object.hasOwn(PROFILE_IGNORE, PROFILE)) {
   throw new Error(
     `Unknown PROFILE "${PROFILE}". Expected one of: ${Object.keys(PROFILE_IGNORE).join(', ')}`
   )
 }
+
+// entrypoint.sh sets this to 1 for the second Playwright invocation of the
+// security profile — after auth.setup.js has already been run un-proxied. The
+// browser projects then skip the setup dependency so credentials never traverse
+// the ZAP proxy on the way to Azure B2C.
+const SKIP_AUTH_SETUP = process.env.SKIP_AUTH_SETUP === '1'
+const authSetupDeps = SKIP_AUTH_SETUP ? [] : ['setup']
 
 const galaxyS23Ultra = {
   userAgent:
@@ -78,7 +86,7 @@ export default defineConfig({
         channel: 'chrome',
         storageState: AUTH_STATE
       },
-      dependencies: ['setup']
+      dependencies: authSetupDeps
     },
     {
       name: 'chrome-windows',
@@ -87,7 +95,7 @@ export default defineConfig({
         channel: 'chrome',
         storageState: AUTH_STATE
       },
-      dependencies: ['setup']
+      dependencies: authSetupDeps
     },
     {
       name: 'edge-windows',
@@ -96,7 +104,7 @@ export default defineConfig({
         channel: 'msedge',
         storageState: AUTH_STATE
       },
-      dependencies: ['setup']
+      dependencies: authSetupDeps
     },
     {
       name: 'safari-mac',
@@ -104,7 +112,7 @@ export default defineConfig({
         ...devices['Desktop Safari'],
         storageState: AUTH_STATE
       },
-      dependencies: ['setup']
+      dependencies: authSetupDeps
     },
     {
       name: 'chrome-android',
@@ -112,7 +120,7 @@ export default defineConfig({
         ...galaxyS23Ultra,
         storageState: AUTH_STATE
       },
-      dependencies: ['setup']
+      dependencies: authSetupDeps
     },
     {
       name: 'safari-ios',
@@ -120,7 +128,7 @@ export default defineConfig({
         ...iPhone15ProMax,
         storageState: AUTH_STATE
       },
-      dependencies: ['setup']
+      dependencies: authSetupDeps
     }
   ]
 })

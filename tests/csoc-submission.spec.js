@@ -1,37 +1,16 @@
-import { request as apiRequest } from '@playwright/test'
 import { test, expect } from '../fixtures/pages.fixture.js'
 import { DECLARATION_STATUS, TEST_USER_NAME } from '../data/csoc.data.js'
 import {
-  deleteAllDeclarations,
   getOrgId,
   listDeclarations,
   setDeclarationStatus
 } from '../utils/waste-obligations-api.js'
+import { resetOrgDeclarations } from '../utils/test-setup.js'
 
 // Shared backend org: keep serial so a single worker owns the lifecycle state.
 // Declaration status is not asserted in the UI; the audit trail (see
 // expectAuditEntry) is the authoritative state-change check.
 test.describe.configure({ mode: 'serial' })
-
-async function resetOrgDeclarations() {
-  const apiContext = await apiRequest.newContext({ ignoreHTTPSErrors: true })
-  let primaryError
-  try {
-    await deleteAllDeclarations(
-      apiContext,
-      getOrgId(),
-      new Date().getFullYear()
-    )
-  } catch (error) {
-    primaryError = error
-  }
-  try {
-    await apiContext.dispose()
-  } catch (disposeError) {
-    if (!primaryError) primaryError = disposeError
-  }
-  if (primaryError) throw primaryError
-}
 
 test.describe('CSOC lifecycle journey', () => {
   test.beforeAll(resetOrgDeclarations)
