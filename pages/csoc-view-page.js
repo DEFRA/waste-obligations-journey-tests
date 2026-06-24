@@ -10,7 +10,7 @@ export class CsocViewPage extends BasePage {
   }
 
   async expectLoaded(year) {
-    await expect(this.page).toHaveURL(/\/certificate\/view(\?|$)/)
+    await expect(this.page).toHaveURL(/\/certificate\/[a-f0-9]{24}(?:\?|$)/)
     await expect(this.headingFor(year)).toBeVisible()
   }
 
