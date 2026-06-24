@@ -31,6 +31,7 @@ export function getJourneyAuthHeader() {
 
 export function getSubmitterUser() {
   return {
+    name: 'Journey-test submitter',
     id: requireEnv('WASTE_OBLIGATION_SUBMITTER_ID'),
     email: requireEnv('WASTE_OBLIGATION_SUBMITTER_EMAIL')
   }
