@@ -15,7 +15,7 @@ test.describe.configure({ mode: 'serial' })
 test.describe('CSOC lifecycle journey', () => {
   test.beforeAll(resetOrgDeclarations)
 
-  test('Submit → view → accept → cancel → resubmit lifecycle', async ({
+  test('Submit → cancel → resubmit → accept lifecycle', async ({
     request,
     landingPage,
     obligationsPage,
@@ -80,32 +80,19 @@ test.describe('CSOC lifecycle journey', () => {
       await csocViewPage.expectLoaded(year)
     }
 
-    await test.step('Scenario 1: submit a declaration via the UI', async () => {
+    await test.step('Scenario 1: submit declaration A via the UI', async () => {
       firstId = await submitCsoc()
     })
 
-    await test.step('Scenario 2: view declaration; audit records Submitted', async () => {
+    await test.step('Scenario 2: view declaration A; audit records Submitted', async () => {
       await viewCsocViaUi()
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Submitted })
     })
 
-    // await test.step('Scenario 3: PATCH status to Accepted', async () => {
-    //   await setDeclarationStatus(
-    //     request,
-    //     orgId,
-    //     firstId,
-    //     DECLARATION_STATUS.Accepted
-    //   )
-    // })
-    //
-    // await test.step('Scenario 4: view declaration; audit reflects Accepted', async () => {
-    //   await viewCsocViaUi()
-    //   await csocViewPage.expectOrgIdentity()
-    //   await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Accepted })
-    // })
-
-    await test.step('Scenario 5: PATCH status to Cancelled', async () => {
+    // Backend only permits Submitted → Cancelled (Accepted is terminal), so
+    // Cancel must run before the Accept further down this lifecycle.
+    await test.step('Scenario 3: PATCH declaration A to Cancelled', async () => {
       await setDeclarationStatus(
         request,
         orgId,
@@ -115,7 +102,7 @@ test.describe('CSOC lifecycle journey', () => {
       )
     })
 
-    await test.step('Scenario 6: obligations page shows resubmit; audit reflects Cancelled with reason', async () => {
+    await test.step('Scenario 4: obligations page shows resubmit; audit reflects Cancelled with reason', async () => {
       await obligationsPage.goto()
       await obligationsPage.expectResubmitCardVisible()
       await expectAuditEntry(firstId, {
@@ -124,7 +111,7 @@ test.describe('CSOC lifecycle journey', () => {
       })
     })
 
-    await test.step('Scenario 7: resubmit a declaration via the UI', async () => {
+    await test.step('Scenario 5: resubmit declaration B via the UI', async () => {
       secondId = await submitCsoc()
       expect(secondId).not.toBe(firstId)
       const declarations = await listDeclarations(request, orgId, year)
@@ -142,10 +129,25 @@ test.describe('CSOC lifecycle journey', () => {
       )
     })
 
-    await test.step('Scenario 8: view resubmitted declaration; audit records Submitted', async () => {
+    await test.step('Scenario 6: view declaration B; audit records Submitted', async () => {
       await viewCsocViaUi()
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(secondId, { action: DECLARATION_STATUS.Submitted })
+    })
+
+    await test.step('Scenario 7: PATCH declaration B to Accepted', async () => {
+      await setDeclarationStatus(
+        request,
+        orgId,
+        secondId,
+        DECLARATION_STATUS.Accepted
+      )
+    })
+
+    await test.step('Scenario 8: view declaration B; audit reflects Accepted', async () => {
+      await viewCsocViaUi()
+      await csocViewPage.expectOrgIdentity()
+      await expectAuditEntry(secondId, { action: DECLARATION_STATUS.Accepted })
     })
   })
 })
