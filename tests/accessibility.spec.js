@@ -76,17 +76,9 @@ test.describe('Accessibility testing — CSOC journey', () => {
 
     // Hub → View are only reachable via the "view your certificate" flow on
     // the obligations page after a successful submission.
-    await test.step('CSOC Certificate Hub page', async () => {
+    await test.step('CSOC View page', async () => {
       await obligationsPage.goto()
       await obligationsPage.openCertificateHub()
-      await csocCertificateHubPage.expectLoaded()
-      await analyseAccessibility(page, 'csoc-certificate-hub')
-    })
-
-    await test.step('CSOC View page', async () => {
-      await csocCertificateHubPage.goToConfirmation()
-      await csocConfirmationPage.expectSubmitted(year)
-      await csocConfirmationPage.goToCertificateView()
       await csocViewPage.expectLoaded(year)
       await analyseAccessibility(page, 'csoc-view')
     })

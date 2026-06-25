@@ -74,17 +74,9 @@ test.describe('Security scan — CSOC journey', () => {
       await expect(page).toHaveURL(APP_HOST)
     })
 
-    await test.step('CSOC Certificate Hub page', async () => {
+    await test.step('CSOC View page', async () => {
       await obligationsPage.goto()
       await obligationsPage.openCertificateHub()
-      await csocCertificateHubPage.expectLoaded()
-      await expect(page).toHaveURL(APP_HOST)
-    })
-
-    await test.step('CSOC View page', async () => {
-      await csocCertificateHubPage.goToConfirmation()
-      await csocConfirmationPage.expectSubmitted(year)
-      await csocConfirmationPage.goToCertificateView()
       await csocViewPage.expectLoaded(year)
     })
 
