@@ -2,9 +2,11 @@ import 'dotenv/config'
 import { defineConfig, devices } from '@playwright/test'
 
 const baseURL =
-  process.env.ENVIRONMENT === 'dev'
-    ? 'https://rwd-dev9.azure.defra.cloud'
-    : 'https://rwd-tst1.azure.defra.cloud'
+  process.env.ENVIRONMENT === 'local'
+    ? 'https://localhost:7084'
+    : process.env.ENVIRONMENT === 'dev'
+      ? 'https://rwd-dev9.azure.defra.cloud'
+      : 'https://rwd-tst1.azure.defra.cloud'
 const proxy = process.env.HTTP_PROXY
   ? { server: process.env.HTTP_PROXY }
   : undefined

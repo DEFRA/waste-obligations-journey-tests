@@ -98,6 +98,32 @@ function buildPerPageSummary() {
   })
 }
 
+export function assertNoAccessibilityIssues() {
+  const summary = buildPerPageSummary()
+  const totals = summary.reduce(
+    (acc, p) => ({
+      critical: acc.critical + p.critical,
+      medium: acc.medium + p.medium
+    }),
+    { critical: 0, medium: 0 }
+  )
+  if (totals.critical === 0 && totals.medium === 0) return
+
+  const offending = summary
+    .filter((p) => p.critical > 0 || p.medium > 0)
+    .map(
+      (p) =>
+        `  - ${p.pageTitle || p.url}: ${p.critical} critical, ${p.medium} medium`
+    )
+    .join('\n')
+
+  throw new Error(
+    `Accessibility violations: ${totals.critical} critical, ${totals.medium} medium ` +
+      `(policy: 0 critical and 0 medium).\nPages with issues:\n${offending}\n` +
+      `See ./reports/index.html for full detail.`
+  )
+}
+
 const escapeHtml = (value) =>
   String(value).replace(
     /[&<>"']/g,

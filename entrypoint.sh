@@ -125,6 +125,32 @@ run_active_scan() {
   : > security-report/SCAN_INCOMPLETE
 }
 
+# Query ZAP for alert counts on our target host (third-party hosts are already
+# excluded from the proxy). Fails the run when any High or Medium alert exists
+# — mirrors the accessibility gate (0 Critical / 0 Medium). Must run before
+# stop_zap shuts the daemon down.
+check_zap_alerts() {
+  base=$(target_base_url)
+  resp=$(curl -sf --get \
+    --data-urlencode "baseurl=${base}" \
+    "${ZAP_BASE}/JSON/alert/view/alertsSummary/")
+  if [ -z "$resp" ]; then
+    echo "ERROR: could not fetch ZAP alert summary" >&2
+    return 1
+  fi
+  high=$(printf '%s' "$resp" | jq -r '.alertsSummary.High // "0"')
+  medium=$(printf '%s' "$resp" | jq -r '.alertsSummary.Medium // "0"')
+  low=$(printf '%s' "$resp" | jq -r '.alertsSummary.Low // "0"')
+  info=$(printf '%s' "$resp" | jq -r '.alertsSummary.Informational // "0"')
+  echo "ZAP alerts — High: ${high}, Medium: ${medium}, Low: ${low}, Informational: ${info}"
+  if [ "$high" -gt 0 ] || [ "$medium" -gt 0 ]; then
+    echo "ERROR: security scan failed — ${high} High and ${medium} Medium alerts found (policy: 0 High, 0 Medium)" >&2
+    echo "See security-report/index.html for full detail" >&2
+    return 1
+  fi
+  return 0
+}
+
 stop_zap() {
   if [ -z "${ZAP_PID:-}" ]; then
     return 0
@@ -176,6 +202,8 @@ if [ "${PROFILE:-e2e}" = "security" ]; then
   if [ "${ZAP_ACTIVE:-0}" = "1" ]; then
     run_active_scan
   fi
+  check_zap_alerts
+  zap_alert_exit=$?
   stop_zap
 else
   npm test
@@ -201,6 +229,12 @@ fi
 if [ $test_exit_code -ne 0 ]; then
   echo "test suite failed (exit $test_exit_code)" >&2
   exit $test_exit_code
+fi
+
+# Security profile additionally fails when ZAP reported Medium-or-higher alerts.
+if [ "${zap_alert_exit:-0}" -ne 0 ]; then
+  echo "security scan failed (Medium or higher alerts present)" >&2
+  exit 4
 fi
 
 # Allow an explicit FAILED marker to override (matches CDP template convention).

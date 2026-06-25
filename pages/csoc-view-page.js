@@ -1,6 +1,5 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
-import { EXPECTED_ORG } from '../data/csoc.data.js'
 
 export class CsocViewPage extends BasePage {
   headingFor(year) {
@@ -15,7 +14,9 @@ export class CsocViewPage extends BasePage {
   }
 
   async expectOrgIdentity() {
-    await expect(this.page.getByText(EXPECTED_ORG.name).first()).toBeVisible()
-    await expect(this.page.getByText(EXPECTED_ORG.id).first()).toBeVisible()
+    await this.expectFieldPopulated('Organisation name')
+    // Org IDs are short numeric strings in some envs and longer GUIDs in
+    // others, so the > 10-char rule doesn't apply — just assert non-empty.
+    await this.expectFieldPopulated('Organisation ID', 0)
   }
 }

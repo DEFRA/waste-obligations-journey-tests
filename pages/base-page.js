@@ -17,6 +17,32 @@ export class BasePage {
     await this.page.getByRole(role, { name }).click()
   }
 
+  // Env-agnostic populated-field check for GDS summary lists: locate the
+  // `<dd>` paired with a `<dt>` of the given label and assert its trimmed
+  // text exceeds `minLength`. Used in place of equality checks against
+  // env-seeded org names / addresses / regulators / emails.
+  async expectFieldPopulated(label, minLength = 10) {
+    const value = this.page.locator(
+      `xpath=//dt[normalize-space()=${JSON.stringify(label)}]/following-sibling::dd[1]`
+    )
+    await expect(value).toBeVisible()
+    const text = (await value.innerText()).trim()
+    expect(
+      text.length,
+      `expected "${label}" value to be > ${minLength} chars (got "${text}")`
+    ).toBeGreaterThan(minLength)
+  }
+
+  async expectMailtoLinkPopulated(minLength = 10) {
+    const link = this.page.locator('a[href^="mailto:"]').first()
+    await expect(link).toBeVisible()
+    const text = (await link.innerText()).trim()
+    expect(
+      text.length,
+      `expected mailto link text to be > ${minLength} chars (got "${text}")`
+    ).toBeGreaterThan(minLength)
+  }
+
   async readGovukTable(tableLocator) {
     const readVisibleText = (locator) =>
       locator.evaluateAll((nodes) =>

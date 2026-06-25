@@ -2,6 +2,9 @@ import { DECLARATION_STATUS } from '../data/csoc.data.js'
 import { requireEnv } from './env.js'
 
 export function getBackendBaseUrl() {
+  if (process.env.ENVIRONMENT === 'local') {
+    return 'http://localhost:8007'
+  }
   const env = process.env.ENVIRONMENT === 'dev' ? 'dev' : 'tst'
   return `https://waste-obligations.${env}.cdp-int.defra.cloud`
 }

@@ -1,6 +1,5 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
-import { REGULATOR_EMAIL } from '../data/csoc.data.js'
 
 export class CsocAboutPage extends BasePage {
   constructor(page) {
@@ -9,7 +8,6 @@ export class CsocAboutPage extends BasePage {
       name: /About your \d{4} certificate of compliance/i
     })
     this.continueButton = page.getByRole('button', { name: /^continue$/i })
-    this.regulatorEmailLink = page.getByRole('link', { name: REGULATOR_EMAIL })
   }
 
   async expectLoaded() {
@@ -17,7 +15,7 @@ export class CsocAboutPage extends BasePage {
   }
 
   async expectRegulatorEmail() {
-    await expect(this.regulatorEmailLink.first()).toBeVisible()
+    await this.expectMailtoLinkPopulated()
   }
 
   async clickContinue() {

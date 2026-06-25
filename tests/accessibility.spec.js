@@ -12,7 +12,8 @@ import {
   initialiseAccessibilityChecking,
   analyseAccessibility,
   generateAccessibilityReports,
-  generateAccessibilityReportIndex
+  generateAccessibilityReportIndex,
+  assertNoAccessibilityIssues
 } from './accessibility-checking.js'
 
 // Shared backend org: keep serial so a single worker owns the lifecycle state
@@ -97,6 +98,10 @@ test.describe('Accessibility testing — CSOC journey', () => {
       await obligationsPage.goto()
       await obligationsPage.expectResubmitCardVisible()
       await analyseAccessibility(page, 'obligations-resubmit')
+    })
+
+    await test.step('Assert no accessibility issues', () => {
+      assertNoAccessibilityIssues()
     })
   })
 })

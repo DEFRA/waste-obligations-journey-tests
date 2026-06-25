@@ -1,10 +1,6 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
-import {
-  EXPECTED_ORG,
-  REGULATOR_EMAIL,
-  OBLIGATIONS_MET_STATUS
-} from '../data/csoc.data.js'
+import { OBLIGATIONS_MET_STATUS } from '../data/csoc.data.js'
 
 export class CsocSubmissionPage extends BasePage {
   constructor(page) {
@@ -16,7 +12,6 @@ export class CsocSubmissionPage extends BasePage {
     this.confirmAndSubmitButton = page.getByRole('button', {
       name: /confirm and submit/i
     })
-    this.regulatorEmail = page.getByText(REGULATOR_EMAIL)
     this.obligationsMetStatus = page.getByText(OBLIGATIONS_MET_STATUS)
     // Filter by a cell's data-header attribute rather than `getByRole('columnheader')`:
     // the responsive-table CSS hides <thead> on mobile, removing th columnheader roles.
@@ -33,12 +28,10 @@ export class CsocSubmissionPage extends BasePage {
   }
 
   async expectOrganisationDetails() {
-    await expect(this.page.getByText(EXPECTED_ORG.name).first()).toBeVisible()
-    await expect(this.page.getByText(EXPECTED_ORG.address)).toBeVisible()
-    await expect(
-      this.page.getByText(EXPECTED_ORG.regulator).first()
-    ).toBeVisible()
-    await expect(this.regulatorEmail.first()).toBeVisible()
+    await this.expectFieldPopulated('Organisation name')
+    await this.expectFieldPopulated('Address')
+    await this.expectFieldPopulated('Regulator')
+    await this.expectMailtoLinkPopulated()
   }
 
   async expectObligationsMet() {
