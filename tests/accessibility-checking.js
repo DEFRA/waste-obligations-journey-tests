@@ -1,66 +1,36 @@
-import * as wcagChecker from '../dist/wcagchecker.js'
+import AxeBuilder from '@axe-core/playwright'
 import fs from 'fs'
 import path from 'path'
 
 const reportDirectory = path.join('./reports')
 
-// `dist/wcagchecker.js` was bundled for WebdriverIO and expects a driver with
-// WdIO-shaped methods. Wrap a Playwright `page` so the same lib can be used
-// from this Playwright suite without modifying the bundle.
-function asWdioDriver(page) {
-  return {
-    getUrl: async () => page.url(),
-    getTitle: async () => page.title(),
-    // Playwright has no per-script timeout; rely on the surrounding test timeout.
-    setTimeout: async () => {},
-    execute: async (script, ...args) => {
-      if (typeof script === 'string') {
-        // WdIO treats the string as a function body (so `return` works).
-        // Wrap in an IIFE so Playwright can evaluate it as an expression.
-        return page.evaluate(`(function () { ${script} })()`)
-      }
-      return page.evaluate(script, ...args)
-    },
-    executeAsync: async (fn, ...args) => {
-      return page.evaluate(
-        ({ fnSource, evalArgs }) => {
-          // eslint-disable-next-line no-new-func
-          const userFn = new Function(`return (${fnSource})`)()
-          return new Promise((resolve) => userFn(...evalArgs, resolve))
-        },
-        { fnSource: fn.toString(), evalArgs: args }
-      )
-    }
-  }
-}
+// Per-scan results captured during the journey. Reset by
+// initialiseAccessibilityChecking() and consumed by the report / assert
+// helpers below — no global state survives between test runs.
+let scans = []
 
 export async function initialiseAccessibilityChecking() {
   if (!fs.existsSync(reportDirectory)) {
     fs.mkdirSync(reportDirectory, { recursive: true })
   }
-
-  await wcagChecker.init()
+  scans = []
 }
 
 export async function analyseAccessibility(page, suffix) {
-  await wcagChecker.analyse(asWdioDriver(page), suffix)
+  const results = await new AxeBuilder({ page }).analyze()
+  scans.push({
+    suffix,
+    url: page.url(),
+    pageTitle: await page.title(),
+    violations: results.violations
+  })
 }
 
 export function generateAccessibilityReports(filePrefix) {
-  const categoryReport = wcagChecker.getHtmlReportByCategory()
-  const guidelineReport = wcagChecker.getHtmlReportByGuideLine()
-
-  if (categoryReport && categoryReport.length > 0) {
+  for (const scan of scans) {
     fs.writeFileSync(
-      path.join(reportDirectory, `${filePrefix}-accessibility-category.html`),
-      categoryReport
-    )
-  }
-
-  if (guidelineReport && guidelineReport.length > 0) {
-    fs.writeFileSync(
-      path.join(reportDirectory, `${filePrefix}-accessibility-guideline.html`),
-      guidelineReport
+      path.join(reportDirectory, `${scan.suffix}-accessibility.html`),
+      renderScanHtml(scan)
     )
   }
 
@@ -73,27 +43,15 @@ export function generateAccessibilityReports(filePrefix) {
   }
 }
 
-// The bundled report's "Low Impacts" column is unreliable — the vendored
-// dist/wcagchecker.js renders it as a clean-element count, not a count of
-// minor axe violations, and the bundle can't be patched from here. We
-// deliberately do not surface a Low number in the custom totals or per-page
-// table; mirrors the release-tests project, which only summarises Critical
-// and Medium for the same reason.
 function buildPerPageSummary() {
-  const stats = wcagChecker.deserializedStatistics()
-  const axe = wcagChecker.deserializedAxeResults()
-  const records = wcagChecker.deserializedWaveResults().concat(axe)
-  return stats.map((s) => {
-    const forPage = records.filter((r) => r.URL === s.URL)
-    const countOf = (type) => forPage.filter((r) => r.Type === type).length
-    const error = parseInt(s.Error, 10) || 0
-    const contrast = parseInt(s.Contrast, 10) || 0
-    const alert = parseInt(s.Alert, 10) || 0
+  return scans.map((scan) => {
+    const count = (impacts) =>
+      scan.violations.filter((v) => impacts.includes(v.impact)).length
     return {
-      url: s.URL,
-      pageTitle: s.PageTitle,
-      critical: error + contrast + countOf('critical') + countOf('serious'),
-      medium: alert + countOf('moderate')
+      url: scan.url,
+      pageTitle: scan.pageTitle,
+      critical: count(['critical', 'serious']),
+      medium: count(['moderate'])
     }
   })
 }
@@ -136,6 +94,92 @@ const escapeHtml = (value) =>
         "'": '&#39;'
       })[c]
   )
+
+const IMPACT_ORDER = ['critical', 'serious', 'moderate', 'minor']
+const IMPACT_LABEL = {
+  critical: 'Critical',
+  serious: 'Serious',
+  moderate: 'Moderate',
+  minor: 'Minor'
+}
+const IMPACT_COLOUR = {
+  critical: '#d4351c',
+  serious: '#d4351c',
+  moderate: '#f47738',
+  minor: '#505a5f'
+}
+
+function renderScanHtml(scan) {
+  const grouped = IMPACT_ORDER.map((impact) => ({
+    impact,
+    items: scan.violations.filter((v) => v.impact === impact)
+  })).filter((g) => g.items.length > 0)
+
+  const sections =
+    grouped.length === 0
+      ? '<p class="empty">No axe-core violations detected on this page.</p>'
+      : grouped.map(renderImpactSection).join('\n')
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accessibility report — ${escapeHtml(scan.pageTitle || scan.suffix)}</title>
+    <style>
+      body { font-family: 'GDS Transport', arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f8f8; color: #0b0c0c; }
+      .header { background: #1d70b8; color: white; padding: 20px; border-radius: 8px; margin-bottom: 24px; }
+      .header h1 { margin: 0; font-size: 1.6rem; }
+      .header p { margin: 6px 0 0 0; opacity: 0.9; word-break: break-all; }
+      h2 { margin-top: 28px; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+      .impact-chip { padding: 2px 10px; border-radius: 4px; color: white; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      table { width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 16px; }
+      th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+      th { background: #f3f3f3; font-size: 0.85rem; text-transform: uppercase; }
+      tr:last-child td { border-bottom: none; }
+      .rule { font-weight: bold; }
+      .help-link { color: #1d70b8; }
+      .targets { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; color: #505a5f; white-space: pre-wrap; word-break: break-word; }
+      .empty { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>${escapeHtml(scan.pageTitle || scan.suffix)}</h1>
+      <p>${escapeHtml(scan.url)}</p>
+    </div>
+    ${sections}
+  </body>
+</html>`
+}
+
+function renderImpactSection(group) {
+  const colour = IMPACT_COLOUR[group.impact]
+  const label = IMPACT_LABEL[group.impact]
+  const rows = group.items
+    .map((v) => {
+      const targets = v.nodes
+        .map((n) => (n.target || []).join(' '))
+        .filter(Boolean)
+        .join('\n')
+      return `
+        <tr>
+          <td class="rule">${escapeHtml(v.id)}<br><span style="font-weight: normal">${escapeHtml(v.description || v.help || '')}</span></td>
+          <td><a class="help-link" href="${escapeHtml(v.helpUrl)}" target="_blank" rel="noopener">${escapeHtml(v.help || v.id)}</a></td>
+          <td><div class="targets">${escapeHtml(targets)}</div></td>
+        </tr>`
+    })
+    .join('')
+
+  return `
+    <h2><span class="impact-chip" style="background:${colour}">${label}</span> ${group.items.length} ${group.items.length === 1 ? 'violation' : 'violations'}</h2>
+    <table>
+      <thead>
+        <tr><th>Rule</th><th>Help</th><th>Targets</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`
+}
 
 export function generateAccessibilityReportIndex() {
   if (!fs.existsSync(reportDirectory)) {
@@ -377,25 +421,17 @@ export function generateAccessibilityReportIndex() {
                     : `<div class="reports-grid">
                         ${filenames
                           .map((filename) => {
-                            const isCategory = filename.includes('-category')
-                            const isGuideline = filename.includes('-guideline')
-                            const reportType = isCategory
-                              ? 'By Category'
-                              : isGuideline
-                                ? 'By Guideline'
-                                : 'General'
                             const displayName = filename
-                              .replace('-accessibility-category.html', '')
-                              .replace('-accessibility-guideline.html', '')
+                              .replace('-accessibility.html', '')
                               .replace('.html', '')
                               .replace(/-/g, ' ')
                               .replace(/\b\w/g, (l) => l.toUpperCase())
 
                             return `
                                 <div class="report-card">
-                                    <div class="report-type">${reportType}</div>
+                                    <div class="report-type">Page report</div>
                                     <a href="${filename}" class="report-title">${displayName}</a>
-                                    <p>Click to view detailed accessibility analysis</p>
+                                    <p>Click to view axe-core violations for this page</p>
                                 </div>
                             `
                           })
@@ -405,7 +441,7 @@ export function generateAccessibilityReportIndex() {
 
                 <div class="footer">
                     <p>Generated by Playwright Accessibility Testing Suite</p>
-                    <p>Reports are organized by test suite and analysis type</p>
+                    <p>Reports are organized by page; each lists axe-core violations grouped by impact.</p>
                 </div>
             </body>
         </html>
