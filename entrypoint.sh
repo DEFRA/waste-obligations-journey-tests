@@ -125,15 +125,35 @@ run_active_scan() {
   : > security-report/SCAN_INCOMPLETE
 }
 
-# Query ZAP for alert counts on our target host (third-party hosts are already
-# excluded from the proxy). Fails the run when any High or Medium alert exists
-# — mirrors the accessibility gate (0 Critical / 0 Medium). Must run before
-# stop_zap shuts the daemon down.
+# Block until ZAP's passive scanner has finished processing the proxy traffic
+# captured during the test run. Without this we can race the scanner — the
+# alert summary is queried while records are still queued, the count comes
+# back too low, and the run is wrongly marked green even though the HTML
+# report (fetched moments later) shows the missed alert.
+wait_for_passive_scan() {
+  i=0
+  while [ $i -lt 120 ]; do
+    remaining=$(curl -sf "${ZAP_BASE}/JSON/pscan/view/recordsToScan/" \
+      | jq -r '.recordsToScan // empty')
+    if [ "$remaining" = "0" ]; then
+      return 0
+    fi
+    sleep 1
+    i=$((i + 1))
+  done
+  echo "WARNING: passive scan queue still has records after 120s; alert totals may be incomplete" >&2
+  return 0
+}
+
+# Read every alert ZAP recorded and fail the run on any High or Medium —
+# mirrors the accessibility gate (0 Critical / 0 Medium). No `baseurl` filter:
+# third-party hosts are already excluded from the proxy (see
+# exclude_third_parties), so everything ZAP saw is in-scope for the gate, and
+# any baseurl prefix would silently drop alerts recorded against the post-auth
+# *.cdp-int.defra.cloud hosts. Must run before stop_zap shuts ZAP down.
 check_zap_alerts() {
-  base=$(target_base_url)
-  resp=$(curl -sf --get \
-    --data-urlencode "baseurl=${base}" \
-    "${ZAP_BASE}/JSON/alert/view/alertsSummary/")
+  wait_for_passive_scan
+  resp=$(curl -sf "${ZAP_BASE}/JSON/alert/view/alertsSummary/")
   if [ -z "$resp" ]; then
     echo "ERROR: could not fetch ZAP alert summary" >&2
     return 1
