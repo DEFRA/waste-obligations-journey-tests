@@ -29,7 +29,6 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
-    csocCertificateHubPage,
     csocConfirmationPage,
     csocViewPage
   }) => {

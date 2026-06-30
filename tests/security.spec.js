@@ -35,7 +35,6 @@ test.describe('Security scan — CSOC journey', () => {
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
-    csocCertificateHubPage,
     csocConfirmationPage,
     csocViewPage
   }) => {
