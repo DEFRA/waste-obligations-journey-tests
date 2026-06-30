@@ -8,13 +8,13 @@ import {
 
 // Wipes the shared backend org so a single-worker serial test starts from a
 // known-empty state. Mirrors the pattern used in every journey spec.
-export async function resetOrgDeclarations() {
+export async function resetOrgDeclarations(account = 'dp') {
   const apiContext = await apiRequest.newContext({ ignoreHTTPSErrors: true })
   let primaryError
   try {
     await deleteAllDeclarations(
       apiContext,
-      getOrgId(),
+      getOrgId(account),
       new Date().getFullYear()
     )
   } catch (error) {

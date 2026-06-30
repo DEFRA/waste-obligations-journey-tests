@@ -22,7 +22,7 @@ test.describe.configure({ mode: 'serial' })
 const APP_HOST = /\.defra\.cloud/
 
 test.describe('Security scan — CSOC journey', () => {
-  test.beforeAll(resetOrgDeclarations)
+  test.beforeAll(() => resetOrgDeclarations())
 
   // Pure navigation — no per-page scans. When PROFILE=security the entrypoint
   // points the browser at a ZAP daemon via HTTP_PROXY, ZAP records every

@@ -12,7 +12,7 @@ export class ObligationsPage extends BasePage {
       name: /submit your (certificate|statement)/i
     })
     this.viewCertificateButton = page.getByRole('button', {
-      name: /view your certificate of compliance/i
+      name: /view your (certificate|statement) of compliance/i
     })
     this.resubmitButton = page.getByRole('button', {
       name: /resubmit/i

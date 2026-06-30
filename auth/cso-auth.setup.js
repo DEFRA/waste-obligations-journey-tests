@@ -4,13 +4,12 @@ import { fileURLToPath } from 'node:url'
 import { requireEnv } from '../utils/env.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'dp.json')
+const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'cso.json')
 
-setup('authenticate', async ({ page }) => {
-  const email = requireEnv('EPR_USER_EMAIL')
-  const password = requireEnv('EPR_USER_PASSWORD')
+setup('authenticate cso', async ({ page }) => {
+  const email = requireEnv('EPR_CSO_USER_EMAIL')
+  const password = requireEnv('EPR_CSO_USER_PASSWORD')
 
-  // https://rwd-dev9.azure.defra.cloud/create-account
   await page.goto('/report-data', { timeout: 60_000 })
 
   // The B2C flow can resolve in two ways:

@@ -7,6 +7,7 @@ End-to-end Playwright tests for the EPR waste obligations CSOC submission journe
   - [Setup](#setup)
   - [Running locally](#running-locally)
   - [Profiles](#profiles)
+  - [Accounts](#accounts)
   - [Debugging locally](#debugging-locally)
   - [Running locally in Docker](#running-locally-in-docker)
 - [Production (CDP Portal)](#production-cdp-portal)
@@ -68,11 +69,11 @@ npm run report
 
 The suite runs one profile at a time, selected by the `PROFILE` env var. The CDP Portal injects this from the **Profile** field on the test-suite run page; locally you set it yourself.
 
-| `PROFILE`       | Specs run                       |
-| --------------- | ------------------------------- |
-| `e2e` (default) | `tests/csoc-submission.spec.js` |
-| `accessibility` | `tests/accessibility.spec.js`   |
-| `security`      | `tests/security.spec.js`        |
+| `PROFILE`       | Specs run                                                               |
+| --------------- | ----------------------------------------------------------------------- |
+| `e2e` (default) | `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js` |
+| `accessibility` | `tests/accessibility.spec.js`                                           |
+| `security`      | `tests/security.spec.js`                                                |
 
 Unset → `e2e` (so `npm test` and `npm run test:local` keep working as before). Any other value throws at config load and names the valid options.
 
@@ -106,6 +107,19 @@ ZAP_ACTIVE=1 PROFILE=security npm run docker:test:local
 Active scans send attack payloads at the target environment — only enable against shared envs (`tst1`/`dev9`) after the security team has signed off.
 
 **Local outside Docker:** `npm run test:local:security` does NOT start ZAP — it just runs the security spec as a plain headed Playwright run (useful for iterating on the journey itself). Use `npm run docker:test:local` whenever you need real ZAP coverage; the entrypoint inside the container does the orchestration.
+
+### Accounts
+
+The suite covers two accounts in parallel — both run on every `npm run test:*` invocation, no env flag needed.
+
+| Spec                                | Account                          | Login env vars                                | Backend org / submitter env vars                                                               | Storage state               |
+| ----------------------------------- | -------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------- |
+| `tests/csoc-submission-dp.spec.js`  | DP (direct producer)             | `EPR_USER_EMAIL`, `EPR_USER_PASSWORD`         | `WASTE_OBLIGATION_ORG_ID`, `WASTE_OBLIGATION_SUBMITTER_ID`, `WASTE_OBLIGATION_SUBMITTER_EMAIL` | `playwright/.auth/dp.json`  |
+| `tests/csoc-submission-cso.spec.js` | CSO (compliance scheme operator) | `EPR_CSO_USER_EMAIL`, `EPR_CSO_USER_PASSWORD` | `WASTE_OBLIGATION_CSO_ORG_ID`                                                                  | `playwright/.auth/cso.json` |
+
+Both `*.setup.js` files run unconditionally, producing `dp.json` and `cso.json`. Each spec pins its own `storageState` via `test.use({ storageState })` and threads the account string (`'dp'` or `'cso'`) into the API helpers so backend ops target the right org and submitter. The submission page object auto-detects the CSO variant from the rendered DOM (presence of a "Compliance scheme" summary row and a "Regulation 43" radio fieldset).
+
+Shared backend admin credentials (`WASTE_OBLIGATION_USERNAME` / `WASTE_OBLIGATION_PASSWORD` / `JOURNEY_USER` / `JOURNEY_PASSWORD`) are tenant-agnostic and used for both accounts.
 
 ### Debugging locally
 

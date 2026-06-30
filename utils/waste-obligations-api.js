@@ -9,8 +9,12 @@ export function getBackendBaseUrl() {
   return `https://waste-obligations.${env}.cdp-int.defra.cloud`
 }
 
-export function getOrgId() {
-  return requireEnv('WASTE_OBLIGATION_ORG_ID')
+export function getOrgId(account = 'dp') {
+  return requireEnv(
+    account === 'cso'
+      ? 'WASTE_OBLIGATION_CSO_ORG_ID'
+      : 'WASTE_OBLIGATION_ORG_ID'
+  )
 }
 
 function basicAuthHeader(username, password) {
@@ -72,7 +76,8 @@ export async function setDeclarationStatus(
   orgId,
   declarationId,
   status,
-  reason
+  reason,
+  account = 'dp'
 ) {
   if (reason !== undefined && status !== DECLARATION_STATUS.Cancelled) {
     throw new Error(

@@ -33,6 +33,15 @@ export class BasePage {
     ).toBeGreaterThan(minLength)
   }
 
+  // Asserts a summary-list row for `label` is rendered, without checking the
+  // value's content. Use for optional fields that may legitimately render empty.
+  async expectFieldRendered(label) {
+    const value = this.page.locator(
+      `xpath=//dt[normalize-space()=${JSON.stringify(label)}]/following-sibling::dd[1]`
+    )
+    await expect(value).toBeVisible()
+  }
+
   async expectMailtoLinkPopulated(minLength = 10) {
     const link = this.page.locator('a[href^="mailto:"]').first()
     await expect(link).toBeVisible()

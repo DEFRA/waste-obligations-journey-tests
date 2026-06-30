@@ -7,13 +7,19 @@ import {
 } from '../utils/waste-obligations-api.js'
 import { resetOrgDeclarations } from '../utils/test-setup.js'
 
+// Direct Producer journey. Mirrors the CSO twin in csoc-submission-cso.spec.js
+// but pins the DP storage state and threads 'dp' through every backend helper.
+const ACCOUNT = 'dp'
+
+test.use({ storageState: 'playwright/.auth/dp.json' })
+
 // Shared backend org: keep serial so a single worker owns the lifecycle state.
 // Declaration status is not asserted in the UI; the audit trail (see
 // expectAuditEntry) is the authoritative state-change check.
 test.describe.configure({ mode: 'serial' })
 
-test.describe('CSOC lifecycle journey', () => {
-  test.beforeAll(resetOrgDeclarations)
+test.describe('CSOC lifecycle journey (DP)', () => {
+  test.beforeAll(() => resetOrgDeclarations(ACCOUNT))
 
   test('Submit → cancel → resubmit → accept lifecycle', async ({
     request,
@@ -21,11 +27,10 @@ test.describe('CSOC lifecycle journey', () => {
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
-    csocCertificateHubPage,
     csocConfirmationPage,
     csocViewPage
   }) => {
-    const orgId = getOrgId()
+    const orgId = getOrgId(ACCOUNT)
     const year = new Date().getFullYear()
     let firstId
     let secondId
@@ -98,7 +103,8 @@ test.describe('CSOC lifecycle journey', () => {
         orgId,
         firstId,
         DECLARATION_STATUS.Cancelled,
-        'Journey-test cancel'
+        'Journey-test cancel',
+        ACCOUNT
       )
     })
 
@@ -140,7 +146,9 @@ test.describe('CSOC lifecycle journey', () => {
         request,
         orgId,
         secondId,
-        DECLARATION_STATUS.Accepted
+        DECLARATION_STATUS.Accepted,
+        undefined,
+        ACCOUNT
       )
     })
 

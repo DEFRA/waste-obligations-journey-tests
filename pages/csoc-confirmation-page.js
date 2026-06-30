@@ -11,7 +11,7 @@ export class CsocConfirmationPage extends BasePage {
 
   headingFor(year) {
     return this.page.getByRole('heading', {
-      name: new RegExp(`${year} certificate of compliance`, 'i')
+      name: new RegExp(`${year} (certificate|statement) of compliance`, 'i')
     })
   }
 

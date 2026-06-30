@@ -11,13 +11,17 @@ const proxy = process.env.HTTP_PROXY
   ? { server: process.env.HTTP_PROXY }
   : undefined
 
-const AUTH_STATE = 'playwright/.auth/user.json'
+// DP (direct producer) storage state is the default for every browser project.
+// Specs that run against a different account (e.g. the CSO twin) override
+// storageState via test.use() and depend on the corresponding *.setup.js
+// producing its file.
+const AUTH_STATE = 'playwright/.auth/dp.json'
 
 const PROFILE = process.env.PROFILE || 'e2e'
 const PROFILE_IGNORE = {
   e2e: ['**/accessibility.spec.js', '**/security.spec.js'],
-  accessibility: ['**/csoc-submission.spec.js', '**/security.spec.js'],
-  security: ['**/csoc-submission.spec.js', '**/accessibility.spec.js']
+  accessibility: ['**/csoc-submission*.spec.js', '**/security.spec.js'],
+  security: ['**/csoc-submission*.spec.js', '**/accessibility.spec.js']
 }
 if (!Object.hasOwn(PROFILE_IGNORE, PROFILE)) {
   throw new Error(
@@ -72,6 +76,7 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   use: {
+    headless: false,
     baseURL,
     ignoreHTTPSErrors: true,
     trace: 'on',
