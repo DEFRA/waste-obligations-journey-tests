@@ -25,107 +25,113 @@ test.describe('Accessibility testing — CSOC journey', () => {
     generateAccessibilityReportIndex()
   })
 
-  test('DP > scan the four CSOC pages', async ({
-    page,
-    landingPage,
-    obligationsPage,
-    csocAboutPage,
-    csocSubmissionPage,
-    csocConfirmationPage,
-    csocViewPage
-  }) => {
-    test.setTimeout(300_000)
-
-    const year = new Date().getFullYear()
-
+  test.describe('DP', () => {
     test.use({ storageState: 'playwright/.auth/dp.json' })
-    // Navigate from landing to the start of the CSOC journey — these pages
-    // are out of scope for the accessibility scan, so we just step through.
-    await landingPage.goto()
-    await landingPage.goToObligations()
-    await obligationsPage.expectLoaded()
-    await obligationsPage.startCsocSubmission()
 
-    await test.step('DP > CSOC About page', async () => {
-      await csocAboutPage.expectLoaded()
-      await analyseAccessibility(page, 'dp-csoc-about')
-    })
+    test('scan the four CSOC pages', async ({
+      page,
+      landingPage,
+      obligationsPage,
+      csocAboutPage,
+      csocSubmissionPage,
+      csocConfirmationPage,
+      csocViewPage
+    }) => {
+      test.setTimeout(300_000)
 
-    await test.step('DP > CSOC Check-and-submit page', async () => {
-      await csocAboutPage.clickContinue()
-      await csocSubmissionPage.expectLoaded()
-      await analyseAccessibility(page, 'dp-csoc-check-and-submit')
-    })
+      const year = new Date().getFullYear()
 
-    await test.step('DP > CSOC Confirmation page', async () => {
-      await csocSubmissionPage.submit(TEST_USER_NAME)
-      await csocConfirmationPage.expectSubmitted(year)
-      await analyseAccessibility(page, 'dp-csoc-confirmation')
-    })
+      // Navigate from landing to the start of the CSOC journey — these pages
+      // are out of scope for the accessibility scan, so we just step through.
+      await landingPage.goto()
+      await landingPage.goToObligations()
+      await obligationsPage.expectLoaded()
+      await obligationsPage.startCsocSubmission()
 
-    // Hub → View are only reachable via the "view your certificate" flow on
-    // the obligations page after a successful submission.
-    await test.step('DP > CSOC View page', async () => {
-      await obligationsPage.goto()
-      await obligationsPage.openCertificateHub()
-      await csocViewPage.expectLoaded(year)
-      await analyseAccessibility(page, 'dp-csoc-view')
-    })
+      await test.step('DP > CSOC About page', async () => {
+        await csocAboutPage.expectLoaded()
+        await analyseAccessibility(page, 'dp-csoc-about')
+      })
 
-    await test.step('CP > Assert no accessibility issues', () => {
-      assertNoAccessibilityIssues()
+      await test.step('DP > CSOC Check-and-submit page', async () => {
+        await csocAboutPage.clickContinue()
+        await csocSubmissionPage.expectLoaded()
+        await analyseAccessibility(page, 'dp-csoc-check-and-submit')
+      })
+
+      await test.step('DP > CSOC Confirmation page', async () => {
+        await csocSubmissionPage.submit(TEST_USER_NAME)
+        await csocConfirmationPage.expectSubmitted(year)
+        await analyseAccessibility(page, 'dp-csoc-confirmation')
+      })
+
+      // Hub → View are only reachable via the "view your certificate" flow on
+      // the obligations page after a successful submission.
+      await test.step('DP > CSOC View page', async () => {
+        await obligationsPage.goto()
+        await obligationsPage.openCertificateHub()
+        await csocViewPage.expectLoaded(year)
+        await analyseAccessibility(page, 'dp-csoc-view')
+      })
+
+      await test.step('DP > Assert no accessibility issues', () => {
+        assertNoAccessibilityIssues()
+      })
     })
   })
 
-  test('CSO > scan the four CSOC pages', async ({
-    page,
-    landingPage,
-    obligationsPage,
-    csocAboutPage,
-    csocSubmissionPage,
-    csocConfirmationPage,
-    csocViewPage
-  }) => {
-    test.setTimeout(300_000)
-
-    const year = new Date().getFullYear()
-
+  test.describe('CSO', () => {
     test.use({ storageState: 'playwright/.auth/cso.json' })
-    // Navigate from landing to the start of the CSOC journey — these pages
-    // are out of scope for the accessibility scan, so we just step through.
-    await landingPage.goto()
-    await landingPage.goToObligations()
-    await obligationsPage.expectLoaded()
-    await obligationsPage.startCsocSubmission()
 
-    await test.step('CSO > CSOC About page', async () => {
-      await csocAboutPage.expectLoaded()
-      await analyseAccessibility(page, 'cso-csoc-about')
-    })
+    test('scan the four CSOC pages', async ({
+      page,
+      landingPage,
+      obligationsPage,
+      csocAboutPage,
+      csocSubmissionPage,
+      csocConfirmationPage,
+      csocViewPage
+    }) => {
+      test.setTimeout(300_000)
 
-    await test.step('CSO > CSOC Check-and-submit page', async () => {
-      await csocAboutPage.clickContinue()
-      await csocSubmissionPage.expectLoaded()
-      await analyseAccessibility(page, 'cso-csoc-check-and-submit')
-    })
+      const year = new Date().getFullYear()
 
-    await test.step('CSO > CSOC Confirmation page', async () => {
-      await csocSubmissionPage.submit(TEST_USER_NAME)
-      await csocConfirmationPage.expectSubmitted(year)
-      await analyseAccessibility(page, 'cso-csoc-confirmation')
-    })
+      // Navigate from landing to the start of the CSOC journey — these pages
+      // are out of scope for the accessibility scan, so we just step through.
+      await landingPage.goto()
+      await landingPage.goToObligations()
+      await obligationsPage.expectLoaded()
+      await obligationsPage.startCsocSubmission()
 
-    // Hub → View are only reachable via the "view your certificate" flow on
-    // the obligations page after a successful submission.
-    await test.step('CSO > CSOC View page', async () => {
-      await obligationsPage.goto()
-      await obligationsPage.openCertificateHub()
-      await csocViewPage.expectLoaded(year)
-      await analyseAccessibility(page, 'cso-csoc-view')
-    })
+      await test.step('CSO > CSOC About page', async () => {
+        await csocAboutPage.expectLoaded()
+        await analyseAccessibility(page, 'cso-csoc-about')
+      })
 
-    await test.step('CSO > Assert no accessibility issues', () => {
-      assertNoAccessibilityIssues()
+      await test.step('CSO > CSOC Check-and-submit page', async () => {
+        await csocAboutPage.clickContinue()
+        await csocSubmissionPage.expectLoaded()
+        await analyseAccessibility(page, 'cso-csoc-check-and-submit')
+      })
+
+      await test.step('CSO > CSOC Confirmation page', async () => {
+        await csocSubmissionPage.submit(TEST_USER_NAME)
+        await csocConfirmationPage.expectSubmitted(year)
+        await analyseAccessibility(page, 'cso-csoc-confirmation')
+      })
+
+      // Hub → View are only reachable via the "view your certificate" flow on
+      // the obligations page after a successful submission.
+      await test.step('CSO > CSOC View page', async () => {
+        await obligationsPage.goto()
+        await obligationsPage.openCertificateHub()
+        await csocViewPage.expectLoaded(year)
+        await analyseAccessibility(page, 'cso-csoc-view')
+      })
+
+      await test.step('CSO > Assert no accessibility issues', () => {
+        assertNoAccessibilityIssues()
+      })
     })
   })
 })
