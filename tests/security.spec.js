@@ -9,7 +9,7 @@ import {
   resetOrgDeclarations
 } from '../utils/test-setup.js'
 
-// Single worker owns the org's declaration state across submit → cancel.
+// Single worker owns each org's declaration state across submit → cancel.
 test.describe.configure({ mode: 'serial' })
 
 // All authenticated pages of the application live somewhere under the DEFRA
@@ -21,76 +21,143 @@ test.describe.configure({ mode: 'serial' })
 // error page.
 const APP_HOST = /\.defra\.cloud/
 
-test.describe('Security scan — CSOC journey', () => {
-  test.beforeAll(() => resetOrgDeclarations())
-
-  // Pure navigation — no per-page scans. When PROFILE=security the entrypoint
-  // points the browser at a ZAP daemon via HTTP_PROXY, ZAP records every
-  // request/response, and the entrypoint fetches the HTML report after the
-  // test exits.
-  test('walk every page so ZAP sees the full traffic', async ({
-    page,
-    request,
+const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
+  const {
     landingPage,
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
     csocConfirmationPage,
     csocViewPage
-  }) => {
+  } = pages
+
+  return async () => {
     // Doubled vs accessibility (300s) because every request adds 100-500ms of
     // ZAP overhead, and ZAP_ACTIVE=1 fans out scan jobs in parallel.
     test.setTimeout(600_000)
-    const orgId = getOrgId()
+    const orgId = getOrgId(account)
     const year = new Date().getFullYear()
 
-    await test.step('Landing page', async () => {
+    await test.step(`${prefix} > Landing page`, async () => {
       await landingPage.goto()
       await expect(page).toHaveURL(APP_HOST)
     })
 
-    await test.step('Obligations page', async () => {
+    await test.step(`${prefix} > Obligations page`, async () => {
       await landingPage.goToObligations()
       await obligationsPage.expectLoaded()
       await expect(page).toHaveURL(APP_HOST)
     })
 
-    await test.step('CSOC About page', async () => {
+    await test.step(`${prefix} > CSOC About page`, async () => {
       await obligationsPage.startCsocSubmission()
       await csocAboutPage.expectLoaded()
       await expect(page).toHaveURL(APP_HOST)
     })
 
-    await test.step('CSOC Check-and-submit page', async () => {
+    await test.step(`${prefix} > CSOC Check-and-submit page`, async () => {
       await csocAboutPage.clickContinue()
       await csocSubmissionPage.expectLoaded()
       await expect(page).toHaveURL(APP_HOST)
     })
 
-    await test.step('CSOC Confirmation page', async () => {
+    await test.step(`${prefix} > CSOC Confirmation page`, async () => {
       await csocSubmissionPage.submit(TEST_USER_NAME)
       await csocConfirmationPage.expectSubmitted(year)
       await expect(page).toHaveURL(APP_HOST)
     })
 
-    await test.step('CSOC View page', async () => {
+    await test.step(`${prefix} > CSOC View page`, async () => {
       await obligationsPage.goto()
       await obligationsPage.openCertificateHub()
       await csocViewPage.expectLoaded(year)
     })
 
-    await test.step('Obligations page — resubmit state', async () => {
+    await test.step(`${prefix} > Obligations page — resubmit state`, async () => {
       const submitted = await findOnlySubmittedDeclaration(request, orgId, year)
       await setDeclarationStatus(
         request,
         orgId,
         submitted.id,
         DECLARATION_STATUS.Cancelled,
-        'Security-test cancel'
+        'Security-test cancel',
+        account
       )
       await obligationsPage.goto()
       await obligationsPage.expectResubmitCardVisible()
       await expect(page).toHaveURL(APP_HOST)
+    })
+  }
+}
+
+test.describe('Security scan — CSOC journey', () => {
+  test.beforeAll(async () => {
+    await resetOrgDeclarations('dp')
+    await resetOrgDeclarations('cso')
+  })
+
+  // Pure navigation — no per-page scans. When PROFILE=security the entrypoint
+  // points the browser at a ZAP daemon via HTTP_PROXY, ZAP records every
+  // request/response, and the entrypoint fetches the HTML report after the
+  // test exits.
+
+  test.describe('DP', () => {
+    test.use({ storageState: 'playwright/.auth/dp.json' })
+
+    test('walk every page so ZAP sees the full traffic', async ({
+      page,
+      request,
+      landingPage,
+      obligationsPage,
+      csocAboutPage,
+      csocSubmissionPage,
+      csocConfirmationPage,
+      csocViewPage
+    }) => {
+      await walkCsocJourney({
+        account: 'dp',
+        prefix: 'DP',
+        page,
+        request,
+        pages: {
+          landingPage,
+          obligationsPage,
+          csocAboutPage,
+          csocSubmissionPage,
+          csocConfirmationPage,
+          csocViewPage
+        }
+      })()
+    })
+  })
+
+  test.describe('CSO', () => {
+    test.use({ storageState: 'playwright/.auth/cso.json' })
+
+    test('walk every page so ZAP sees the full traffic', async ({
+      page,
+      request,
+      landingPage,
+      obligationsPage,
+      csocAboutPage,
+      csocSubmissionPage,
+      csocConfirmationPage,
+      csocViewPage
+    }) => {
+      await walkCsocJourney({
+        account: 'cso',
+        prefix: 'CSO',
+        page,
+        request,
+        pages: {
+          landingPage,
+          obligationsPage,
+          csocAboutPage,
+          csocSubmissionPage,
+          csocConfirmationPage,
+          csocViewPage
+        }
+      })()
     })
   })
 })
