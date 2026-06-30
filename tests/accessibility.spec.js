@@ -24,7 +24,7 @@ test.describe('Accessibility testing — CSOC journey', () => {
     generateAccessibilityReportIndex()
   })
 
-  test('scan the four CSOC pages', async ({
+  test('DP -> scan the four CSOC pages', async ({
     page,
     landingPage,
     obligationsPage,
@@ -45,19 +45,19 @@ test.describe('Accessibility testing — CSOC journey', () => {
 
     await test.step('CSOC About page', async () => {
       await csocAboutPage.expectLoaded()
-      await analyseAccessibility(page, 'csoc-about')
+      await analyseAccessibility(page, 'dp-csoc-about')
     })
 
     await test.step('CSOC Check-and-submit page', async () => {
       await csocAboutPage.clickContinue()
       await csocSubmissionPage.expectLoaded()
-      await analyseAccessibility(page, 'csoc-check-and-submit')
+      await analyseAccessibility(page, 'dp-csoc-check-and-submit')
     })
 
     await test.step('CSOC Confirmation page', async () => {
       await csocSubmissionPage.submit(TEST_USER_NAME)
       await csocConfirmationPage.expectSubmitted(year)
-      await analyseAccessibility(page, 'csoc-confirmation')
+      await analyseAccessibility(page, 'dp-csoc-confirmation')
     })
 
     // Hub → View are only reachable via the "view your certificate" flow on
@@ -66,7 +66,7 @@ test.describe('Accessibility testing — CSOC journey', () => {
       await obligationsPage.goto()
       await obligationsPage.openCertificateHub()
       await csocViewPage.expectLoaded(year)
-      await analyseAccessibility(page, 'csoc-view')
+      await analyseAccessibility(page, 'dp-csoc-view')
     })
 
     await test.step('Assert no accessibility issues', () => {

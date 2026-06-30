@@ -76,7 +76,7 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   use: {
-    headless: false,
+    headless: true,
     baseURL,
     ignoreHTTPSErrors: true,
     trace: 'on',
