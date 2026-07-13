@@ -11,7 +11,7 @@ export class ObligationsPage extends BasePage {
     this.submitCertificateButton = page.getByRole('button', {
       name: /submit your (certificate|statement)/i
     })
-    this.viewCertificateButton = page.getByRole('button', {
+    this.viewCertificateButton = page.getByRole('link', {
       name: /view your (certificate|statement) of compliance/i
     })
     this.resubmitButton = page.getByRole('button', {
