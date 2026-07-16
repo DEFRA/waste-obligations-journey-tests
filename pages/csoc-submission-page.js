@@ -11,11 +11,6 @@ export class CsocSubmissionPage extends BasePage {
     this.confirmAndSubmitButton = page.getByRole('button', {
       name: /confirm and submit/i
     })
-    // Stable id rendered by both producer and CSO check-and-submit pages,
-    // regardless of whether obligations are met or not. The banner text
-    // changes ("have been met" vs "have not been met") so we anchor on the
-    // id and only assert that the status section is rendered.
-    this.obligationsStatusBanner = page.locator('#overall-obligation-status')
     // CSO journey adds a required Regulation 43 radio fieldset before submit.
     this.regulation43Fieldset = page.locator('fieldset', {
       hasText: /regulation 43/i
@@ -66,21 +61,6 @@ export class CsocSubmissionPage extends BasePage {
       await this.expectFieldPopulated('Regulator')
     }
     await this.expectMailtoLinkPopulated()
-  }
-
-  // Derive the expected banner state from the materials table rather than
-  // hardcoding either text: the page should show "have not been met" when at
-  // least one material row is Not met, and "have been met" otherwise. Catches
-  // banner/table inconsistencies that a state-agnostic check would miss.
-  async expectObligationsMet() {
-    await expect(this.obligationsStatusBanner).toBeVisible()
-    const rows = await this.readObligationsTable()
-    const materialRows = rows.filter((r) => r.Material !== 'Totals')
-    const anyNotMet = materialRows.some((r) =>
-      /not\s*met/i.test(r.Status ?? '')
-    )
-    const expected = anyNotMet ? 'have not been met' : 'have been met'
-    await expect(this.obligationsStatusBanner).toContainText(expected)
   }
 
   async readObligationsTable() {

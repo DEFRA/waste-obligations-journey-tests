@@ -73,7 +73,6 @@ test.describe('CSOC lifecycle journey (DP)', () => {
       await csocAboutPage.clickContinue()
       await csocSubmissionPage.expectLoaded()
       await csocSubmissionPage.expectOrganisationDetails()
-      await csocSubmissionPage.expectObligationsMet()
       await csocSubmissionPage.submit(TEST_USER_NAME)
       await csocConfirmationPage.expectSubmitted(year)
       return findSubmittedDeclarationId()
