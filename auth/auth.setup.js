@@ -2,6 +2,10 @@ import { test as setup, expect } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { requireEnv } from '../utils/env.js'
+import {
+  getJourneyStartPath,
+  usesPackagingEntryPoint
+} from '../utils/journey-entry-point.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'dp.json')
@@ -10,8 +14,7 @@ setup('authenticate', async ({ page }) => {
   const email = requireEnv('EPR_USER_EMAIL')
   const password = requireEnv('EPR_USER_PASSWORD')
 
-  // https://rwd-dev9.azure.defra.cloud/create-account
-  await page.goto('/report-data', { timeout: 60_000 })
+  await page.goto(getJourneyStartPath('dp'), { timeout: 60_000 })
 
   // The B2C flow can resolve in two ways:
   //   - straight to the login form on b2clogin.com
@@ -27,9 +30,17 @@ setup('authenticate', async ({ page }) => {
   await page.getByLabel(/password/i).fill(password)
   await page.getByRole('button', { name: /sign in|continue|next/i }).click()
 
-  await expect(
-    page.getByRole('heading', { name: 'Account home -' })
-  ).toBeVisible({ timeout: 60_000 })
+  if (usesPackagingEntryPoint()) {
+    await expect(
+      page.getByRole('heading', { name: 'Account home -' })
+    ).toBeVisible({ timeout: 60_000 })
+  } else {
+    await expect(
+      page.getByRole('heading', {
+        name: /About your \d{4} certificate of compliance/i
+      })
+    ).toBeVisible({ timeout: 60_000 })
+  }
 
   await page.context().storageState({ path: authFile })
 })

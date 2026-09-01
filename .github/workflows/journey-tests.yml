@@ -1,62 +1,70 @@
-name: Run Journey Tests on GitHub
-
-permissions:
-  checks: write
-  pull-requests: write
+name: Run Waste Obligations e2e journeys
 
 on:
   workflow_dispatch:
+    inputs:
+      waste-obligations:
+        description: Optional Waste Obligations commit SHA to check out and build locally; otherwise main assets and the published image are used.
+        required: false
+        type: string
+      waste-obligations-frontend:
+        description: Optional Waste Obligations frontend commit SHA to check out and build locally; otherwise main assets and the published image are used.
+        required: false
+        type: string
   workflow_call:
+    inputs:
+      waste-obligations:
+        description: Optional Waste Obligations commit SHA to check out and build locally; otherwise main assets and the published image are used.
+        required: false
+        type: string
+      waste-obligations-frontend:
+        description: Optional Waste Obligations frontend commit SHA to check out and build locally; otherwise main assets and the published image are used.
+        required: false
+        type: string
+    secrets:
+      EPR_USER_EMAIL:
+        required: true
+      EPR_USER_PASSWORD:
+        required: true
+      EPR_CSO_USER_EMAIL:
+        required: true
+      EPR_CSO_USER_PASSWORD:
+        required: true
+      WASTE_OBLIGATION_ORG_ID:
+        required: true
+      WASTE_OBLIGATION_CSO_ORG_ID:
+        required: true
+      WASTE_OBLIGATION_SUBMITTER_ID:
+        required: true
+      WASTE_OBLIGATION_SUBMITTER_EMAIL:
+        required: true
+      WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET:
+        required: true
+
+permissions:
+  contents: read
 
 jobs:
-  matrix:
-    name: ${{ matrix.project }} (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        include:
-          - os: macos-latest
-            project: chrome-mac
-            browsers: chromium chrome
-          - os: macos-latest
-            project: safari-mac
-            browsers: webkit
-          - os: macos-latest
-            project: safari-ios
-            browsers: webkit
-          - os: windows-latest
-            project: chrome-windows
-            browsers: chromium chrome
-          - os: windows-latest
-            project: edge-windows
-            browsers: chromium msedge
-          - os: ubuntu-latest
-            project: chrome-android
-            browsers: chromium
+  e2e:
+    name: DP and CSO lifecycle (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - name: Run journeys
+        uses: ./run-journey-tests
         with:
-          node-version-file: .nvmrc
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps ${{ matrix.browsers }}
-        shell: bash
-      - name: Run journey tests (${{ matrix.project }})
+          journey-tests-ref: ''
+          waste-obligations: ${{ inputs.waste-obligations }}
+          waste-obligations-frontend: ${{ inputs.waste-obligations-frontend }}
         env:
           EPR_USER_EMAIL: ${{ secrets.EPR_USER_EMAIL }}
           EPR_USER_PASSWORD: ${{ secrets.EPR_USER_PASSWORD }}
-        run: npx playwright test --project=setup --project=${{ matrix.project }}
-        shell: bash
-      - name: Upload Playwright artefacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: results-${{ matrix.project }}-${{ matrix.os }}
-          path: |
-            test-results/
-            allure-results/
+          EPR_CSO_USER_EMAIL: ${{ secrets.EPR_CSO_USER_EMAIL }}
+          EPR_CSO_USER_PASSWORD: ${{ secrets.EPR_CSO_USER_PASSWORD }}
+          WASTE_OBLIGATION_ORG_ID: ${{ secrets.WASTE_OBLIGATION_ORG_ID }}
+          WASTE_OBLIGATION_CSO_ORG_ID: ${{ secrets.WASTE_OBLIGATION_CSO_ORG_ID }}
+          WASTE_OBLIGATION_SUBMITTER_ID: ${{ secrets.WASTE_OBLIGATION_SUBMITTER_ID }}
+          WASTE_OBLIGATION_SUBMITTER_EMAIL: ${{ secrets.WASTE_OBLIGATION_SUBMITTER_EMAIL }}
+          WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET: ${{ secrets.WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET }}

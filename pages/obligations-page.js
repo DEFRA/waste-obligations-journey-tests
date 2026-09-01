@@ -1,5 +1,9 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import {
+  getJourneyStartPath,
+  usesPackagingEntryPoint
+} from '../utils/journey-entry-point.js'
 
 export class ObligationsPage extends BasePage {
   constructor(page) {
@@ -27,7 +31,11 @@ export class ObligationsPage extends BasePage {
       .first()
   }
 
-  async goto() {
+  async goto(account = 'dp') {
+    if (!usesPackagingEntryPoint()) {
+      await this.gotoPath(getJourneyStartPath(account))
+      return
+    }
     await this.gotoPath(this.path)
     await this.expectLoaded()
   }

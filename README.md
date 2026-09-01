@@ -43,7 +43,18 @@ cp .env.example .env
 # edit .env to set EPR_USER_EMAIL, EPR_USER_PASSWORD, and optionally EPR_BASE_URL
 ```
 
-The local config (`playwright.local.config.js`) reads `EPR_BASE_URL` and defaults to `https://localhost:7084` when not set.
+The local config (`playwright.local.config.js`) reads `EPR_BASE_URL`; without it, Packaging defaults to `https://localhost:7084` and the direct Waste Obligations entry point to `https://localhost:8010`.
+
+### Entry point
+
+`JOURNEY_ENTRY_POINT` controls which application receives the first browser request:
+
+| Value                 | Start route                                                                                                                  | Intended use                                     |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `packaging` (default) | Packaging `/report-data`, then the Manage recycling obligations link                                                         | Local journeys through epr-local-environment     |
+| `waste-obligations`   | DP: `/compliance/producer/{organisationId}/certificate?year={year}`; CSO: `/compliance/cso/{schemeId}/statement?year={year}` | CI against a deployed Waste Obligations frontend |
+
+`EPR_BASE_URL` overrides the frontend URL for either entry point. `WASTE_OBLIGATIONS_API_BASE_URL` similarly overrides the lifecycle API URL; use it when the frontend and API are deployed to different hosts. Local scripts now set `ENVIRONMENT=local` automatically.
 
 ### Running locally
 
@@ -158,21 +169,43 @@ The container's flow (`entrypoint.sh`):
 5. Publishes the run via `bin/publish-tests.sh` (see [Reporting](#reporting)): Allure goes to the S3 root for every profile (the Portal report link opens it directly), and accessibility/security profiles also upload their findings to `accessibility-report/` or `security-report/`. `test-results/` (Playwright traces/screenshots) uploads alongside in every case.
 6. Exits with Playwright's exit code so the portal shows pass/fail correctly. ZAP findings are report-only and do not affect the exit code.
 
-`baseURL` is built from the portal-injected `ENVIRONMENT` variable in `playwright.config.js`:
-
-```js
-const baseURL = `https://waste-obligations-journey-tests.${process.env.ENVIRONMENT}.cdp-int.defra.cloud`
-```
-
-> **Important:** the host segment is currently `waste-obligations-journey-tests` (the test-suite repo name). Swap this for the deployed frontend service name when the EPR app is in CDP.
+`baseURL` is resolved from `ENVIRONMENT` and `JOURNEY_ENTRY_POINT`, unless `EPR_BASE_URL` is supplied explicitly. The CDP Portal can continue to use the Packaging entry point, or set `JOURNEY_ENTRY_POINT=waste-obligations` when it needs to begin at the direct frontend route.
 
 Outbound HTTP from the container goes through the CDP proxy at `localhost:3128`. Any target host outside CDP-internal must be on your test suite's outbound allowlist; otherwise Chromium fails with `ERR_TUNNEL_CONNECTION_FAILED`.
 
 ## Running on GitHub
 
-`compose.yml` is a single test-runner service built from this repo's `Dockerfile`. Playwright runs the browser inside the runner itself — no separate Selenium service required.
+The repository workflow runs the e2e lifecycle once with the Playwright `chrome-android` project. It starts a dedicated Docker Compose stack from [ci/compose.yml](ci/compose.yml), accessed locally at `https://localhost:8010` and `http://localhost:8007`. It does not start, check out or depend on an `epr-local-environment` profile.
 
-For PR-triggered runs from another service repo, see `run-journey-tests/action.yml` and the example workflow in `.github/workflows/journey-tests.yml`.
+The stack contains only the journey's runtime dependencies:
+
+- published `waste-obligations`, `waste-obligations-frontend` and `waste-organisations` images;
+- MongoDB, Redis, Floci and an Nginx TLS proxy;
+- WireMock in place of the Azure-hosted Backend Account API; and
+- journey-owned organisation scenario data, seeded through the Waste Organisations API.
+
+The runner always checks out `waste-obligations` and `waste-obligations-frontend`: at a supplied SHA, or at `main` when a SHA is omitted. With a SHA it builds the existing service Dockerfile locally; without one, Docker Compose pulls the service's normal `latest` image from the registry. The checkout always supplies that service's CI setup assets. The workflow is available through **Run workflow** and as a reusable workflow. It requires the two B2C login accounts, test organisation/submitter identifiers, and `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET` as GitHub secrets.
+
+### Service-owned CI setup
+
+The journey-test repository owns the shared topology and test scenario; it does not copy a service's setup logic. Waste Obligations owns [its Compose fragment](../waste-obligations/compose/journey-tests.compose.yml), which runs its existing `compose/init-floci.sh` to create and verify the analytics SNS topic, SQS queue, queue policy and subscription before the API starts. It also provides the Account `organisation-with-persons` and GOV.UK Notify mappings it consumes. The frontend owns [its Compose fragment](../waste-obligations-frontend/compose/journey-tests.compose.yml), which provides Account token, user-organisation and compliance-scheme mappings. Those mappings mirror the relevant epr-local-environment account seed: POP QUEST LTD, Organisation Name, and Compliance Scheme Name.
+
+Every source-owned fragment extends the shared target service with a one-shot dependency. For example, a fragment that contributes WireMock mappings adds its generator as a `wiremock.depends_on` entry; a fragment that contributes Floci resources adds its initialiser to the consuming service's `depends_on`. A later service can use the same convention for additional Floci or WireMock setup without changing `ci/compose.yml`; the runner only needs to check out and merge that service's fragment when it is added to the stack.
+
+No test-support images are built or published. The no-SHA route deliberately uses setup assets from `main` with the service's published `latest` image; those assets must remain compatible. Supplying a SHA makes the runtime image and setup assets come from the same source revision.
+
+```yaml
+jobs:
+  waste-obligations-e2e:
+    uses: DEFRA/waste-obligations-journey-tests/.github/workflows/journey-tests.yml@main
+    with:
+      waste-obligations-frontend: ${{ github.sha }}
+      # Pass this when the calling repository is waste-obligations itself.
+      # waste-obligations: ${{ github.sha }}
+    secrets: inherit
+```
+
+`run-journey-tests/action.yml` provides the same runner as a composite action when a caller needs to place it among other workflow steps. Omitting both SHA inputs exercises the latest registry images; supplying one or both exercises those source revisions in the local stack.
 
 ## Reporting
 

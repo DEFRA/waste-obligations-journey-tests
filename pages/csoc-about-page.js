@@ -21,4 +21,8 @@ export class CsocAboutPage extends BasePage {
   async clickContinue() {
     await this.continueButton.click()
   }
+
+  async expectCanSubmit() {
+    await expect(this.continueButton).toBeVisible()
+  }
 }
