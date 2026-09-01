@@ -186,6 +186,19 @@ The stack contains only the journey's runtime dependencies:
 
 The runner always checks out `waste-obligations` and `waste-obligations-frontend`: at a supplied SHA, or at `main` when a SHA is omitted. With a SHA it builds the existing service Dockerfile locally; without one, Docker Compose pulls the service's normal `latest` image from the registry. The checkout always supplies that service's CI setup assets. The workflow is available through **Run workflow** and as a reusable workflow. It requires the two B2C login accounts, `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET`, and `GOVUK_NOTIFY_API_KEY` as GitHub secrets. The journey's organisation and submitter identifiers are non-secret scenario data defined in the workflow.
 
+#### GitHub Actions secrets
+
+Configure these repository secrets for manual runs. A repository calling the reusable workflow must provide the same names, either explicitly or through `secrets: inherit`.
+
+| Secret                                         | Purpose                                                                                  |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `EPR_USER_EMAIL`                               | Direct producer journey-account email address.                                           |
+| `EPR_USER_PASSWORD`                            | Direct producer journey-account password.                                                |
+| `EPR_CSO_USER_EMAIL`                           | Compliance-scheme journey-account email address.                                         |
+| `EPR_CSO_USER_PASSWORD`                        | Compliance-scheme journey-account password.                                              |
+| `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET` | Azure AD B2C application client secret used by the frontend.                             |
+| `GOVUK_NOTIFY_API_KEY`                         | Valid GOV.UK Notify API key injected into the WireMock-backed Waste Obligations service. |
+
 ### Service-owned CI setup
 
 The journey-test repository owns the shared topology and test scenario; it does not copy a service's setup logic. Waste Obligations owns [its Compose fragment](../waste-obligations/compose/journey-tests.compose.yml), which runs its existing `compose/init-floci.sh` to create and verify the analytics SNS topic, SQS queue, queue policy and subscription before the API starts. It also provides the Account `organisation-with-persons` and GOV.UK Notify mappings it consumes. The frontend owns [its Compose fragment](../waste-obligations-frontend/compose/journey-tests.compose.yml), which provides Account token, user-organisation and compliance-scheme mappings. Those mappings mirror the relevant epr-local-environment account seed: POP QUEST LTD, Organisation Name, and Compliance Scheme Name.
