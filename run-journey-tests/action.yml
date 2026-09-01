@@ -29,12 +29,18 @@ runs:
     - name: Use checked-out journey tests
       if: inputs.journey-tests-ref != ''
       shell: bash
-      run: echo "JOURNEY_TESTS_PATH=$GITHUB_WORKSPACE/journey-tests" >> "$GITHUB_ENV"
+      run: |
+        echo "JOURNEY_TESTS_PATH=$GITHUB_WORKSPACE/journey-tests" >> "$GITHUB_ENV"
+        echo "JOURNEY_TESTS_NODE_VERSION_FILE=journey-tests/.nvmrc" >> "$GITHUB_ENV"
+        echo "JOURNEY_TESTS_PACKAGE_LOCK=journey-tests/package-lock.json" >> "$GITHUB_ENV"
 
     - name: Use caller checkout
       if: inputs.journey-tests-ref == ''
       shell: bash
-      run: echo "JOURNEY_TESTS_PATH=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+      run: |
+        echo "JOURNEY_TESTS_PATH=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+        echo "JOURNEY_TESTS_NODE_VERSION_FILE=.nvmrc" >> "$GITHUB_ENV"
+        echo "JOURNEY_TESTS_PACKAGE_LOCK=package-lock.json" >> "$GITHUB_ENV"
 
     # Each service repository supplies CI assets from the selected revision.
     # When no SHA is supplied, main supplies those assets and the normal
@@ -92,9 +98,9 @@ runs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version-file: ${{ env.JOURNEY_TESTS_PATH }}/.nvmrc
+        node-version-file: ${{ env.JOURNEY_TESTS_NODE_VERSION_FILE }}
         cache: npm
-        cache-dependency-path: ${{ env.JOURNEY_TESTS_PATH }}/package-lock.json
+        cache-dependency-path: ${{ env.JOURNEY_TESTS_PACKAGE_LOCK }}
 
     - name: Install journey-test dependencies
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
@@ -105,7 +111,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-browsers-${{ runner.os }}-${{ hashFiles(format('{0}/package-lock.json', env.JOURNEY_TESTS_PATH)) }}
+        key: playwright-browsers-${{ runner.os }}-${{ hashFiles(env.JOURNEY_TESTS_PACKAGE_LOCK) }}
 
     - name: Install Playwright Chromium
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
