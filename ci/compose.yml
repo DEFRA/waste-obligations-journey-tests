@@ -10,6 +10,8 @@ name: waste-obligations-journey-tests
 # setup logic.
 
 services:
+  # Two-second readiness probes shorten the CI dependency chain. Retry counts
+  # retain each service's previous overall readiness allowance.
   mongodb:
     image: mongo:7.0.24
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
@@ -22,26 +24,26 @@ services:
           "--eval",
           "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}).ok }"
         ]
-      interval: 5s
+      interval: 2s
       timeout: 5s
-      retries: 10
+      retries: 25
       start_period: 5s
 
   redis:
     image: redis:7.2.3-alpine3.18
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      interval: 2s
       timeout: 3s
-      retries: 5
+      retries: 13
 
   floci:
     image: floci/floci:latest
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
-      interval: 5s
+      interval: 2s
       timeout: 5s
-      retries: 10
+      retries: 25
       start_period: 5s
 
   wiremock:
@@ -59,9 +61,9 @@ services:
       ]
     healthcheck:
       test: ["CMD-SHELL", "timeout 1 bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/80'"]
-      interval: 5s
+      interval: 2s
       timeout: 5s
-      retries: 10
+      retries: 25
       start_period: 5s
 
   waste-organisations:
@@ -95,9 +97,9 @@ services:
       Acl__Clients__waste-organisations-seed__Scopes__1: write
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 5s
+      interval: 2s
       timeout: 5s
-      retries: 10
+      retries: 25
       start_period: 5s
 
   # Scenario data is owned by the journey suite because the tests choose the
@@ -172,9 +174,9 @@ services:
       - "${WASTE_OBLIGATIONS_HOST_PORT:-8007}:8080"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 5s
+      interval: 2s
       timeout: 5s
-      retries: 10
+      retries: 25
       start_period: 5s
 
   waste-obligations-frontend:
@@ -230,9 +232,9 @@ services:
       SESSION_COOKIE_SECURE: "true"
     healthcheck:
       test: ["CMD", "node", "-e", "require('net').connect({host:'127.0.0.1', port:3000}).once('connect', () => process.exit(0)).once('error', () => process.exit(1))"]
-      interval: 5s
+      interval: 2s
       timeout: 3s
-      retries: 12
+      retries: 30
       start_period: 15s
 
   waste-obligations-frontend-proxy:
@@ -247,7 +249,7 @@ services:
       - ${CI_STACK_RUNTIME_DIR:?CI_STACK_RUNTIME_DIR must identify the generated CI stack directory}/certs:/certs:ro
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider --no-check-certificate https://127.0.0.1/health"]
-      interval: 5s
+      interval: 2s
       timeout: 3s
-      retries: 12
+      retries: 30
       start_period: 5s

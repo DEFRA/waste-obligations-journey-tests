@@ -132,11 +132,6 @@ runs:
         path: ~/.cache/ms-playwright
         key: playwright-browsers-${{ runner.os }}-${{ hashFiles(env.JOURNEY_TESTS_PACKAGE_LOCK) }}
 
-    - name: Install Playwright Chromium
-      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
-      shell: bash
-      run: npx playwright install --with-deps chromium
-
     - name: Prepare dedicated CI stack
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
@@ -166,7 +161,7 @@ runs:
           -f "$WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR/compose/journey-tests.compose.yml" \
           config -q
 
-    - name: Start dedicated CI stack
+    - name: Install Playwright Chromium while starting dedicated CI stack
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
       run: |
@@ -185,7 +180,24 @@ runs:
           -f ci/compose.yml \
           -f "$WASTE_OBLIGATIONS_SOURCE_DIR/compose/journey-tests.compose.yml" \
           -f "$WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR/compose/journey-tests.compose.yml" \
-          up --detach --wait --wait-timeout 900 --quiet-pull
+          up --detach --wait --wait-timeout 900 --quiet-pull &
+        stack_pid=$!
+
+        browser_status=0
+        npx playwright install --with-deps chromium || browser_status=$?
+
+        stack_status=0
+        wait "$stack_pid" || stack_status=$?
+
+        if [ "$browser_status" -ne 0 ]; then
+          echo "Playwright Chromium installation failed" >&2
+        fi
+        if [ "$stack_status" -ne 0 ]; then
+          echo "Dedicated CI stack startup failed" >&2
+        fi
+        if [ "$browser_status" -ne 0 ] || [ "$stack_status" -ne 0 ]; then
+          exit 1
+        fi
 
     - name: Confirm local services are reachable
       shell: bash
