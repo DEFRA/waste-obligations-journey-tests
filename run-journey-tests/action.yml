@@ -118,6 +118,7 @@ runs:
       run: |
         set -euo pipefail
         : "${WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET:?WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET must be set}"
+        : "${GOVUK_NOTIFY_API_KEY:?GOVUK_NOTIFY_API_KEY must be set}"
 
         stack_runtime_dir="$RUNNER_TEMP/waste-obligations-journey-tests"
         mkdir -p "$stack_runtime_dir/certs"

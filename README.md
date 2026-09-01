@@ -184,7 +184,7 @@ The stack contains only the journey's runtime dependencies:
 - WireMock in place of the Azure-hosted Backend Account API; and
 - journey-owned organisation scenario data, seeded through the Waste Organisations API.
 
-The runner always checks out `waste-obligations` and `waste-obligations-frontend`: at a supplied SHA, or at `main` when a SHA is omitted. With a SHA it builds the existing service Dockerfile locally; without one, Docker Compose pulls the service's normal `latest` image from the registry. The checkout always supplies that service's CI setup assets. The workflow is available through **Run workflow** and as a reusable workflow. It requires the two B2C login accounts, test organisation/submitter identifiers, and `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET` as GitHub secrets.
+The runner always checks out `waste-obligations` and `waste-obligations-frontend`: at a supplied SHA, or at `main` when a SHA is omitted. With a SHA it builds the existing service Dockerfile locally; without one, Docker Compose pulls the service's normal `latest` image from the registry. The checkout always supplies that service's CI setup assets. The workflow is available through **Run workflow** and as a reusable workflow. It requires the two B2C login accounts, test organisation/submitter identifiers, `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET`, and `GOVUK_NOTIFY_API_KEY` as GitHub secrets.
 
 ### Service-owned CI setup
 

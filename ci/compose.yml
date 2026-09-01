@@ -167,7 +167,7 @@ services:
       AccountBackend__Scope: api://backend-account/.default
       AccountBackend__BaseAddress: http://wiremock/
       GovukNotify__BaseAddress: http://wiremock/
-      GovukNotify__ApiKey: journey-test-notify-key
+      GovukNotify__ApiKey: ${GOVUK_NOTIFY_API_KEY:?GOVUK_NOTIFY_API_KEY must be set}
     ports:
       - "${WASTE_OBLIGATIONS_HOST_PORT:-8007}:8080"
     healthcheck:

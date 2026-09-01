@@ -40,6 +40,8 @@ on:
         required: true
       WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET:
         required: true
+      GOVUK_NOTIFY_API_KEY:
+        required: true
 
 permissions:
   contents: read
@@ -68,3 +70,4 @@ jobs:
           WASTE_OBLIGATION_SUBMITTER_ID: ${{ secrets.WASTE_OBLIGATION_SUBMITTER_ID }}
           WASTE_OBLIGATION_SUBMITTER_EMAIL: ${{ secrets.WASTE_OBLIGATION_SUBMITTER_EMAIL }}
           WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET: ${{ secrets.WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET }}
+          GOVUK_NOTIFY_API_KEY: ${{ secrets.GOVUK_NOTIFY_API_KEY }}
