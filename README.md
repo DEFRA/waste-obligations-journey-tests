@@ -190,14 +190,14 @@ The runner always checks out `waste-obligations` and `waste-obligations-frontend
 
 Configure these repository secrets for manual runs. A repository calling the reusable workflow must provide the same names, either explicitly or through `secrets: inherit`.
 
-| Secret                                         | Purpose                                                                                  |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `EPR_USER_EMAIL`                               | Direct producer journey-account email address.                                           |
-| `EPR_USER_PASSWORD`                            | Direct producer journey-account password.                                                |
-| `EPR_CSO_USER_EMAIL`                           | Compliance-scheme journey-account email address.                                         |
-| `EPR_CSO_USER_PASSWORD`                        | Compliance-scheme journey-account password.                                              |
-| `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET` | Azure AD B2C application client secret used by the frontend.                             |
-| `GOVUK_NOTIFY_API_KEY`                         | Valid GOV.UK Notify API key injected into the WireMock-backed Waste Obligations service. |
+| Secret                                         | Purpose                                                                                           |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `EPR_USER_EMAIL`                               | Direct producer journey-account email address.                                                    |
+| `EPR_USER_PASSWORD`                            | Direct producer journey-account password.                                                         |
+| `EPR_CSO_USER_EMAIL`                           | Compliance-scheme journey-account email address.                                                  |
+| `EPR_CSO_USER_PASSWORD`                        | Compliance-scheme journey-account password.                                                       |
+| `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET` | Azure AD B2C application client secret used by the frontend.                                      |
+| `GOVUK_NOTIFY_API_KEY`                         | Format-valid dummy GOV.UK Notify key injected into the WireMock-backed Waste Obligations service. |
 
 ### Service-owned CI setup
 
