@@ -62,17 +62,6 @@ runs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
 
-    - name: Build Waste Obligations service
-      if: inputs.waste-obligations != ''
-      shell: bash
-      run: |
-        docker buildx build \
-          --cache-from type=gha,scope=waste-obligations \
-          --cache-to type=gha,mode=max,scope=waste-obligations \
-          --load \
-          --tag local/waste-obligations:journey-tests \
-          "$GITHUB_WORKSPACE/waste-obligations-source"
-
     - name: Checkout Waste Obligations frontend source assets
       uses: actions/checkout@v7
       with:
@@ -84,17 +73,47 @@ runs:
       shell: bash
       run: echo "WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR=$GITHUB_WORKSPACE/waste-obligations-frontend-source" >> "$GITHUB_ENV"
 
-    - name: Build Waste Obligations frontend
-      if: inputs.waste-obligations-frontend != ''
+    # Both images stay on the same runner, so concurrent Buildx processes can
+    # build them in parallel without publishing or transferring test images.
+    - name: Build selected service images in parallel
+      if: inputs.waste-obligations != '' || inputs.waste-obligations-frontend != ''
       shell: bash
       run: |
-        docker buildx build \
-          --cache-from type=gha,scope=waste-obligations-frontend \
-          --cache-to type=gha,mode=max,scope=waste-obligations-frontend \
-          --load \
-          --target production \
-          --tag local/waste-obligations-frontend:journey-tests \
-          "$GITHUB_WORKSPACE/waste-obligations-frontend-source"
+        set -euo pipefail
+        build_pids=()
+        build_names=()
+
+        if [ -n "${{ inputs.waste-obligations }}" ]; then
+          docker buildx build \
+            --cache-from type=gha,scope=waste-obligations \
+            --cache-to type=gha,mode=max,scope=waste-obligations \
+            --load \
+            --tag local/waste-obligations:journey-tests \
+            "$GITHUB_WORKSPACE/waste-obligations-source" &
+          build_pids+=("$!")
+          build_names+=("Waste Obligations")
+        fi
+
+        if [ -n "${{ inputs.waste-obligations-frontend }}" ]; then
+          docker buildx build \
+            --cache-from type=gha,scope=waste-obligations-frontend \
+            --cache-to type=gha,mode=max,scope=waste-obligations-frontend \
+            --load \
+            --target production \
+            --tag local/waste-obligations-frontend:journey-tests \
+            "$GITHUB_WORKSPACE/waste-obligations-frontend-source" &
+          build_pids+=("$!")
+          build_names+=("Waste Obligations frontend")
+        fi
+
+        build_failed=0
+        for index in "${!build_pids[@]}"; do
+          if ! wait "${build_pids[$index]}"; then
+            echo "${build_names[$index]} image build failed" >&2
+            build_failed=1
+          fi
+        done
+        exit "$build_failed"
 
     - uses: actions/setup-node@v7
       with:
