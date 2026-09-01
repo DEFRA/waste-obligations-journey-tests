@@ -20,7 +20,7 @@ runs:
   steps:
     - name: Checkout journey tests
       if: inputs.journey-tests-ref != ''
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         repository: DEFRA/waste-obligations-journey-tests
         ref: ${{ inputs.journey-tests-ref }}
@@ -46,7 +46,7 @@ runs:
     # When no SHA is supplied, main supplies those assets and the normal
     # latest application image is pulled from the registry.
     - name: Checkout Waste Obligations source assets
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         repository: DEFRA/waste-obligations
         ref: ${{ inputs.waste-obligations || 'main' }}
@@ -60,7 +60,7 @@ runs:
       uses: DEFRA/cdp-build-action/docker-login@main
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build Waste Obligations service
       if: inputs.waste-obligations != ''
@@ -74,7 +74,7 @@ runs:
           "$GITHUB_WORKSPACE/waste-obligations-source"
 
     - name: Checkout Waste Obligations frontend source assets
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         repository: DEFRA/waste-obligations-frontend
         ref: ${{ inputs.waste-obligations-frontend || 'main' }}
@@ -96,7 +96,7 @@ runs:
           --tag local/waste-obligations-frontend:journey-tests \
           "$GITHUB_WORKSPACE/waste-obligations-frontend-source"
 
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v7
       with:
         node-version-file: ${{ env.JOURNEY_TESTS_NODE_VERSION_FILE }}
         cache: npm
@@ -108,7 +108,7 @@ runs:
       run: npm ci
 
     - name: Cache Playwright browsers
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.cache/ms-playwright
         key: playwright-browsers-${{ runner.os }}-${{ hashFiles(env.JOURNEY_TESTS_PACKAGE_LOCK) }}
@@ -208,7 +208,7 @@ runs:
 
     - name: Upload journey artefacts
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: waste-obligations-e2e-${{ inputs.project }}
         path: |
