@@ -1,5 +1,9 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import {
+  getJourneyStartPath,
+  usesPackagingEntryPoint
+} from '../utils/journey-entry-point.js'
 
 export class LandingPage extends BasePage {
   constructor(page) {
@@ -10,7 +14,11 @@ export class LandingPage extends BasePage {
     })
   }
 
-  async goto() {
+  async goto(account = 'dp') {
+    if (!usesPackagingEntryPoint()) {
+      await this.gotoPath(getJourneyStartPath(account))
+      return
+    }
     await this.gotoPath(this.path)
     await this.expectLoaded()
   }
@@ -20,6 +28,11 @@ export class LandingPage extends BasePage {
   }
 
   async goToObligations() {
+    if (!usesPackagingEntryPoint()) {
+      throw new Error(
+        'The waste-obligations entry point opens the CSOC about page directly.'
+      )
+    }
     await this.manageObligationsLink.click()
   }
 }

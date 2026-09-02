@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import { getJourneyViewPath } from '../utils/journey-entry-point.js'
 
 export class CsocViewPage extends BasePage {
   constructor(page) {
@@ -20,6 +21,10 @@ export class CsocViewPage extends BasePage {
       /\/(certificate|statement)\/[a-f0-9]{24}(?:\?|$)/
     )
     await expect(this.headingFor(year)).toBeVisible()
+  }
+
+  async goto(account, declarationId) {
+    await this.gotoPath(getJourneyViewPath(account, declarationId))
   }
 
   // CSO renders a "Compliance scheme" row; producer renders "Organisation

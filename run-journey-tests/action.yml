@@ -1,57 +1,262 @@
-name: Run Journey Tests on GitHub
+name: Run Waste Obligations e2e journeys
+description: Start a dedicated Waste Obligations CI stack and run the DP and CSO lifecycle journeys.
 
 inputs:
-  example-node-backend:
+  journey-tests-ref:
+    description: Ref of this repository to check out when called from another repository. Leave empty when this repository is already checked out.
+    default: main
+  waste-obligations:
+    description: Waste Obligations commit SHA to check out and build locally. Leave empty to check out main CI assets and pull its published image.
     required: false
-    type: string
-  example-node-frontend:
+  waste-obligations-frontend:
+    description: Waste Obligations frontend commit SHA to check out and build locally. Leave empty to check out main CI assets and pull its published image.
     required: false
-    type: string
+  project:
+    description: Playwright project to run. chromium-based chrome-android is the CI default.
+    default: chrome-android
 
 runs:
-  using: "composite"
+  using: composite
   steps:
-    - uses: actions/checkout@v4
+    - name: Checkout journey tests
+      if: inputs.journey-tests-ref != ''
+      uses: actions/checkout@v7
       with:
-        repository: DEFRA/cdp-node-journey-test-suite-template
+        repository: DEFRA/waste-obligations-journey-tests
+        ref: ${{ inputs.journey-tests-ref }}
+        path: journey-tests
 
-    - name: Docker Login
+    - name: Use checked-out journey tests
+      if: inputs.journey-tests-ref != ''
+      shell: bash
+      run: |
+        echo "JOURNEY_TESTS_PATH=$GITHUB_WORKSPACE/journey-tests" >> "$GITHUB_ENV"
+        echo "JOURNEY_TESTS_NODE_VERSION_FILE=journey-tests/.nvmrc" >> "$GITHUB_ENV"
+        echo "JOURNEY_TESTS_PACKAGE_LOCK=journey-tests/package-lock.json" >> "$GITHUB_ENV"
+
+    - name: Use caller checkout
+      if: inputs.journey-tests-ref == ''
+      shell: bash
+      run: |
+        echo "JOURNEY_TESTS_PATH=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+        echo "JOURNEY_TESTS_NODE_VERSION_FILE=.nvmrc" >> "$GITHUB_ENV"
+        echo "JOURNEY_TESTS_PACKAGE_LOCK=package-lock.json" >> "$GITHUB_ENV"
+
+    # Each service repository supplies CI assets from the selected revision.
+    # When no SHA is supplied, main supplies those assets and the normal
+    # latest application image is pulled from the registry.
+    - name: Checkout Waste Obligations source assets
+      uses: actions/checkout@v7
+      with:
+        repository: DEFRA/waste-obligations
+        ref: ${{ inputs.waste-obligations || 'main' }}
+        path: waste-obligations-source
+
+    - name: Use Waste Obligations source assets
+      shell: bash
+      run: echo "WASTE_OBLIGATIONS_SOURCE_DIR=$GITHUB_WORKSPACE/waste-obligations-source" >> "$GITHUB_ENV"
+
+    - name: Log into container registries
       uses: DEFRA/cdp-build-action/docker-login@main
 
-    - uses: actions/setup-node@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Checkout Waste Obligations frontend source assets
+      uses: actions/checkout@v7
       with:
-        node-version: 22
+        repository: DEFRA/waste-obligations-frontend
+        ref: ${{ inputs.waste-obligations-frontend || 'main' }}
+        path: waste-obligations-frontend-source
+
+    - name: Use Waste Obligations frontend source assets
+      shell: bash
+      run: echo "WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR=$GITHUB_WORKSPACE/waste-obligations-frontend-source" >> "$GITHUB_ENV"
+
+    # Both images stay on the same runner, so concurrent Buildx processes can
+    # build them in parallel without publishing or transferring test images.
+    - name: Build selected service images in parallel
+      if: inputs.waste-obligations != '' || inputs.waste-obligations-frontend != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        build_pids=()
+        build_names=()
+
+        if [ -n "${{ inputs.waste-obligations }}" ]; then
+          docker buildx build \
+            --cache-from type=gha,scope=waste-obligations \
+            --cache-to type=gha,mode=max,scope=waste-obligations \
+            --load \
+            --tag local/waste-obligations:journey-tests \
+            "$GITHUB_WORKSPACE/waste-obligations-source" &
+          build_pids+=("$!")
+          build_names+=("Waste Obligations")
+        fi
+
+        if [ -n "${{ inputs.waste-obligations-frontend }}" ]; then
+          docker buildx build \
+            --cache-from type=gha,scope=waste-obligations-frontend \
+            --cache-to type=gha,mode=max,scope=waste-obligations-frontend \
+            --load \
+            --target production \
+            --tag local/waste-obligations-frontend:journey-tests \
+            "$GITHUB_WORKSPACE/waste-obligations-frontend-source" &
+          build_pids+=("$!")
+          build_names+=("Waste Obligations frontend")
+        fi
+
+        build_failed=0
+        for index in "${!build_pids[@]}"; do
+          if ! wait "${build_pids[$index]}"; then
+            echo "${build_names[$index]} image build failed" >&2
+            build_failed=1
+          fi
+        done
+        exit "$build_failed"
+
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: ${{ env.JOURNEY_TESTS_NODE_VERSION_FILE }}
         cache: npm
-    - name: Setup the tests
+        cache-dependency-path: ${{ env.JOURNEY_TESTS_PACKAGE_LOCK }}
+
+    - name: Install journey-test dependencies
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
+      shell: bash
       run: npm ci
-      shell: bash
-    - name: Install Playwright browsers
-      run: npx playwright install --with-deps chromium
-      shell: bash
-    - name: Start docker compose
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-browsers-${{ runner.os }}-${{ hashFiles(env.JOURNEY_TESTS_PACKAGE_LOCK) }}
+
+    - name: Prepare dedicated CI stack
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
       run: |
-          CDP_EXAMPLE_NODE_FRONTEND=${{inputs.example-node-frontend}} \
-          CDP_EXAMPLE_NODE_BACKEND=${{inputs.example-node-backend}} \
-          docker compose up --wait-timeout 300 -d --quiet-pull
-    - name: Run the tests
+        set -euo pipefail
+        : "${WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET:?WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET must be set}"
+        : "${GOVUK_NOTIFY_API_KEY:?GOVUK_NOTIFY_API_KEY must be set}"
+
+        stack_runtime_dir="$RUNNER_TEMP/waste-obligations-journey-tests"
+        mkdir -p "$stack_runtime_dir/certs"
+        openssl req -x509 -newkey rsa:2048 -sha256 -nodes \
+          -keyout "$stack_runtime_dir/certs/localhost.key" \
+          -out "$stack_runtime_dir/certs/localhost.crt" \
+          -days 1 \
+          -subj '/CN=localhost' \
+          -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1'
+
+        echo "CI_STACK_RUNTIME_DIR=$stack_runtime_dir" >> "$GITHUB_ENV"
+
+    - name: Validate dedicated CI stack configuration
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
-      run: npm test
-    - name: debug
-      if: always()
       run: |
-        docker compose logs > logs.txt
-        docker ps
+        docker compose \
+          -f ci/compose.yml \
+          -f "$WASTE_OBLIGATIONS_SOURCE_DIR/compose/journey-tests.compose.yml" \
+          -f "$WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR/compose/journey-tests.compose.yml" \
+          config -q
+
+    - name: Install Playwright Chromium while starting dedicated CI stack
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
-    - name: Upload Playwright report
+      run: |
+        set -euo pipefail
+        if [ -n "${{ inputs.waste-obligations }}" ]; then
+          export WASTE_OBLIGATIONS_IMAGE=local/waste-obligations:journey-tests
+          export WASTE_OBLIGATIONS_PULL_POLICY=never
+        fi
+        if [ -n "${{ inputs.waste-obligations-frontend }}" ]; then
+          export WASTE_OBLIGATIONS_FRONTEND_IMAGE=local/waste-obligations-frontend:journey-tests
+          export WASTE_OBLIGATIONS_FRONTEND_PULL_POLICY=never
+        fi
+
+        docker compose \
+          --project-name waste-obligations-journey-tests \
+          -f ci/compose.yml \
+          -f "$WASTE_OBLIGATIONS_SOURCE_DIR/compose/journey-tests.compose.yml" \
+          -f "$WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR/compose/journey-tests.compose.yml" \
+          up --detach --wait --wait-timeout 900 --quiet-pull &
+        stack_pid=$!
+
+        browser_status=0
+        npx playwright install --with-deps chromium || browser_status=$?
+
+        stack_status=0
+        wait "$stack_pid" || stack_status=$?
+
+        if [ "$browser_status" -ne 0 ]; then
+          echo "Playwright Chromium installation failed" >&2
+        fi
+        if [ "$stack_status" -ne 0 ]; then
+          echo "Dedicated CI stack startup failed" >&2
+        fi
+        if [ "$browser_status" -ne 0 ] || [ "$stack_status" -ne 0 ]; then
+          exit 1
+        fi
+
+    - name: Confirm local services are reachable
+      shell: bash
+      run: |
+        curl --fail --retry 12 --retry-delay 5 http://localhost:8007/health
+        curl --fail --insecure --retry 12 --retry-delay 5 https://localhost:8010/health
+
+    - name: Run e2e journeys
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
+      shell: bash
+      env:
+        ENVIRONMENT: local
+        JOURNEY_ENTRY_POINT: waste-obligations
+        EPR_BASE_URL: ''
+        WASTE_OBLIGATIONS_API_BASE_URL: ''
+        WASTE_OBLIGATION_USERNAME: Developer
+        WASTE_OBLIGATION_PASSWORD: developer-pwd
+        JOURNEY_USER: Developer
+        JOURNEY_PASSWORD: developer-pwd
+      run: npx playwright test --project=${{ inputs.project }}
+
+    - name: Generate Allure report
       if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: playwright-report
-        path: ./playwright-report
-    - name: Upload docker compose logs
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
+      shell: bash
+      run: npm run report
+
+    - name: Collect dedicated CI stack logs
       if: always()
-      uses: actions/upload-artifact@v4
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
+      shell: bash
+      run: |
+        docker compose \
+          --project-name waste-obligations-journey-tests \
+          -f ci/compose.yml \
+          -f "$WASTE_OBLIGATIONS_SOURCE_DIR/compose/journey-tests.compose.yml" \
+          -f "$WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR/compose/journey-tests.compose.yml" \
+          logs --no-color > docker-compose.log
+
+    - name: Upload journey artefacts
+      if: always()
+      uses: actions/upload-artifact@v7
       with:
-        name: docker-compose-logs
-        path: ./logs.txt
+        name: waste-obligations-e2e-${{ inputs.project }}
+        path: |
+          ${{ env.JOURNEY_TESTS_PATH }}/test-results/
+          ${{ env.JOURNEY_TESTS_PATH }}/allure-results/
+          ${{ env.JOURNEY_TESTS_PATH }}/allure-report/
+          ${{ env.JOURNEY_TESTS_PATH }}/docker-compose.log
+        if-no-files-found: warn
+
+    - name: Stop dedicated CI stack
+      if: always()
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
+      shell: bash
+      run: |
+        docker compose \
+          --project-name waste-obligations-journey-tests \
+          -f ci/compose.yml \
+          -f "$WASTE_OBLIGATIONS_SOURCE_DIR/compose/journey-tests.compose.yml" \
+          -f "$WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR/compose/journey-tests.compose.yml" \
+          down --volumes --remove-orphans

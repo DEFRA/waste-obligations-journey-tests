@@ -5,6 +5,7 @@ import {
   listDeclarations,
   setDeclarationStatus
 } from '../utils/waste-obligations-api.js'
+import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
 import { resetOrgDeclarations } from '../utils/test-setup.js'
 
 // CSO twin of csoc-submission-dp.spec.js. Same submit → cancel → resubmit →
@@ -64,12 +65,14 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     }
 
     const submitCsoc = async () => {
-      await landingPage.goto()
-      await landingPage.goToObligations()
-      await obligationsPage.expectLoaded()
-      obligationsRows = await obligationsPage.readObligationsTable()
-      expect(obligationsRows.length).toBeGreaterThan(0)
-      await obligationsPage.startCsocSubmission()
+      await landingPage.goto(ACCOUNT)
+      if (usesPackagingEntryPoint()) {
+        await landingPage.goToObligations()
+        await obligationsPage.expectLoaded()
+        obligationsRows = await obligationsPage.readObligationsTable()
+        expect(obligationsRows.length).toBeGreaterThan(0)
+        await obligationsPage.startCsocSubmission()
+      }
       await csocAboutPage.expectLoaded()
       await csocAboutPage.expectRegulatorEmail()
       await csocAboutPage.clickContinue()
@@ -80,9 +83,13 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
       return findSubmittedDeclarationId()
     }
 
-    const viewCsocViaUi = async () => {
-      await obligationsPage.goto()
-      await obligationsPage.openCertificateHub()
+    const viewCsocViaUi = async (declarationId) => {
+      if (usesPackagingEntryPoint()) {
+        await obligationsPage.goto(ACCOUNT)
+        await obligationsPage.openCertificateHub()
+      } else {
+        await csocViewPage.goto(ACCOUNT, declarationId)
+      }
       await csocViewPage.expectLoaded(year)
     }
 
@@ -91,7 +98,7 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     })
 
     await test.step('Scenario 2: view declaration A; audit records Submitted', async () => {
-      await viewCsocViaUi()
+      await viewCsocViaUi(firstId)
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(firstId, { action: DECLARATION_STATUS.Submitted })
     })
@@ -108,8 +115,14 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     })
 
     await test.step('Scenario 4: obligations page shows resubmit; audit reflects Cancelled with reason', async () => {
-      await obligationsPage.goto()
-      await obligationsPage.expectResubmitCardVisible()
+      if (usesPackagingEntryPoint()) {
+        await obligationsPage.goto(ACCOUNT)
+        await obligationsPage.expectResubmitCardVisible()
+      } else {
+        await landingPage.goto(ACCOUNT)
+        await csocAboutPage.expectLoaded()
+        await csocAboutPage.expectCanSubmit()
+      }
       await expectAuditEntry(firstId, {
         action: DECLARATION_STATUS.Cancelled,
         reason: 'Journey-test cancel'
@@ -135,7 +148,7 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     })
 
     await test.step('Scenario 6: view declaration B; audit records Submitted', async () => {
-      await viewCsocViaUi()
+      await viewCsocViaUi(secondId)
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(secondId, { action: DECLARATION_STATUS.Submitted })
     })
@@ -152,7 +165,7 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     })
 
     await test.step('Scenario 8: view declaration B; audit reflects Accepted', async () => {
-      await viewCsocViaUi()
+      await viewCsocViaUi(secondId)
       await csocViewPage.expectOrgIdentity()
       await expectAuditEntry(secondId, { action: DECLARATION_STATUS.Accepted })
     })

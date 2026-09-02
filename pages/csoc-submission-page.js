@@ -57,7 +57,9 @@ export class CsocSubmissionPage extends BasePage {
       await this.expectFieldPopulated('Regulator')
     } else {
       await this.expectFieldPopulated('Organisation name')
-      await this.expectFieldPopulated('Address')
+      // The epr-local-environment organisation seed deliberately has no
+      // address. The row must still be present when the value is empty.
+      await this.expectFieldRendered('Address')
       await this.expectFieldPopulated('Regulator')
     }
     await this.expectMailtoLinkPopulated()

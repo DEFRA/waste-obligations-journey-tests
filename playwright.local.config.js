@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { defineConfig } from '@playwright/test'
 import baseConfig from './playwright.config.js'
+import { getJourneyBaseUrl } from './utils/journey-entry-point.js'
 
 export default defineConfig({
   ...baseConfig,
@@ -8,7 +9,7 @@ export default defineConfig({
   retries: 0,
   use: {
     ...baseConfig.use,
-    baseURL: process.env.EPR_BASE_URL || 'https://localhost:7084',
+    baseURL: getJourneyBaseUrl('local'),
     trace: 'on',
     video: 'on'
   }

@@ -39,7 +39,7 @@ export class BasePage {
     const value = this.page.locator(
       `xpath=//dt[normalize-space()=${JSON.stringify(label)}]/following-sibling::dd[1]`
     )
-    await expect(value).toBeVisible()
+    await expect(value).toHaveCount(1)
   }
 
   async expectMailtoLinkPopulated(minLength = 10) {
