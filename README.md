@@ -184,11 +184,13 @@ The stack contains only the journey's runtime dependencies:
 - WireMock in place of the Azure-hosted Backend Account API; and
 - journey-owned organisation scenario data, seeded through the Waste Organisations API.
 
-The runner always checks out `waste-obligations` and `waste-obligations-frontend`: at a supplied SHA, or at `main` when a SHA is omitted. With a SHA it builds the existing service Dockerfile locally; when both SHAs are supplied, those image builds run concurrently on the same runner. Without a SHA, Docker Compose pulls the service's normal `latest` image from the registry. The checkout always supplies that service's CI setup assets. The workflow is available through **Run workflow** and as a reusable workflow. It requires the two B2C login accounts, `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET`, and `GOVUK_NOTIFY_API_KEY` as GitHub secrets. The journey's organisation and submitter identifiers are non-secret scenario data defined in the workflow.
+The runner always checks out `waste-obligations` and `waste-obligations-frontend`: at a supplied SHA, or at `main` when a SHA is omitted. With a SHA it builds the existing service Dockerfile locally; when both SHAs are supplied, those image builds run concurrently on the same runner. Without a SHA, Docker Compose pulls the service's normal `latest` image from the registry. The checkout always supplies that service's CI setup assets. The workflow is available through **Run workflow** and as a reusable workflow. The [Waste Obligations](https://github.com/DEFRA/waste-obligations#journey-tests) and [Waste Obligations frontend](https://github.com/DEFRA/waste-obligations-frontend#journey-tests) pull-request workflows use the composite runner directly. It requires the two B2C login accounts, `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET`, and `GOVUK_NOTIFY_API_KEY` as GitHub secrets. The journey's organisation and submitter identifiers are non-secret scenario data defined in the workflow.
 
 #### GitHub Actions secrets
 
 Configure these repository secrets for manual runs. A repository calling the reusable workflow must provide the same names, either explicitly or through `secrets: inherit`.
+
+The composite action used by service pull requests executes in the calling repository, so secrets configured here are not automatically available to it. Configure the same names in both service repositories, or preferably as organisation-level Actions secrets restricted to this repository and the two service repositories. The service-repository READMEs link here as the canonical contract; do not duplicate the values in source control.
 
 | Secret                                         | Purpose                                                                                           |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -198,6 +200,14 @@ Configure these repository secrets for manual runs. A repository calling the reu
 | `EPR_CSO_USER_PASSWORD`                        | Compliance-scheme journey-account password.                                                       |
 | `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET` | Azure AD B2C application client secret used by the frontend.                                      |
 | `GOVUK_NOTIFY_API_KEY`                         | Format-valid dummy GOV.UK Notify key injected into the WireMock-backed Waste Obligations service. |
+
+The caller's journey job also needs `contents: read` and `id-token: write`. Docker login derives the CDP role name from the caller repository, so the roles `github-waste-obligations-build-role` and `github-waste-obligations-frontend-build-role` must be available to their respective workflows. These role permissions are not GitHub secrets.
+
+#### Calling from service pull requests
+
+The service pull-request jobs are independent of their repositories' normal validation jobs. They look for a branch with the same name in this repository and pass it as `journey-tests-ref`; if it does not exist, they use `main`. They then pass their own PR head SHA as the relevant service input. This lets a coordinated change exercise altered journey tests without publishing a test image. Pull requests from forks are excluded because GitHub does not make repository secrets available to them.
+
+The action is deliberately pinned to `run-journey-tests@main`, as GitHub Actions does not support a dynamic `uses:` ref. `journey-tests-ref` checks out the selected test branch and uses its journeys and CI-stack assets.
 
 ### Service-owned CI setup
 
