@@ -1,5 +1,5 @@
-name: Run Waste Obligations e2e journeys
-description: Start a dedicated Waste Obligations CI stack and run the DP and CSO lifecycle journeys.
+name: Run Waste Obligations journey profiles
+description: Start a dedicated Waste Obligations CI stack and run the E2E, accessibility and security journey profiles.
 
 inputs:
   journey-tests-ref:
@@ -217,7 +217,35 @@ runs:
         WASTE_OBLIGATION_PASSWORD: developer-pwd
         JOURNEY_USER: Developer
         JOURNEY_PASSWORD: developer-pwd
-      run: npx playwright test --project=${{ inputs.project }}
+      run: PROFILE=e2e npx playwright test --project=${{ inputs.project }} --output=test-results/e2e
+
+    - name: Run accessibility journeys
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
+      shell: bash
+      env:
+        ENVIRONMENT: local
+        JOURNEY_ENTRY_POINT: waste-obligations
+        EPR_BASE_URL: ''
+        WASTE_OBLIGATIONS_API_BASE_URL: ''
+        WASTE_OBLIGATION_USERNAME: Developer
+        WASTE_OBLIGATION_PASSWORD: developer-pwd
+        JOURNEY_USER: Developer
+        JOURNEY_PASSWORD: developer-pwd
+      run: PROFILE=accessibility npx playwright test --project=${{ inputs.project }} --output=test-results/accessibility
+
+    - name: Run security journeys
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
+      shell: bash
+      env:
+        ENVIRONMENT: local
+        JOURNEY_ENTRY_POINT: waste-obligations
+        EPR_BASE_URL: ''
+        WASTE_OBLIGATIONS_API_BASE_URL: ''
+        WASTE_OBLIGATION_USERNAME: Developer
+        WASTE_OBLIGATION_PASSWORD: developer-pwd
+        JOURNEY_USER: Developer
+        JOURNEY_PASSWORD: developer-pwd
+      run: ./ci/run-security-profile.sh ${{ inputs.project }}
 
     - name: Generate Allure report
       if: always()
@@ -241,11 +269,13 @@ runs:
       if: always()
       uses: actions/upload-artifact@v7
       with:
-        name: waste-obligations-e2e-${{ inputs.project }}
+        name: waste-obligations-journeys-${{ inputs.project }}
         path: |
           ${{ env.JOURNEY_TESTS_PATH }}/test-results/
           ${{ env.JOURNEY_TESTS_PATH }}/allure-results/
           ${{ env.JOURNEY_TESTS_PATH }}/allure-report/
+          ${{ env.JOURNEY_TESTS_PATH }}/reports/
+          ${{ env.JOURNEY_TESTS_PATH }}/security-report/
           ${{ env.JOURNEY_TESTS_PATH }}/docker-compose.log
         if-no-files-found: warn
 

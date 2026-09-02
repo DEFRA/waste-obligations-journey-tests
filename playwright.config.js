@@ -4,7 +4,13 @@ import { getJourneyBaseUrl } from './utils/journey-entry-point.js'
 
 const baseURL = getJourneyBaseUrl()
 const proxy = process.env.HTTP_PROXY
-  ? { server: process.env.HTTP_PROXY }
+  ? {
+      server: process.env.HTTP_PROXY,
+      // Chromium excludes loopback addresses from a proxy by default. The CI
+      // security profile scans the dedicated stack at localhost, so it opts
+      // back in with the Chromium-specific <-loopback> rule.
+      bypass: process.env.HTTP_PROXY_BYPASS
+    }
   : undefined
 
 // DP (direct producer) storage state is the default for every browser project.
