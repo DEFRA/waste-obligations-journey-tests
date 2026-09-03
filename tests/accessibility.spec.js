@@ -1,6 +1,11 @@
 import { test } from '../fixtures/pages.fixture.js'
 import { TEST_USER_NAME } from '../data/csoc.data.js'
-import { resetOrgDeclarations } from '../utils/test-setup.js'
+import { getOrgId } from '../utils/waste-obligations-api.js'
+import {
+  findOnlySubmittedDeclaration,
+  resetOrgDeclarations
+} from '../utils/test-setup.js'
+import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
 import {
   initialiseAccessibilityChecking,
   analyseAccessibility,
@@ -12,6 +17,42 @@ import {
 // Shared backend org: keep serial so a single worker owns the lifecycle state
 // across the submit → view scans.
 test.describe.configure({ mode: 'serial' })
+
+async function startCsocJourney({
+  account,
+  landingPage,
+  obligationsPage,
+  csocAboutPage
+}) {
+  await landingPage.goto(account)
+  if (usesPackagingEntryPoint()) {
+    await landingPage.goToObligations()
+    await obligationsPage.expectLoaded()
+    await obligationsPage.startCsocSubmission()
+  }
+  await csocAboutPage.expectLoaded()
+}
+
+async function openCsocView({
+  account,
+  request,
+  year,
+  obligationsPage,
+  csocViewPage
+}) {
+  if (usesPackagingEntryPoint()) {
+    await obligationsPage.goto(account)
+    await obligationsPage.openCertificateHub()
+  } else {
+    const declaration = await findOnlySubmittedDeclaration(
+      request,
+      getOrgId(account),
+      year
+    )
+    await csocViewPage.goto(account, declaration.id)
+  }
+  await csocViewPage.expectLoaded(year)
+}
 
 test.describe('Accessibility testing — CSOC journey', () => {
   test.beforeAll(async () => {
@@ -30,6 +71,7 @@ test.describe('Accessibility testing — CSOC journey', () => {
 
     test('scan the four CSOC pages', async ({
       page,
+      request,
       landingPage,
       obligationsPage,
       csocAboutPage,
@@ -43,13 +85,14 @@ test.describe('Accessibility testing — CSOC journey', () => {
 
       // Navigate from landing to the start of the CSOC journey — these pages
       // are out of scope for the accessibility scan, so we just step through.
-      await landingPage.goto()
-      await landingPage.goToObligations()
-      await obligationsPage.expectLoaded()
-      await obligationsPage.startCsocSubmission()
+      await startCsocJourney({
+        account: 'dp',
+        landingPage,
+        obligationsPage,
+        csocAboutPage
+      })
 
       await test.step('DP > CSOC About page', async () => {
-        await csocAboutPage.expectLoaded()
         await analyseAccessibility(page, 'dp-csoc-about')
       })
 
@@ -65,12 +108,16 @@ test.describe('Accessibility testing — CSOC journey', () => {
         await analyseAccessibility(page, 'dp-csoc-confirmation')
       })
 
-      // Hub → View are only reachable via the "view your certificate" flow on
-      // the obligations page after a successful submission.
+      // Packaging reaches View through its certificate hub; the direct entry
+      // point loads the submitted declaration's view route instead.
       await test.step('DP > CSOC View page', async () => {
-        await obligationsPage.goto()
-        await obligationsPage.openCertificateHub()
-        await csocViewPage.expectLoaded(year)
+        await openCsocView({
+          account: 'dp',
+          request,
+          year,
+          obligationsPage,
+          csocViewPage
+        })
         await analyseAccessibility(page, 'dp-csoc-view')
       })
 
@@ -85,6 +132,7 @@ test.describe('Accessibility testing — CSOC journey', () => {
 
     test('scan the four CSOC pages', async ({
       page,
+      request,
       landingPage,
       obligationsPage,
       csocAboutPage,
@@ -98,13 +146,14 @@ test.describe('Accessibility testing — CSOC journey', () => {
 
       // Navigate from landing to the start of the CSOC journey — these pages
       // are out of scope for the accessibility scan, so we just step through.
-      await landingPage.goto()
-      await landingPage.goToObligations()
-      await obligationsPage.expectLoaded()
-      await obligationsPage.startCsocSubmission()
+      await startCsocJourney({
+        account: 'cso',
+        landingPage,
+        obligationsPage,
+        csocAboutPage
+      })
 
       await test.step('CSO > CSOC About page', async () => {
-        await csocAboutPage.expectLoaded()
         await analyseAccessibility(page, 'cso-csoc-about')
       })
 
@@ -120,12 +169,16 @@ test.describe('Accessibility testing — CSOC journey', () => {
         await analyseAccessibility(page, 'cso-csoc-confirmation')
       })
 
-      // Hub → View are only reachable via the "view your certificate" flow on
-      // the obligations page after a successful submission.
+      // Packaging reaches View through its statement hub; the direct entry
+      // point loads the submitted declaration's view route instead.
       await test.step('CSO > CSOC View page', async () => {
-        await obligationsPage.goto()
-        await obligationsPage.openCertificateHub()
-        await csocViewPage.expectLoaded(year)
+        await openCsocView({
+          account: 'cso',
+          request,
+          year,
+          obligationsPage,
+          csocViewPage
+        })
         await analyseAccessibility(page, 'cso-csoc-view')
       })
 

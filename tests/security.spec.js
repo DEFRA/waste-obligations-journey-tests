@@ -8,18 +8,26 @@ import {
   findOnlySubmittedDeclaration,
   resetOrgDeclarations
 } from '../utils/test-setup.js'
+import {
+  getJourneyBaseUrl,
+  usesPackagingEntryPoint
+} from '../utils/journey-entry-point.js'
 
 // Single worker owns each org's declaration state across submit → cancel.
 test.describe.configure({ mode: 'serial' })
 
-// All authenticated pages of the application live somewhere under the DEFRA
-// estate (rwd-*.azure.defra.cloud locally / on the tst environment, and
-// *.cdp-int.defra.cloud once you're inside CDP after the post-auth redirect).
-// After every navigation we re-assert we're still under defra.cloud: a silent
-// 302 to b2clogin or microsoftonline would otherwise be invisible, since the
-// page-object `expectLoaded` checks can pass on heading-like elements of an
-// error page.
-const APP_HOST = /\.defra\.cloud/
+// All authenticated pages of the deployed application live under the DEFRA
+// estate. The epr-local-environment instead uses the configured local host.
+// After every navigation we re-assert that we're still at an application host:
+// a silent 302 to B2C would otherwise be invisible, since the page-object
+// `expectLoaded` checks can pass on heading-like elements of an error page.
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const APP_HOST =
+  process.env.ENVIRONMENT === 'local'
+    ? new RegExp(
+        `^https?://${escapeRegExp(new URL(getJourneyBaseUrl()).host)}(?:/|$)`
+      )
+    : /\.defra\.cloud/
 
 const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
   const {
@@ -37,20 +45,27 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
     test.setTimeout(600_000)
     const orgId = getOrgId(account)
     const year = new Date().getFullYear()
+    let submittedDeclaration
 
     await test.step(`${prefix} > Landing page`, async () => {
-      await landingPage.goto()
+      await landingPage.goto(account)
       await expect(page).toHaveURL(APP_HOST)
     })
 
     await test.step(`${prefix} > Obligations page`, async () => {
-      await landingPage.goToObligations()
-      await obligationsPage.expectLoaded()
+      if (usesPackagingEntryPoint()) {
+        await landingPage.goToObligations()
+        await obligationsPage.expectLoaded()
+      } else {
+        await csocAboutPage.expectLoaded()
+      }
       await expect(page).toHaveURL(APP_HOST)
     })
 
     await test.step(`${prefix} > CSOC About page`, async () => {
-      await obligationsPage.startCsocSubmission()
+      if (usesPackagingEntryPoint()) {
+        await obligationsPage.startCsocSubmission()
+      }
       await csocAboutPage.expectLoaded()
       await expect(page).toHaveURL(APP_HOST)
     })
@@ -64,27 +79,41 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
     await test.step(`${prefix} > CSOC Confirmation page`, async () => {
       await csocSubmissionPage.submit(TEST_USER_NAME)
       await csocConfirmationPage.expectSubmitted(year)
+      submittedDeclaration = await findOnlySubmittedDeclaration(
+        request,
+        orgId,
+        year
+      )
       await expect(page).toHaveURL(APP_HOST)
     })
 
     await test.step(`${prefix} > CSOC View page`, async () => {
-      await obligationsPage.goto()
-      await obligationsPage.openCertificateHub()
+      if (usesPackagingEntryPoint()) {
+        await obligationsPage.goto(account)
+        await obligationsPage.openCertificateHub()
+      } else {
+        await csocViewPage.goto(account, submittedDeclaration.id)
+      }
       await csocViewPage.expectLoaded(year)
     })
 
     await test.step(`${prefix} > Obligations page — resubmit state`, async () => {
-      const submitted = await findOnlySubmittedDeclaration(request, orgId, year)
       await setDeclarationStatus(
         request,
         orgId,
-        submitted.id,
+        submittedDeclaration.id,
         DECLARATION_STATUS.Cancelled,
         'Security-test cancel',
         account
       )
-      await obligationsPage.goto()
-      await obligationsPage.expectResubmitCardVisible()
+      if (usesPackagingEntryPoint()) {
+        await obligationsPage.goto(account)
+        await obligationsPage.expectResubmitCardVisible()
+      } else {
+        await landingPage.goto(account)
+        await csocAboutPage.expectLoaded()
+        await csocAboutPage.expectCanSubmit()
+      }
       await expect(page).toHaveURL(APP_HOST)
     })
   }

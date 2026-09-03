@@ -175,7 +175,7 @@ Outbound HTTP from the container goes through the CDP proxy at `localhost:3128`.
 
 ## Running on GitHub
 
-The repository workflow runs the e2e lifecycle once with the Playwright `chrome-android` project. It starts a dedicated Docker Compose stack from [ci/compose.yml](ci/compose.yml), accessed locally at `https://localhost:8010` and `http://localhost:8007`. It does not start, check out or depend on an `epr-local-environment` profile.
+The repository workflow runs the `e2e`, `accessibility` and `security` profiles with the Playwright `chrome-android` project. It starts a dedicated Docker Compose stack from [ci/compose.yml](ci/compose.yml), accessed locally at `https://localhost:8010` and `http://localhost:8007`. It does not start, check out or depend on an `epr-local-environment` profile. The security profile runs its passive ZAP scan in a short-lived container on the runner host network, explicitly including loopback browser traffic so it can inspect the same local stack as the browser.
 
 The stack contains only the journey's runtime dependencies:
 
