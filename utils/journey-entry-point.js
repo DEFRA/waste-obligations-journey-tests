@@ -44,12 +44,12 @@ export function getJourneyStartPath(account, year = new Date().getFullYear()) {
 
   if (account === 'cso') {
     const schemeId = requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')
-    return `/compliance/cso/${schemeId}/statement?year=${year}`
+    return `/cso/${schemeId}/compliance/statement?year=${year}`
   }
 
   if (account === 'dp') {
     const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
-    return `/compliance/producer/${organisationId}/certificate?year=${year}`
+    return `/producer/${organisationId}/compliance/certificate?year=${year}`
   }
 
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
@@ -58,12 +58,12 @@ export function getJourneyStartPath(account, year = new Date().getFullYear()) {
 export function getJourneyViewPath(account, declarationId) {
   if (account === 'cso') {
     const schemeId = requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')
-    return `/compliance/cso/${schemeId}/statement/${declarationId}`
+    return `/cso/${schemeId}/compliance/statement/${declarationId}`
   }
 
   if (account === 'dp') {
     const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
-    return `/compliance/producer/${organisationId}/certificate/${declarationId}`
+    return `/producer/${organisationId}/compliance/certificate/${declarationId}`
   }
 
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
