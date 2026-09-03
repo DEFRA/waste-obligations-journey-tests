@@ -52,7 +52,7 @@ The local config (`playwright.local.config.js`) reads `EPR_BASE_URL`; without it
 | Value                 | Start route                                                                                                                  | Intended use                                     |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | `packaging` (default) | Packaging `/report-data`, then the Manage recycling obligations link                                                         | Local journeys through epr-local-environment     |
-| `waste-obligations`   | DP: `/compliance/producer/{organisationId}/certificate?year={year}`; CSO: `/compliance/cso/{schemeId}/statement?year={year}` | CI against a deployed Waste Obligations frontend |
+| `waste-obligations`   | DP: `/producer/{organisationId}/compliance/certificate?year={year}`; CSO: `/cso/{schemeId}/compliance/statement?year={year}` | CI against a deployed Waste Obligations frontend |
 
 `EPR_BASE_URL` overrides the frontend URL for either entry point. `WASTE_OBLIGATIONS_API_BASE_URL` similarly overrides the lifecycle API URL; use it when the frontend and API are deployed to different hosts. Local scripts now set `ENVIRONMENT=local` automatically.
 
