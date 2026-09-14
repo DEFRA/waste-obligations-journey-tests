@@ -11,6 +11,10 @@ on:
         description: Optional Waste Obligations frontend commit SHA to check out and build locally; otherwise main assets and the published image are used.
         required: false
         type: string
+      packaging-waste-proxy:
+        description: Optional proxy commit SHA to build locally; otherwise its published image is used.
+        required: false
+        type: string
   workflow_call:
     inputs:
       waste-obligations:
@@ -19,6 +23,10 @@ on:
         type: string
       waste-obligations-frontend:
         description: Optional Waste Obligations frontend commit SHA to check out and build locally; otherwise main assets and the published image are used.
+        required: false
+        type: string
+      packaging-waste-proxy:
+        description: Optional proxy commit SHA to build locally; otherwise its published image is used.
         required: false
         type: string
     secrets:
@@ -53,6 +61,7 @@ jobs:
           journey-tests-ref: ''
           waste-obligations: ${{ inputs.waste-obligations }}
           waste-obligations-frontend: ${{ inputs.waste-obligations-frontend }}
+          packaging-waste-proxy: ${{ inputs.packaging-waste-proxy }}
         env:
           EPR_USER_EMAIL: ${{ secrets.EPR_USER_EMAIL }}
           EPR_USER_PASSWORD: ${{ secrets.EPR_USER_PASSWORD }}

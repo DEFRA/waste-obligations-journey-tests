@@ -218,12 +218,12 @@ services:
       BACKEND_ACCOUNT_API_OAUTH_CLIENT_SECRET: waste-obligations-frontend-pwd
       BACKEND_ACCOUNT_API_OAUTH_TOKEN_ENDPOINT: http://wiremock/oauth2/v2.0/token
       BACKEND_ACCOUNT_API_OAUTH_SCOPE: api://backend-account/.default
-      EPR_PACKAGING_HOME_URL: https://localhost:8010/
-      EPR_PACKAGING_MANAGE_ACCOUNT_URL: https://localhost:8010/manage-account
-      EPR_PACKAGING_CLEAR_SESSION_URL: https://localhost:8010/sign-out
-      EPR_PACKAGING_SIGN_IN_URL: https://localhost:8010/sign-in
-      EPR_PACKAGING_COOKIES_URL: https://localhost:8010/cookies
-      MANAGE_YOUR_RECYCLING_OBLIGATIONS_URL: https://localhost:8010/
+      EPR_PACKAGING_HOME_URL: https://localhost:8015/manage-recycling-obligations/
+      EPR_PACKAGING_MANAGE_ACCOUNT_URL: https://localhost:8015/manage-recycling-obligations/manage-account
+      EPR_PACKAGING_CLEAR_SESSION_URL: https://localhost:8015/manage-recycling-obligations/sign-out
+      EPR_PACKAGING_SIGN_IN_URL: https://localhost:8015/manage-recycling-obligations/sign-in
+      EPR_PACKAGING_COOKIES_URL: https://localhost:8015/manage-recycling-obligations/cookies
+      MANAGE_YOUR_RECYCLING_OBLIGATIONS_URL: https://localhost:8015/manage-recycling-obligations/
       AZURE_AD_B2C_CLIENT_ID: 1a512714-ecd4-44f1-ad60-8229da59fb52
       AZURE_AD_B2C_CLIENT_SECRET: ${WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET:?WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET must be set}
       AZURE_AD_B2C_INSTANCE: https://AZDCUSPOC2.b2clogin.com
@@ -243,13 +243,31 @@ services:
       start_period: 15s
       start_interval: 2s
 
-  waste-obligations-frontend-proxy:
-    image: nginx:1.27-alpine
+  packaging-waste-proxy:
+    image: ${PACKAGING_WASTE_PROXY_IMAGE:-defradigital/packaging-waste-proxy:latest}
+    pull_policy: ${PACKAGING_WASTE_PROXY_PULL_POLICY:-always}
     depends_on:
       waste-obligations-frontend:
         condition: service_healthy
+    environment:
+      AWS_EMF_ENABLED: "false"
+      PORT: 8085
+      ReverseProxy__Clusters__ManageRecyclingObligations__Destinations__Primary__Address: http://waste-obligations-frontend:3000/
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8085/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+      start_interval: 2s
+
+  waste-obligations-frontend-proxy:
+    image: nginx:1.27-alpine
+    depends_on:
+      packaging-waste-proxy:
+        condition: service_healthy
     ports:
-      - "${WASTE_OBLIGATIONS_FRONTEND_HOST_PORT:-8010}:443"
+      - "${WASTE_OBLIGATIONS_FRONTEND_HOST_PORT:-8015}:443"
     volumes:
       - ./waste-obligations-frontend-proxy.conf:/etc/nginx/nginx.conf:ro
       - ${CI_STACK_RUNTIME_DIR:?CI_STACK_RUNTIME_DIR must identify the generated CI stack directory}/certs:/certs:ro

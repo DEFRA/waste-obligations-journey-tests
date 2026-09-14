@@ -11,6 +11,9 @@ inputs:
   waste-obligations-frontend:
     description: Waste Obligations frontend commit SHA to check out and build locally. Leave empty to check out main CI assets and pull its published image.
     required: false
+  packaging-waste-proxy:
+    description: Packaging waste proxy commit SHA to check out and build locally. Leave empty to pull its published image.
+    required: false
   project:
     description: Playwright project to run. chromium-based chrome-android is the CI default.
     default: chrome-android
@@ -73,11 +76,21 @@ runs:
       shell: bash
       run: echo "WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR=$GITHUB_WORKSPACE/waste-obligations-frontend-source" >> "$GITHUB_ENV"
 
-    # Both images stay on the same runner, so concurrent Buildx processes can
+    - name: Checkout packaging waste proxy source
+      if: inputs.packaging-waste-proxy != ''
+      uses: actions/checkout@v7
+      with:
+        repository: DEFRA/packaging-waste-proxy
+        ref: ${{ inputs.packaging-waste-proxy }}
+        path: packaging-waste-proxy-source
+
+    # Selected images stay on the same runner, so concurrent Buildx processes can
     # build them in parallel without publishing or transferring test images.
     - name: Build selected service images in parallel
-      if: inputs.waste-obligations != '' || inputs.waste-obligations-frontend != ''
+      if: inputs.waste-obligations != '' || inputs.waste-obligations-frontend != '' || inputs.packaging-waste-proxy != ''
       shell: bash
+      env:
+        PACKAGING_WASTE_PROXY_REF: ${{ inputs.packaging-waste-proxy }}
       run: |
         set -euo pipefail
         build_pids=()
@@ -104,6 +117,17 @@ runs:
             "$GITHUB_WORKSPACE/waste-obligations-frontend-source" &
           build_pids+=("$!")
           build_names+=("Waste Obligations frontend")
+        fi
+
+        if [ -n "$PACKAGING_WASTE_PROXY_REF" ]; then
+          docker buildx build \
+            --cache-from type=gha,scope=packaging-waste-proxy \
+            --cache-to type=gha,mode=max,scope=packaging-waste-proxy \
+            --load \
+            --tag local/packaging-waste-proxy:journey-tests \
+            "$GITHUB_WORKSPACE/packaging-waste-proxy-source" &
+          build_pids+=("$!")
+          build_names+=("Packaging waste proxy")
         fi
 
         build_failed=0
@@ -164,6 +188,8 @@ runs:
     - name: Install Playwright Chromium while starting dedicated CI stack
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
+      env:
+        PACKAGING_WASTE_PROXY_REF: ${{ inputs.packaging-waste-proxy }}
       run: |
         set -euo pipefail
         if [ -n "${{ inputs.waste-obligations }}" ]; then
@@ -173,6 +199,11 @@ runs:
         if [ -n "${{ inputs.waste-obligations-frontend }}" ]; then
           export WASTE_OBLIGATIONS_FRONTEND_IMAGE=local/waste-obligations-frontend:journey-tests
           export WASTE_OBLIGATIONS_FRONTEND_PULL_POLICY=never
+        fi
+
+        if [ -n "$PACKAGING_WASTE_PROXY_REF" ]; then
+          export PACKAGING_WASTE_PROXY_IMAGE=local/packaging-waste-proxy:journey-tests
+          export PACKAGING_WASTE_PROXY_PULL_POLICY=never
         fi
 
         docker compose \
@@ -203,7 +234,7 @@ runs:
       shell: bash
       run: |
         curl --fail --retry 12 --retry-delay 5 http://localhost:8007/health
-        curl --fail --insecure --retry 12 --retry-delay 5 https://localhost:8010/health
+        curl --fail --insecure --retry 12 --retry-delay 5 https://localhost:8015/health
 
     - name: Run e2e journeys
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
@@ -211,7 +242,7 @@ runs:
       env:
         ENVIRONMENT: local
         JOURNEY_ENTRY_POINT: waste-obligations
-        EPR_BASE_URL: ''
+        EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
         WASTE_OBLIGATION_USERNAME: Developer
         WASTE_OBLIGATION_PASSWORD: developer-pwd
@@ -225,7 +256,7 @@ runs:
       env:
         ENVIRONMENT: local
         JOURNEY_ENTRY_POINT: waste-obligations
-        EPR_BASE_URL: ''
+        EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
         WASTE_OBLIGATION_USERNAME: Developer
         WASTE_OBLIGATION_PASSWORD: developer-pwd
@@ -239,7 +270,7 @@ runs:
       env:
         ENVIRONMENT: local
         JOURNEY_ENTRY_POINT: waste-obligations
-        EPR_BASE_URL: ''
+        EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
         WASTE_OBLIGATION_USERNAME: Developer
         WASTE_OBLIGATION_PASSWORD: developer-pwd

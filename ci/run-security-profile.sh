@@ -3,7 +3,7 @@ set -eu
 
 # Runs the security profile on a GitHub-hosted Linux runner. Browser traffic is
 # sent through a short-lived ZAP container on the runner's host network, which
-# gives the daemon access to the dedicated CI stack at localhost:8010.
+# gives the daemon access to the dedicated CI stack at localhost:8015.
 
 project=${1:-chrome-android}
 zap_port=${ZAP_PORT:-8080}
@@ -17,7 +17,7 @@ zap_listen_host=${ZAP_LISTEN_HOST:-127.0.0.1}
 if [ -n "${EPR_BASE_URL:-}" ]; then
   target_base_url=$EPR_BASE_URL
 elif [ "${ENVIRONMENT:-}" = "local" ]; then
-  target_base_url=https://localhost:8010
+  target_base_url=https://localhost:8015
 elif [ "${ENVIRONMENT:-}" = "dev" ]; then
   target_base_url=https://waste-obligations.dev.cdp-int.defra.cloud
 else
