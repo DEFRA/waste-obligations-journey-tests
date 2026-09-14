@@ -190,6 +190,8 @@ The shared stack includes `packaging-waste-proxy`, using its published image by 
 
 #### GitHub Actions secrets
 
+For repository-secret setup, see [Journey tests in Confluence](https://eaflood.atlassian.net/wiki/spaces/EDIA/pages/6597640835/Journey+tests).
+
 Configure these repository secrets for manual runs. A repository calling the reusable workflow must provide the same names, either explicitly or through `secrets: inherit`.
 
 The composite action used by service pull requests executes in the calling repository, so secrets configured here are not automatically available to it. Configure the same names in all calling service repositories, or preferably as organisation-level Actions secrets restricted to this repository and all calling service repositories. The service-repository READMEs link here as the canonical contract; do not duplicate the values in source control.
