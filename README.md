@@ -43,7 +43,7 @@ cp .env.example .env
 # edit .env to set EPR_USER_EMAIL, EPR_USER_PASSWORD, and optionally EPR_BASE_URL
 ```
 
-The local config (`playwright.local.config.js`) reads `EPR_BASE_URL`; without it, Packaging defaults to `https://localhost:7084` and the direct Waste Obligations entry point to `https://localhost:8010`.
+The local config (`playwright.local.config.js`) reads `EPR_BASE_URL`; without it, Packaging defaults to `https://localhost:7084` and the direct Waste Obligations entry point to `https://localhost:8015`.
 
 ### Entry point
 
@@ -175,22 +175,26 @@ Outbound HTTP from the container goes through the CDP proxy at `localhost:3128`.
 
 ## Running on GitHub
 
-The repository workflow runs the `e2e`, `accessibility` and `security` profiles with the Playwright `chrome-android` project. It starts a dedicated Docker Compose stack from [ci/compose.yml](ci/compose.yml), accessed locally at `https://localhost:8010` and `http://localhost:8007`. It does not start, check out or depend on an `epr-local-environment` profile. The security profile runs its passive ZAP scan in a short-lived container on the runner host network, explicitly including loopback browser traffic so it can inspect the same local stack as the browser.
+The repository workflow runs the `e2e`, `accessibility` and `security` profiles with the Playwright `chrome-android` project. It starts a dedicated Docker Compose stack from [ci/compose.yml](ci/compose.yml), accessed locally through the packaging waste proxy at `https://localhost:8015/manage-recycling-obligations/` and the API at `http://localhost:8007`. It does not start, check out or depend on an `epr-local-environment` profile. The security profile runs its passive ZAP scan in a short-lived container on the runner host network, explicitly including loopback browser traffic so it can inspect the same local stack as the browser.
 
 The stack contains only the journey's runtime dependencies:
 
-- published `waste-obligations`, `waste-obligations-frontend` and `waste-organisations` images;
-- MongoDB, Redis, Floci and an Nginx TLS proxy;
+- `waste-obligations`, `waste-obligations-frontend` and the published `waste-organisations` image;
+- MongoDB, Redis, Floci, an Nginx TLS ingress and `packaging-waste-proxy`;
 - WireMock in place of the Azure-hosted Backend Account API; and
 - journey-owned organisation scenario data, seeded through the Waste Organisations API.
 
-The runner always checks out `waste-obligations` and `waste-obligations-frontend`: at a supplied SHA, or at `main` when a SHA is omitted. With a SHA it builds the existing service Dockerfile locally; when both SHAs are supplied, those image builds run concurrently on the same runner. Without a SHA, Docker Compose pulls the service's normal `latest` image from the registry. The checkout always supplies that service's CI setup assets. The workflow is available through **Run workflow** and as a reusable workflow. The [Waste Obligations](https://github.com/DEFRA/waste-obligations#journey-tests) and [Waste Obligations frontend](https://github.com/DEFRA/waste-obligations-frontend#journey-tests) pull-request workflows use the composite runner directly. It requires the two B2C login accounts, `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET`, and `GOVUK_NOTIFY_API_KEY` as GitHub secrets. The journey's organisation and submitter identifiers are non-secret scenario data defined in the workflow.
+The runner checks out the backend and frontend at their resolved revisions for CI setup assets, using `main` assets when a matching branch is absent. The workflow is available through **Run workflow** and as a reusable workflow. The [Waste Obligations](https://github.com/DEFRA/waste-obligations#journey-tests) and [Waste Obligations frontend](https://github.com/DEFRA/waste-obligations-frontend#journey-tests) pull-request workflows use the composite runner directly. It requires the two B2C login accounts, `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET`, and `GOVUK_NOTIFY_API_KEY` as GitHub secrets. The journey's organisation and submitter identifiers are non-secret scenario data defined in the workflow.
+
+The shared stack includes `packaging-waste-proxy`. For each of the backend, frontend and proxy, an explicit SHA takes precedence; otherwise the action resolves a branch matching the caller and builds that revision locally. Only services without a matching branch use published images. Matching service images are built in parallel with pulling disabled. The journey repository also runs this stack for trusted pull requests. All browser journeys use `/manage-recycling-obligations/`; the B2C application must allow `https://localhost:8015/manage-recycling-obligations/signin-oidc` as a redirect URI.
 
 #### GitHub Actions secrets
 
+For repository-secret setup, see [Journey tests in Confluence](https://eaflood.atlassian.net/wiki/spaces/EDIA/pages/6597640835/Journey+tests).
+
 Configure these repository secrets for manual runs. A repository calling the reusable workflow must provide the same names, either explicitly or through `secrets: inherit`.
 
-The composite action used by service pull requests executes in the calling repository, so secrets configured here are not automatically available to it. Configure the same names in both service repositories, or preferably as organisation-level Actions secrets restricted to this repository and the two service repositories. The service-repository READMEs link here as the canonical contract; do not duplicate the values in source control.
+The composite action used by service pull requests executes in the calling repository, so secrets configured here are not automatically available to it. Configure the same names in all calling service repositories, or preferably as organisation-level Actions secrets restricted to this repository and all calling service repositories. The service-repository READMEs link here as the canonical contract; do not duplicate the values in source control.
 
 | Secret                                         | Purpose                                                                                           |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -201,7 +205,7 @@ The composite action used by service pull requests executes in the calling repos
 | `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET` | Azure AD B2C application client secret used by the frontend.                                      |
 | `GOVUK_NOTIFY_API_KEY`                         | Format-valid dummy GOV.UK Notify key injected into the WireMock-backed Waste Obligations service. |
 
-The caller's journey job also needs `contents: read` and `id-token: write`. Docker login derives the CDP role name from the caller repository, so the roles `github-waste-obligations-build-role` and `github-waste-obligations-frontend-build-role` must be available to their respective workflows. These role permissions are not GitHub secrets.
+The caller's journey job also needs `contents: read` and `id-token: write`. Docker login derives the CDP role name from the caller repository, so the roles `github-waste-obligations-build-role`, `github-waste-obligations-frontend-build-role` and `github-packaging-waste-proxy-build-role` must be available to their respective workflows. These role permissions are not GitHub secrets.
 
 #### Calling from service pull requests
 

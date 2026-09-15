@@ -6,10 +6,13 @@ inputs:
     description: Ref of this repository to check out when called from another repository. Leave empty when this repository is already checked out.
     default: main
   waste-obligations:
-    description: Waste Obligations commit SHA to check out and build locally. Leave empty to check out main CI assets and pull its published image.
+    description: Waste Obligations commit SHA to check out and build locally. Leave empty to build the matching branch when present, otherwise use main CI assets and the published image.
     required: false
   waste-obligations-frontend:
-    description: Waste Obligations frontend commit SHA to check out and build locally. Leave empty to check out main CI assets and pull its published image.
+    description: Waste Obligations frontend commit SHA to check out and build locally. Leave empty to build the matching branch when present, otherwise use main CI assets and the published image.
+    required: false
+  packaging-waste-proxy:
+    description: Packaging waste proxy commit SHA to check out and build locally. Leave empty to build the matching branch when present, otherwise pull its published image.
     required: false
   project:
     description: Playwright project to run. chromium-based chrome-android is the CI default.
@@ -42,14 +45,48 @@ runs:
         echo "JOURNEY_TESTS_NODE_VERSION_FILE=.nvmrc" >> "$GITHUB_ENV"
         echo "JOURNEY_TESTS_PACKAGE_LOCK=package-lock.json" >> "$GITHUB_ENV"
 
-    # Each service repository supplies CI assets from the selected revision.
-    # When no SHA is supplied, main supplies those assets and the normal
-    # latest application image is pulled from the registry.
+    - name: Resolve service revisions
+      id: service-refs
+      shell: bash
+      env:
+        JOURNEY_BRANCH: ${{ github.head_ref || github.ref_name }}
+        BACKEND_SHA: ${{ inputs.waste-obligations }}
+        FRONTEND_SHA: ${{ inputs.waste-obligations-frontend }}
+        PROXY_SHA: ${{ inputs.packaging-waste-proxy }}
+      run: |
+        set -euo pipefail
+        resolve_service() {
+          local repository="$1" revision="$2" prefix="$3" remote_ref status
+          if [ -z "$revision" ]; then
+            if remote_ref=$(git ls-remote --exit-code --heads "https://github.com/DEFRA/$repository.git" "refs/heads/$JOURNEY_BRANCH"); then
+              revision="${remote_ref%%[[:space:]]*}"
+            else
+              status=$?
+              if [ "$status" -ne 2 ]; then
+                echo "Failed to resolve $repository branch $JOURNEY_BRANCH" >&2
+                return "$status"
+              fi
+            fi
+          fi
+          echo "$repository=$revision" >> "$GITHUB_OUTPUT"
+          echo "${prefix}_REF=$revision" >> "$GITHUB_ENV"
+          if [ -n "$revision" ]; then
+            echo "$repository: building $revision locally"
+            echo "${prefix}_IMAGE=local/$repository:journey-tests" >> "$GITHUB_ENV"
+            echo "${prefix}_PULL_POLICY=never" >> "$GITHUB_ENV"
+          else
+            echo "$repository: no matching branch; using the published image"
+          fi
+        }
+        resolve_service waste-obligations "$BACKEND_SHA" WASTE_OBLIGATIONS
+        resolve_service waste-obligations-frontend "$FRONTEND_SHA" WASTE_OBLIGATIONS_FRONTEND
+        resolve_service packaging-waste-proxy "$PROXY_SHA" PACKAGING_WASTE_PROXY
+
     - name: Checkout Waste Obligations source assets
       uses: actions/checkout@v7
       with:
         repository: DEFRA/waste-obligations
-        ref: ${{ inputs.waste-obligations || 'main' }}
+        ref: ${{ steps.service-refs.outputs.waste-obligations || 'main' }}
         path: waste-obligations-source
 
     - name: Use Waste Obligations source assets
@@ -66,24 +103,32 @@ runs:
       uses: actions/checkout@v7
       with:
         repository: DEFRA/waste-obligations-frontend
-        ref: ${{ inputs.waste-obligations-frontend || 'main' }}
+        ref: ${{ steps.service-refs.outputs.waste-obligations-frontend || 'main' }}
         path: waste-obligations-frontend-source
 
     - name: Use Waste Obligations frontend source assets
       shell: bash
       run: echo "WASTE_OBLIGATIONS_FRONTEND_SOURCE_DIR=$GITHUB_WORKSPACE/waste-obligations-frontend-source" >> "$GITHUB_ENV"
 
-    # Both images stay on the same runner, so concurrent Buildx processes can
+    - name: Checkout packaging waste proxy source
+      if: steps.service-refs.outputs.packaging-waste-proxy != ''
+      uses: actions/checkout@v7
+      with:
+        repository: DEFRA/packaging-waste-proxy
+        ref: ${{ steps.service-refs.outputs.packaging-waste-proxy }}
+        path: packaging-waste-proxy-source
+
+    # Selected images stay on the same runner, so concurrent Buildx processes can
     # build them in parallel without publishing or transferring test images.
     - name: Build selected service images in parallel
-      if: inputs.waste-obligations != '' || inputs.waste-obligations-frontend != ''
+      if: steps.service-refs.outputs.waste-obligations != '' || steps.service-refs.outputs.waste-obligations-frontend != '' || steps.service-refs.outputs.packaging-waste-proxy != ''
       shell: bash
       run: |
         set -euo pipefail
         build_pids=()
         build_names=()
 
-        if [ -n "${{ inputs.waste-obligations }}" ]; then
+        if [ -n "$WASTE_OBLIGATIONS_REF" ]; then
           docker buildx build \
             --cache-from type=gha,scope=waste-obligations \
             --cache-to type=gha,mode=max,scope=waste-obligations \
@@ -94,7 +139,7 @@ runs:
           build_names+=("Waste Obligations")
         fi
 
-        if [ -n "${{ inputs.waste-obligations-frontend }}" ]; then
+        if [ -n "$WASTE_OBLIGATIONS_FRONTEND_REF" ]; then
           docker buildx build \
             --cache-from type=gha,scope=waste-obligations-frontend \
             --cache-to type=gha,mode=max,scope=waste-obligations-frontend \
@@ -104,6 +149,17 @@ runs:
             "$GITHUB_WORKSPACE/waste-obligations-frontend-source" &
           build_pids+=("$!")
           build_names+=("Waste Obligations frontend")
+        fi
+
+        if [ -n "$PACKAGING_WASTE_PROXY_REF" ]; then
+          docker buildx build \
+            --cache-from type=gha,scope=packaging-waste-proxy \
+            --cache-to type=gha,mode=max,scope=packaging-waste-proxy \
+            --load \
+            --tag local/packaging-waste-proxy:journey-tests \
+            "$GITHUB_WORKSPACE/packaging-waste-proxy-source" &
+          build_pids+=("$!")
+          build_names+=("Packaging waste proxy")
         fi
 
         build_failed=0
@@ -166,15 +222,6 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        if [ -n "${{ inputs.waste-obligations }}" ]; then
-          export WASTE_OBLIGATIONS_IMAGE=local/waste-obligations:journey-tests
-          export WASTE_OBLIGATIONS_PULL_POLICY=never
-        fi
-        if [ -n "${{ inputs.waste-obligations-frontend }}" ]; then
-          export WASTE_OBLIGATIONS_FRONTEND_IMAGE=local/waste-obligations-frontend:journey-tests
-          export WASTE_OBLIGATIONS_FRONTEND_PULL_POLICY=never
-        fi
-
         docker compose \
           --project-name waste-obligations-journey-tests \
           -f ci/compose.yml \
@@ -203,7 +250,7 @@ runs:
       shell: bash
       run: |
         curl --fail --retry 12 --retry-delay 5 http://localhost:8007/health
-        curl --fail --insecure --retry 12 --retry-delay 5 https://localhost:8010/health
+        curl --fail --insecure --retry 12 --retry-delay 5 https://localhost:8015/health
 
     - name: Run e2e journeys
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
@@ -211,7 +258,7 @@ runs:
       env:
         ENVIRONMENT: local
         JOURNEY_ENTRY_POINT: waste-obligations
-        EPR_BASE_URL: ''
+        EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
         WASTE_OBLIGATION_USERNAME: Developer
         WASTE_OBLIGATION_PASSWORD: developer-pwd
@@ -225,7 +272,7 @@ runs:
       env:
         ENVIRONMENT: local
         JOURNEY_ENTRY_POINT: waste-obligations
-        EPR_BASE_URL: ''
+        EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
         WASTE_OBLIGATION_USERNAME: Developer
         WASTE_OBLIGATION_PASSWORD: developer-pwd
@@ -239,7 +286,7 @@ runs:
       env:
         ENVIRONMENT: local
         JOURNEY_ENTRY_POINT: waste-obligations
-        EPR_BASE_URL: ''
+        EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
         WASTE_OBLIGATION_USERNAME: Developer
         WASTE_OBLIGATION_PASSWORD: developer-pwd

@@ -7,7 +7,7 @@ const ENTRY_POINTS = {
     tst: 'https://rwd-tst1.azure.defra.cloud'
   },
   'waste-obligations': {
-    local: 'https://localhost:8010',
+    local: 'https://localhost:8015',
     dev: 'https://waste-obligations.dev.cdp-int.defra.cloud',
     tst: 'https://waste-obligations.tst.cdp-int.defra.cloud'
   }
@@ -37,6 +37,15 @@ export function getJourneyBaseUrl(defaultEnvironment = 'tst') {
   return ENTRY_POINTS[entryPoint][environment] || ENTRY_POINTS[entryPoint].tst
 }
 
+function servicePath(path) {
+  // Playwright resolves leading slashes from the origin, discarding baseURL's
+  // pathname. Preserve the public routing prefix for direct service journeys.
+  const prefix = usesPackagingEntryPoint()
+    ? ''
+    : new URL(getJourneyBaseUrl()).pathname.replace(/\/$/, '')
+  return `${prefix}${path}`
+}
+
 export function getJourneyStartPath(account, year = new Date().getFullYear()) {
   if (usesPackagingEntryPoint()) {
     return '/report-data'
@@ -44,12 +53,14 @@ export function getJourneyStartPath(account, year = new Date().getFullYear()) {
 
   if (account === 'cso') {
     const schemeId = requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')
-    return `/cso/${schemeId}/compliance/statement?year=${year}`
+    return servicePath(`/cso/${schemeId}/compliance/statement?year=${year}`)
   }
 
   if (account === 'dp') {
     const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
-    return `/producer/${organisationId}/compliance/certificate?year=${year}`
+    return servicePath(
+      `/producer/${organisationId}/compliance/certificate?year=${year}`
+    )
   }
 
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
@@ -58,12 +69,14 @@ export function getJourneyStartPath(account, year = new Date().getFullYear()) {
 export function getJourneyViewPath(account, declarationId) {
   if (account === 'cso') {
     const schemeId = requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')
-    return `/cso/${schemeId}/compliance/statement/${declarationId}`
+    return servicePath(`/cso/${schemeId}/compliance/statement/${declarationId}`)
   }
 
   if (account === 'dp') {
     const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
-    return `/producer/${organisationId}/compliance/certificate/${declarationId}`
+    return servicePath(
+      `/producer/${organisationId}/compliance/certificate/${declarationId}`
+    )
   }
 
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)

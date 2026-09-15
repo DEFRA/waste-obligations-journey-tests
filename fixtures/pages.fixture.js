@@ -8,6 +8,27 @@ import { CsocConfirmationPage } from '../pages/csoc-confirmation-page.js'
 import { CsocViewPage } from '../pages/csoc-view-page.js'
 
 export const test = base.extend({
+  page: async ({ page, baseURL }, use) => {
+    const target = new URL(baseURL)
+    process.stdout.write(
+      `[journey] Target: ${target.origin}${target.pathname}\n`
+    )
+
+    const logNavigation = (frame) => {
+      if (frame !== page.mainFrame()) return
+      const url = new URL(frame.url())
+      if (url.origin === target.origin) {
+        process.stdout.write(`[journey] Page: ${url.pathname}\n`)
+      }
+    }
+
+    page.on('framenavigated', logNavigation)
+    try {
+      await use(page)
+    } finally {
+      page.off('framenavigated', logNavigation)
+    }
+  },
   landingPage: async ({ page }, use) => {
     await use(new LandingPage(page))
   },
