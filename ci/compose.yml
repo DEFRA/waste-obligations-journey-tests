@@ -41,7 +41,7 @@ services:
   floci:
     image: floci/floci:latest
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
       interval: 2s
       timeout: 5s
       retries: 25
