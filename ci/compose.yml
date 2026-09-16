@@ -237,6 +237,8 @@ services:
       AUTH_COOKIE_SECURE: "true"
       SESSION_COOKIE_PASSWORD: the-password-must-be-at-least-32-characters-long
       SESSION_COOKIE_SECURE: "true"
+      GOOGLE_TAG_MANAGER_KEY: GTM-TEST0001
+      GOOGLE_ANALYTICS_MEASUREMENT_ID: G-TEST000001
     healthcheck:
       test: ["CMD", "node", "-e", "require('net').connect({host:'127.0.0.1', port:3000}).once('connect', () => process.exit(0)).once('error', () => process.exit(1))"]
       interval: 2s
