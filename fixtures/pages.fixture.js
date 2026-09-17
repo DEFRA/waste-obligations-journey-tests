@@ -1,6 +1,8 @@
 import { test as base, expect } from '@playwright/test'
 import { LandingPage } from '../pages/landing-page.js'
+import { ChooseYearPage } from '../pages/choose-year-page.js'
 import { ObligationsPage } from '../pages/obligations-page.js'
+import { PrnsListPage } from '../pages/prns-list-page.js'
 import { CsocAboutPage } from '../pages/csoc-about-page.js'
 import { CsocSubmissionPage } from '../pages/csoc-submission-page.js'
 import { CsocCertificateHubPage } from '../pages/csoc-certificate-hub-page.js'
@@ -32,8 +34,14 @@ export const test = base.extend({
   landingPage: async ({ page }, use) => {
     await use(new LandingPage(page))
   },
+  chooseYearPage: async ({ page }, use) => {
+    await use(new ChooseYearPage(page))
+  },
   obligationsPage: async ({ page }, use) => {
     await use(new ObligationsPage(page))
+  },
+  prnsListPage: async ({ page }, use) => {
+    await use(new PrnsListPage(page))
   },
   csocAboutPage: async ({ page }, use) => {
     await use(new CsocAboutPage(page))

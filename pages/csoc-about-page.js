@@ -14,6 +14,16 @@ export class CsocAboutPage extends BasePage {
     await expect(this.heading).toBeVisible()
   }
 
+  headingFor(year) {
+    return this.page.getByRole('heading', {
+      name: new RegExp(`${year} (certificate|statement) of compliance`, 'i')
+    })
+  }
+
+  async expectLoadedForYear(year) {
+    await expect(this.headingFor(year)).toBeVisible()
+  }
+
   async expectRegulatorEmail() {
     await this.expectMailtoLinkPopulated()
   }
