@@ -44,6 +44,16 @@ export class ObligationsPage extends BasePage {
     await expect(this.heading).toBeVisible()
   }
 
+  headingFor(year) {
+    return this.page.getByRole('heading', {
+      name: new RegExp(`manage your ${year} recycling`, 'i')
+    })
+  }
+
+  async expectLoadedForYear(year) {
+    await expect(this.headingFor(year)).toBeVisible()
+  }
+
   async startCsocSubmission() {
     await this.submitCertificateButton.click()
   }

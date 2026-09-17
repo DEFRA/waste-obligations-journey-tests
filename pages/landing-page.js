@@ -12,6 +12,12 @@ export class LandingPage extends BasePage {
     this.manageObligationsLink = page.getByRole('link', {
       name: /manage your \d{4} recycling/i
     })
+    // Shown instead of manageObligationsLink when ShowMultiYearObligations is
+    // enabled: no year in the link text, since the year is chosen on the next
+    // page rather than being known up front.
+    this.manageRecyclingObligationsLink = page.getByRole('link', {
+      name: /^manage recycling obligations$/i
+    })
   }
 
   async goto(account = 'dp') {
@@ -24,7 +30,10 @@ export class LandingPage extends BasePage {
   }
 
   async expectLoaded() {
-    await expect(this.manageObligationsLink).toBeVisible()
+    // Only one of these renders, depending on ShowMultiYearObligations.
+    await expect(
+      this.manageObligationsLink.or(this.manageRecyclingObligationsLink)
+    ).toBeVisible()
   }
 
   async goToObligations() {
@@ -34,5 +43,14 @@ export class LandingPage extends BasePage {
       )
     }
     await this.manageObligationsLink.click()
+  }
+
+  async goToChooseYear() {
+    if (!usesPackagingEntryPoint()) {
+      throw new Error(
+        'The waste-obligations entry point opens the CSOC about page directly.'
+      )
+    }
+    await this.manageRecyclingObligationsLink.click()
   }
 }

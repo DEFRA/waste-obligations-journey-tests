@@ -10,6 +10,7 @@
   "license": "OGL-UK-3.0",
   "scripts": {
     "clean": "rm -rf allure-results allure-report reports security-report index.html",
+    "clean:local": "npm run clean && rm -rf test-results",
     "create:folders": "mkdir -p allure-results && mkdir -p allure-report",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
