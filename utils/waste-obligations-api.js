@@ -2,6 +2,9 @@ import { DECLARATION_STATUS } from '../data/csoc.data.js'
 import { requireEnv } from './env.js'
 
 export function getBackendBaseUrl() {
+  if (process.env.WASTE_OBLIGATIONS_BACKEND_URL) {
+    return process.env.WASTE_OBLIGATIONS_BACKEND_URL
+  }
   if (process.env.ENVIRONMENT === 'local') {
     return 'http://localhost:8007'
   }

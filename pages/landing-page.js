@@ -4,7 +4,7 @@ import { BasePage } from './base-page.js'
 export class LandingPage extends BasePage {
   constructor(page) {
     super(page)
-    this.path = '/report-data'
+    this.path = '/manage-recycling-obligations'
     this.manageObligationsLink = page.getByRole('link', {
       name: /manage your \d{4} recycling/i
     })

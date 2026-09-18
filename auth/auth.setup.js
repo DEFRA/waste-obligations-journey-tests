@@ -11,7 +11,7 @@ setup('authenticate', async ({ page }) => {
   const password = requireEnv('EPR_USER_PASSWORD')
 
   // https://rwd-dev9.azure.defra.cloud/create-account
-  await page.goto('/report-data', { timeout: 60_000 })
+  await page.goto('/manage-recycling-obligations', { timeout: 60_000 })
 
   // The B2C flow can resolve in two ways:
   //   - straight to the login form on b2clogin.com

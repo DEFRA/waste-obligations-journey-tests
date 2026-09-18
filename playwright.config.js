@@ -1,12 +1,16 @@
 import 'dotenv/config'
 import { defineConfig, devices } from '@playwright/test'
 
+// EPR_BASE_URL wins when set — production tst is behind a different host now
+// (packaging-waste-proxy.test.cdp-int.defra.cloud). Fall back to the historical
+// hardcoded defaults so unset local/dev runs keep working.
 const baseURL =
-  process.env.ENVIRONMENT === 'local'
+  process.env.EPR_BASE_URL ??
+  (process.env.ENVIRONMENT === 'local'
     ? 'https://localhost:7084'
     : process.env.ENVIRONMENT === 'dev'
       ? 'https://rwd-dev9.azure.defra.cloud'
-      : 'https://rwd-tst1.azure.defra.cloud'
+      : 'https://rwd-tst1.azure.defra.cloud')
 const proxy = process.env.HTTP_PROXY
   ? { server: process.env.HTTP_PROXY }
   : undefined
@@ -20,8 +24,16 @@ const AUTH_STATE = 'playwright/.auth/dp.json'
 const PROFILE = process.env.PROFILE || 'e2e'
 const PROFILE_IGNORE = {
   e2e: ['**/accessibility.spec.js', '**/security.spec.js'],
-  accessibility: ['**/csoc-submission*.spec.js', '**/security.spec.js'],
-  security: ['**/csoc-submission*.spec.js', '**/accessibility.spec.js']
+  accessibility: [
+    '**/csoc-submission*.spec.js',
+    '**/csoc-e2e-journey.spec.js',
+    '**/security.spec.js'
+  ],
+  security: [
+    '**/csoc-submission*.spec.js',
+    '**/csoc-e2e-journey.spec.js',
+    '**/accessibility.spec.js'
+  ]
 }
 if (!Object.hasOwn(PROFILE_IGNORE, PROFILE)) {
   throw new Error(
