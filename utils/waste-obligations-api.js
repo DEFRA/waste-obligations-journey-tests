@@ -39,7 +39,7 @@ export function getJourneyAuthHeader() {
   )
 }
 
-async function getAuthHeader(request, journeyAdmin = false) {
+async function getAuthHeader(journeyAdmin = false) {
   const names = [
     'WASTE_OBLIGATIONS_API_TOKEN_URL',
     'WASTE_OBLIGATIONS_API_CLIENT_ID',
@@ -51,24 +51,28 @@ async function getAuthHeader(request, journeyAdmin = false) {
 
   // Partial OAuth configuration must fail rather than silently use Basic auth.
   const [tokenUrl, clientId, clientSecret] = names.map(requireEnv)
+  // Playwright traces even standalone API contexts. Use an untraced token
+  // exchange so client credentials and token responses are not saved in reports.
   let response
   try {
-    response = await request.post(tokenUrl, {
-      form: {
+    response = await fetch(tokenUrl, {
+      method: 'POST',
+      body: new URLSearchParams({
         grant_type: 'client_credentials',
         client_id: clientId,
         client_secret: clientSecret
-      },
+      }),
       headers: { Accept: 'application/json' },
-      maxRedirects: 0
+      redirect: 'error',
+      signal: AbortSignal.timeout(30_000)
     })
   } catch {
     throw new Error('Waste Obligations token request failed')
   }
-  if (!response.ok()) {
+  if (!response.ok) {
     // Token endpoint bodies can contain credentials; report only the status.
     throw new Error(
-      `Waste Obligations token request failed: ${response.status()}`
+      `Waste Obligations token request failed: ${response.status}`
     )
   }
   let body
@@ -102,7 +106,7 @@ function buildHeaders(authHeader) {
 export async function listDeclarations(request, orgId, obligationYear) {
   const response = await request.get(
     `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations?obligationYear=${obligationYear}`,
-    { headers: buildHeaders(await getAuthHeader(request)) }
+    { headers: buildHeaders(await getAuthHeader()) }
   )
   if (!response.ok()) {
     throw new Error(
@@ -137,7 +141,7 @@ export async function setDeclarationStatus(
   }
   const response = await request.patch(
     `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations/${declarationId}`,
-    { headers: buildHeaders(await getAuthHeader(request)), data }
+    { headers: buildHeaders(await getAuthHeader()), data }
   )
   if (!response.ok()) {
     throw new Error(
@@ -152,7 +156,7 @@ export async function setDeclarationStatus(
 export async function deleteDeclaration(request, declarationId) {
   const response = await request.delete(
     `${getBackendBaseUrl()}/compliance-declarations/${declarationId}`,
-    { headers: buildHeaders(await getAuthHeader(request, true)) }
+    { headers: buildHeaders(await getAuthHeader(true)) }
   )
   if (!response.ok()) {
     throw new Error(

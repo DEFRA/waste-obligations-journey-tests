@@ -70,7 +70,11 @@ Set `WASTE_OBLIGATIONS_API_TOKEN_URL`, `WASTE_OBLIGATIONS_API_CLIENT_ID` and
 `WASTE_OBLIGATIONS_API_CLIENT_SECRET` in the local `.env` to enable bearer
 authentication for every backend helper, including admin cleanup. All three
 are required when any is set. With none set, Basic auth remains the default.
-A local Squid proxy does not provide private backend access.
+The gateway must expose the admin cleanup route as well as the read/write
+routes; OAuth credentials alone do not guarantee a complete local deployed run.
+The CI action clears all three OAuth settings to keep local Basic auth isolated
+from developer gateway configuration. A local Squid proxy does not provide
+private backend access.
 
 ## Entry points, proxy routing and omitted steps
 
@@ -154,7 +158,9 @@ default, credential, endpoint or dependency in a participating service:
 5. Coordinate matching branches or explicit service revisions, and record which
    were tested. Waste Organisations currently uses a published image; its
    same-named branch is not selected by the action. Use an explicit
-   `WASTE_ORGANISATIONS_IMAGE` for an unpublished change.
+   `WASTE_ORGANISATIONS_IMAGE` for an alternative image. For a locally built,
+   unpublished image, also start Compose with `--pull never`: this service's
+   Compose definition otherwise always attempts a registry pull.
 6. Run affected profiles in the applicable modes. State in the change description
    which journey setup was amended, or why no update is needed, and record any
    unavailable environment. Do not skip scenarios to hide configuration gaps.
@@ -174,7 +180,7 @@ the backend, frontend and proxy consume the shared PR action.
    E2E-only scenarios must not accidentally run in accessibility or security.
    Keep authentication setup outside the ZAP proxy; do not introduce fresh B2C
    logins into the proxied security phase.
-4. Run `npm run format:check`, `npm run lint` and relevant journey checks.
+4. Run `npm run format:check`, `npm run lint`, `npm run test:unit` and relevant journey checks.
    For routing/CI changes, exercise the affected scenarios through the Docker
    proxy. For full-journey changes, validate the deployed path when the required
    environment and flags are available. `--list` confirms selection, not execution.

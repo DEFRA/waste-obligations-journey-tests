@@ -16,7 +16,10 @@ export default class SkippedTestsReporter {
       'No skip reason recorded (check dependencies or earlier failures).'
     const message = `SKIPPED SCENARIO: ${scenario} — Reason: ${reason}`
 
-    process.stdout.write(`\n[journey] WARNING: ${message}\n`)
+    const consoleMessage = message
+      .replaceAll('\r', '\\r')
+      .replaceAll('\n', '\\n')
+    process.stdout.write(`\n[journey] WARNING: ${consoleMessage}\n`)
     if (process.env.GITHUB_ACTIONS === 'true') {
       // Escape workflow-command data so test names cannot create new commands.
       const escaped = message

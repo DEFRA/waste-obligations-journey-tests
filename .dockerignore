@@ -7,3 +7,9 @@ allure-results
 allure-report
 test-results
 security-report
+.env*
+!.env.example
+playwright/.auth
+playwright-report
+reports
+/index.html

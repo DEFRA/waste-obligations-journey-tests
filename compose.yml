@@ -12,6 +12,8 @@ services:
   waste-obligations-journey-tests:
     build: .
     platform: linux/amd64
+    env_file:
+      - .env
     environment:
       PUBLISH_TEST_RESULTS: 0
       PROFILE: ${PROFILE:-e2e}

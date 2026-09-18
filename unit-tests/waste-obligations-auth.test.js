@@ -24,6 +24,7 @@ test('backend authentication over HTTP', async (t) => {
   const original = keys.map((key) => process.env[key])
   const calls = []
   let tokenStatus = 200
+  let rawTokenBody
   let tokenBody = { access_token: 'test-token' }
   const server = createServer(async (req, res) => {
     let body = ''
@@ -32,13 +33,15 @@ test('backend authentication over HTTP', async (t) => {
     res.setHeader('Content-Type', 'application/json')
     if (req.url === '/token') {
       res.statusCode = tokenStatus
-      res.end(JSON.stringify(tokenBody))
+      res.end(rawTokenBody ?? JSON.stringify(tokenBody))
     } else {
       res.end(JSON.stringify({ complianceDeclarations: [] }))
     }
   })
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
-  const api = await request.newContext()
+  const api = await request.newContext({
+    extraHTTPHeaders: { 'X-Test-Context': 'journey-context' }
+  })
   t.after(async () => {
     await api.dispose()
     await new Promise((resolve) => server.close(resolve))
@@ -101,6 +104,7 @@ test('backend authentication over HTTP', async (t) => {
       assert.equal(tokens.length, 3)
       for (const call of tokens) {
         assert.equal(call.method, 'POST')
+        assert.equal(call.headers['x-test-context'], undefined)
         assert.match(
           call.headers['content-type'],
           /application\/x-www-form-urlencoded/
@@ -132,6 +136,20 @@ test('backend authentication over HTTP', async (t) => {
       )
       assert.equal(calls.length, 0)
       process.env.WASTE_OBLIGATIONS_API_CLIENT_SECRET = 'secret'
+    }
+  )
+
+  await t.test(
+    'invalid JSON does not leak the token response into errors',
+    async () => {
+      calls.length = 0
+      rawTokenBody = 'sensitive-invalid-json'
+      await assert.rejects(
+        listDeclarations(api, 'org', 2026),
+        /^Error: Waste Obligations token response is not valid JSON$/
+      )
+      assert.equal(calls.length, 1)
+      rawTokenBody = undefined
     }
   )
 

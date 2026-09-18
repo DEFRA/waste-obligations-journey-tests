@@ -36,6 +36,15 @@ npm install
 npm run install:browsers
 ```
 
+The Chromium install above supports the pipeline's `chrome-android` project.
+For the full matrix on the host, also install the configured browser channels:
+
+```bash
+npx playwright install chromium webkit chrome msedge
+```
+
+The CDP Docker image installs all these browsers during its build.
+
 Copy the example env file and fill in test credentials:
 
 ```bash
@@ -49,10 +58,10 @@ The local config (`playwright.local.config.js`) reads `EPR_BASE_URL`; without it
 
 `JOURNEY_ENTRY_POINT` controls which application receives the first browser request:
 
-| Value                 | Start route                                                                                                                  | Intended use                                     |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `packaging` (default) | Packaging `/report-data`, then the Manage recycling obligations link                                                         | Local journeys through epr-local-environment     |
-| `waste-obligations`   | DP: `/producer/{organisationId}/compliance/certificate?year={year}`; CSO: `/cso/{schemeId}/compliance/statement?year={year}` | CI against a deployed Waste Obligations frontend |
+| Value                 | Start route                                                                                                                  | Intended use                                    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `packaging` (default) | Packaging `/report-data`, then the Manage recycling obligations link                                                         | Full Azure/CDP journey or epr-local-environment |
+| `waste-obligations`   | DP: `/producer/{organisationId}/compliance/certificate?year={year}`; CSO: `/cso/{schemeId}/compliance/statement?year={year}` | CDP-only Docker pipeline through the proxy      |
 
 `EPR_BASE_URL` overrides the frontend URL for either entry point. `WASTE_OBLIGATIONS_API_BASE_URL` similarly overrides the lifecycle API URL; use it when the frontend and API are deployed to different hosts. Local scripts now set `ENVIRONMENT=local` automatically.
 
@@ -63,9 +72,22 @@ For local runs against deployed CDP services, connect to the Azure VPN and set
 your local `.env`. With all three configured, API helpers obtain a token using
 the OAuth client-credentials grant and send `Authorization: Bearer <token>`
 for reads, status changes and cleanup. The client needs permission for all these
-operations. A fresh token is requested for each API call. Partial configuration
-fails explicitly; leaving all three empty preserves the existing Basic auth.
+operations, and the gateway must expose the admin cleanup route
+(`DELETE /compliance-declarations/{id}`). Successful token acquisition and reads
+alone do not establish that a full run is possible. A fresh token is requested
+for each API call. Token exchanges are excluded from Playwright tracing; service
+requests and browser traces can still contain sensitive authentication data.
+Partial configuration fails explicitly; leaving all three empty preserves the existing Basic auth.
 The base URL remains a separate setting; OAuth does not rewrite it.
+For the full E2E matrix against deployed dev, override the local browser defaults
+as well as configuring the API gateway values above:
+
+```bash
+ENVIRONMENT=dev JOURNEY_ENTRY_POINT=packaging EPR_BASE_URL=https://rwd-dev9.azure.defra.cloud PROFILE=e2e npm test
+```
+
+This is a local run against deployed services, not a run inside CDP. Azure must
+be available and its journey feature flags enabled.
 
 ### Running locally
 
@@ -91,11 +113,11 @@ npm run report
 
 The suite runs one profile at a time, selected by the `PROFILE` env var. The CDP Portal injects this from the **Profile** field on the test-suite run page; locally you set it yourself.
 
-| `PROFILE`       | Specs run                                                               |
-| --------------- | ----------------------------------------------------------------------- |
-| `e2e` (default) | `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js` |
-| `accessibility` | `tests/accessibility.spec.js`                                           |
-| `security`      | `tests/security.spec.js`                                                |
+| `PROFILE`       | Specs run                                                                                                                                                 |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e` (default) | `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js`, `tests/obligations-choose-year-dp.spec.js`, `tests/prns-list-journey-dp.spec.js` |
+| `accessibility` | `tests/accessibility.spec.js`                                                                                                                             |
+| `security`      | `tests/security.spec.js`                                                                                                                                  |
 
 Unset → `e2e` (so `npm test` and `npm run test:local` keep working as before). Any other value throws at config load and names the valid options.
 
@@ -161,6 +183,10 @@ npm run test:ui
 
 ### Running locally in Docker
 
+Local Compose loads credentials from `.env` at container runtime. The image
+build excludes `.env`, saved browser authentication state and local reports;
+do not copy these into a published image.
+
 Build the container and run the suite end-to-end (skipping the S3 publish step):
 
 ```bash
@@ -185,6 +211,10 @@ The container's flow (`entrypoint.sh`):
 `baseURL` is resolved from `ENVIRONMENT` and `JOURNEY_ENTRY_POINT`, unless `EPR_BASE_URL` is supplied explicitly. The CDP Portal can continue to use the Packaging entry point, or set `JOURNEY_ENTRY_POINT=waste-obligations` when it needs to begin at the direct frontend route.
 
 Outbound HTTP from the container goes through the CDP proxy at `localhost:3128`. Any target host outside CDP-internal must be on your test suite's outbound allowlist; otherwise Chromium fails with `ERR_TUNNEL_CONNECTION_FAILED`.
+
+Helper regression tests run with `npm run test:unit` and are also executed by
+the PR checks and shared CI action. They cover backend authentication, PRN URL
+routing and skipped-scenario reporting without requiring deployed services.
 
 ## Running on GitHub
 

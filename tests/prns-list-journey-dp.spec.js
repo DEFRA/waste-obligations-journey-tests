@@ -1,5 +1,5 @@
 import { test } from '../fixtures/pages.fixture.js'
-import { getProducerPrnsPath } from '../utils/journey-entry-point.js'
+import { getProducerPrnsUrl } from '../utils/journey-entry-point.js'
 import { loginAsProducerAndOpenCertificate } from '../utils/choose-year-journey.js'
 
 const ACCOUNT = 'dp'
@@ -22,7 +22,7 @@ test.describe('Producer PRNs list (DP)', () => {
     )
 
     await test.step('go to the PRNs accept/reject list on waste-obligations-frontend host', async () => {
-      const prnsListUrl = new URL(getProducerPrnsPath(YEAR), page.url())
+      const prnsListUrl = getProducerPrnsUrl(YEAR, page.url())
       await page.goto(prnsListUrl.toString())
 
       await prnsListPage.expectLoaded()
