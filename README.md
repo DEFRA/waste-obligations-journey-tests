@@ -163,7 +163,7 @@ The suite covers two accounts in parallel — both run on every `npm run test:*`
 
 Both `*.setup.js` files run unconditionally, producing `dp.json` and `cso.json`. Each spec pins its own `storageState` via `test.use({ storageState })` and threads the account string (`'dp'` or `'cso'`) into the API helpers so backend ops target the right org and submitter. The submission page object auto-detects the CSO variant from the rendered DOM (presence of a "Compliance scheme" summary row and a "Regulation 43" radio fieldset).
 
-The certificate-for-year and PRNs-list journeys also use `EPR_USER_EMAIL` / `EPR_USER_PASSWORD`, signing in from an empty browser context to verify the producer login flow. With the Packaging entry point they navigate through account home and choose a year. With direct entry (the pipeline), they open the certificate URL with that year and omit only those Azure navigation steps. Both modes assert the certificate year, and the PRNs journey continues to the list with the same year and routing prefix. These scenarios run in the E2E profile only.
+The certificate-for-year and PRNs-list journeys sign in independently with `EPR_USER_EMAIL` / `EPR_USER_PASSWORD` from empty browser contexts. With the Packaging entry point, each explicitly navigates account home and selects a year. The certificate scenario then opens and checks the certificate. The PRNs scenario opens the CDP PRNs URL directly, using `WASTE_OBLIGATIONS_FRONTEND_BASE_URL` (required in Packaging mode; set it to the public frontend/proxy base URL including any routing prefix). Azure's existing PRNs link targets its own page, so this scenario does not assert an Azure-to-CDP PRNs link. In the pipeline, each scenario enters its own CDP destination through `EPR_BASE_URL`, omitting only its Azure steps. PRNs never visits or checks a certificate. These scenarios run in the E2E profile only.
 
 Shared backend admin credentials (`WASTE_OBLIGATION_USERNAME` / `WASTE_OBLIGATION_PASSWORD` / `JOURNEY_USER` / `JOURNEY_PASSWORD`) are tenant-agnostic and used for both accounts.
 
@@ -320,3 +320,5 @@ The following attribution statement MUST be cited in your products and applicati
 The Open Government Licence (OGL) was developed by the Controller of Her Majesty's Stationery Office (HMSO) to enable information providers in the public sector to license the use and re-use of their information under a common open licence.
 
 It is designed to encourage use and re-use of information freely and flexibly, with only a few conditions.
+
+Journey console logs have blank lines and explicit `START` / `END` boundaries. Each target, page and omitted-step message includes the browser project, scenario name, spec location and attempt number, so messages can be attributed even across retries or interleaved workers. Playwright’s result line remains the source of the final test outcome.

@@ -82,24 +82,14 @@ export function getJourneyViewPath(account, declarationId) {
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
 }
 
-export function getProducerPrnsUrl(year, certificateUrl) {
+// The CDP PRNs destination is independent of any certificate navigation.
+export function getProducerPrnsUrl(year) {
+  const baseUrl = usesPackagingEntryPoint()
+    ? requireEnv('WASTE_OBLIGATIONS_FRONTEND_BASE_URL')
+    : getJourneyBaseUrl()
+  const url = new URL(baseUrl)
+  const prefix = url.pathname.replace(/\/$/, '')
   const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
-  const url = new URL(certificateUrl)
-  const certificatePath = `/producer/${organisationId}/compliance/certificate`
-  const pathname = url.pathname.replace(/\/$/, '')
-  const certificateIndex = pathname.lastIndexOf(certificatePath)
-  const suffix = pathname.slice(certificateIndex + certificatePath.length)
-  if (
-    certificateIndex < 0 ||
-    (suffix !== '' && !/^\/[a-f0-9]{24}$/i.test(suffix))
-  ) {
-    throw new Error(
-      'Expected the producer certificate page before opening PRNs'
-    )
-  }
-  // The Azure handoff can also land behind a path-routing proxy. Derive the
-  // prefix from the loaded certificate, not the original Azure entry point.
-  const prefix = pathname.slice(0, certificateIndex)
   url.pathname = `${prefix}/producer/${organisationId}/prns`
   url.search = new URLSearchParams({ year: String(year) }).toString()
   url.hash = ''

@@ -99,8 +99,14 @@ private backend access.
   execute the remaining assertions. Mark omitted steps in the report and print
   an explicit `SKIPPED STEPS` message with the reason.
 - The certificate-for-year and PRNs-list scenarios use this combined approach.
-  Direct entry still checks the certificate for the requested year and loads
-  the PRNs page. It must not claim to have tested the Azure year-selection UI.
+  Each scenario enters its own CDP destination directly in CI. PRNs must not
+  navigate through or assert a certificate. In Packaging mode, configure
+  `WASTE_OBLIGATIONS_FRONTEND_BASE_URL` with the public CDP frontend/proxy URL
+  and routing prefix for the PRNs destination; Azure currently owns its PRNs link.
+  Do not claim to test that link or Azure year selection in direct-entry mode.
+- Keep helpers focused on one action or assertion. Compose login, year selection,
+  destination navigation and assertions explicitly in each scenario. Reporting
+  helpers must not decide which steps to omit or navigate on a test's behalf.
 - Do not silently omit steps in deployed runs because a flag is off or a page
   is missing. Investigate the environment configuration instead of weakening
   the assertions to make the run green.

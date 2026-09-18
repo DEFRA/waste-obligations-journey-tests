@@ -1,16 +1,12 @@
 import { test } from '../fixtures/pages.fixture.js'
-import { loginAsProducerAndOpenCertificate } from '../utils/choose-year-journey.js'
+import { requireEnv } from '../utils/env.js'
+import { submitB2CCredentials } from '../utils/login.js'
+import {
+  getJourneyStartPath,
+  usesPackagingEntryPoint
+} from '../utils/journey-entry-point.js'
+import { reportSkippedSteps } from '../utils/skipped-steps.js'
 
-// Direct Producer journey through the multi-year "Choose a year" step
-// (ShowMultiYearObligations) on the packaging Account home page, down into
-// the obligations-home page and the certificate-of-compliance "about" page.
-// In CI the direct Waste Obligations entry point opens the certificate for
-// the requested year; only the Azure navigation steps are omitted.
-//
-// Unlike the other specs, this one logs in explicitly as EPR_USER_EMAIL rather
-// than reusing the shared dp storageState fixture, so it starts from a clean,
-// unauthenticated context and verifies login succeeds before continuing.
-const ACCOUNT = 'dp'
 const YEAR = 2026
 
 test.use({ storageState: { cookies: [], origins: [] } })
@@ -23,9 +19,40 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
     obligationsPage,
     csocAboutPage
   }) => {
-    await loginAsProducerAndOpenCertificate(
-      { page, landingPage, chooseYearPage, obligationsPage, csocAboutPage },
-      { account: ACCOUNT, year: YEAR }
-    )
+    const packaging = usesPackagingEntryPoint()
+    await test.step('open the entry point and sign in as the producer', async () => {
+      await page.goto(getJourneyStartPath('dp', YEAR), { timeout: 60_000 })
+      await submitB2CCredentials(
+        page,
+        requireEnv('EPR_USER_EMAIL'),
+        requireEnv('EPR_USER_PASSWORD')
+      )
+    })
+
+    if (packaging) {
+      await test.step('open year selection from Azure account home', async () => {
+        await landingPage.expectLoaded()
+        await landingPage.goToChooseYear()
+        await chooseYearPage.expectLoaded()
+      })
+      await test.step(`select ${YEAR} and check the obligations page`, async () => {
+        await chooseYearPage.selectYear(YEAR)
+        await chooseYearPage.clickContinue()
+        await obligationsPage.expectLoadedForYear(YEAR)
+      })
+      await test.step('open the certificate hub', async () => {
+        await obligationsPage.openCertificateHub()
+      })
+    } else {
+      await reportSkippedSteps(
+        'Azure account home, choose a year and open the certificate hub',
+        'unavailable in the CDP-only pipeline; entered the certificate page directly for ' +
+          YEAR
+      )
+    }
+
+    await test.step('check the certificate for the requested year', async () => {
+      await csocAboutPage.expectLoadedForYear(YEAR)
+    })
   })
 })
