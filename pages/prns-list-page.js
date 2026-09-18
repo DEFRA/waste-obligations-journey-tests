@@ -9,6 +9,23 @@ export class PrnsListPage extends BasePage {
     })
   }
 
+  // Read only the list's operational values, excluding names and free-text notes.
+  async readPrnSummaries() {
+    return this.page
+      .locator('table.app-prns-table tbody tr')
+      .evaluateAll((rows) =>
+        rows.map((row) => {
+          const cells = row.querySelectorAll('td')
+          return {
+            number:
+              cells[0]?.querySelector('a')?.textContent?.trim() || '(missing)',
+            material: cells[1]?.textContent?.trim() || '(missing)',
+            tonnage: cells[5]?.textContent?.trim() || '(missing)'
+          }
+        })
+      )
+  }
+
   async expectPrnVisible(prn) {
     const numberLink = this.page.getByRole('link', {
       name: prn.number,

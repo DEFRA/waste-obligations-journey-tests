@@ -6,6 +6,7 @@ import {
   usesPackagingEntryPoint,
   getProducerPrnsUrl
 } from '../utils/journey-entry-point.js'
+import { logJourney } from '../utils/journey-log.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
 
@@ -22,22 +23,31 @@ test.describe('Producer PRNs list (DP)', () => {
     obligationsPage,
     prnsListPage
   }) => {
-    const prns =
-      await test.step('read a PRN awaiting acceptance from the backend', async () => {
-        return listAwaitingPrns(request, getOrgId('dp'))
-      })
-    expect(
-      prns.length,
-      'The journey producer needs at least one PRN awaiting acceptance; seed CI or provision deployed test data.'
-    ).toBeGreaterThan(0)
-    const expectedPrn = prns[0]
-    expect(expectedPrn.number).toEqual(expect.any(String))
-    expect(expectedPrn.number.trim()).not.toBe('')
-    expect(expectedPrn.material).toEqual(expect.any(String))
-    expect(expectedPrn.material.trim()).not.toBe('')
-    expect(expectedPrn.issuer?.organisationName).toEqual(expect.any(String))
-    expect(expectedPrn.issuer.organisationName.trim()).not.toBe('')
-    expect(expectedPrn.tonnage).toEqual(expect.any(Number))
+    // ENVIRONMENT identifies the target, independently of the browser entry point.
+    // The shared Docker action sets local; deployed targets default to tst.
+    const requirePrnData = process.env.ENVIRONMENT === 'local'
+    let expectedPrn
+    if (requirePrnData) {
+      expectedPrn =
+        await test.step('read the seeded PRN awaiting acceptance', async () => {
+          const prns = await listAwaitingPrns(request, getOrgId('dp'))
+          expect(
+            prns.length,
+            'The local journey fixture must contain a PRN awaiting acceptance.'
+          ).toBeGreaterThan(0)
+          const prn = prns[0]
+          for (const value of [
+            prn.number,
+            prn.material,
+            prn.issuer?.organisationName
+          ]) {
+            expect(value).toEqual(expect.any(String))
+            expect(value.trim()).not.toBe('')
+          }
+          expect(prn.tonnage).toEqual(expect.any(Number))
+          return prn
+        })
+    }
 
     const packaging = usesPackagingEntryPoint()
     const prnsUrl = getProducerPrnsUrl(YEAR)
@@ -70,14 +80,51 @@ test.describe('Producer PRNs list (DP)', () => {
     } else {
       await reportSkippedSteps(
         'Azure account home and choose a year',
-        'unavailable in the CDP-only pipeline; entered the prns page directly for ' +
+        'unavailable at the waste-obligations entry point; entered the PRNs page directly for ' +
           YEAR
       )
     }
 
-    await test.step('check the CDP PRNs list and the returned PRN values', async () => {
+    await test.step('check the CDP PRNs page loads', async () => {
       await prnsListPage.expectLoaded()
-      await prnsListPage.expectPrnVisible(expectedPrn)
     })
+
+    if (requirePrnData) {
+      await test.step('assert the seeded PRN values in the list', async () => {
+        await prnsListPage.expectPrnVisible(expectedPrn)
+      })
+    } else {
+      await test.step('report deployed PRN data (diagnostic only)', async () => {
+        try {
+          const prns = await prnsListPage.readPrnSummaries()
+          if (prns.length === 0) {
+            const warning =
+              'No PRN rows rendered; deployed PRN data is not guaranteed. Row-value assertions were not performed.'
+            logJourney(test.info(), `WARNING: ${warning}`)
+            test
+              .info()
+              .annotations.push({ type: 'warning', description: warning })
+          } else {
+            logJourney(
+              test.info(),
+              `PRN data: ${prns.length} rendered row(s); diagnostic only, no fixture comparison.`
+            )
+            for (const prn of prns) {
+              logJourney(
+                test.info(),
+                `PRN: ${prn.number} | Material: ${prn.material} | Tonnes: ${prn.tonnage}`
+              )
+            }
+          }
+        } catch {
+          const warning =
+            'Could not read rendered PRN data; the page heading loaded, but row values were not verified.'
+          logJourney(test.info(), `WARNING: ${warning}`)
+          test
+            .info()
+            .annotations.push({ type: 'warning', description: warning })
+        }
+      })
+    }
   })
 })
