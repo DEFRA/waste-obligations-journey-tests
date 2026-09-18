@@ -103,6 +103,24 @@ function buildHeaders(authHeader) {
   }
 }
 
+// Match the browser list's default first-page AwaitingAcceptance query.
+export async function listAwaitingPrns(request, orgId) {
+  const response = await request.get(
+    `${getBackendBaseUrl()}/organisations/${orgId}/prns?status=AwaitingAcceptance`,
+    { headers: buildHeaders(await getAuthHeader()) }
+  )
+  if (!response.ok()) {
+    throw new Error(`GET organisation PRNs failed: ${response.status()}`)
+  }
+  const body = await response.json()
+  if (!Array.isArray(body.prns)) {
+    throw new Error(
+      'GET organisation PRNs returned an unexpected response shape'
+    )
+  }
+  return body.prns
+}
+
 export async function listDeclarations(request, orgId, obligationYear) {
   const response = await request.get(
     `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations?obligationYear=${obligationYear}`,

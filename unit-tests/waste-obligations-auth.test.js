@@ -4,6 +4,7 @@ import { createServer } from 'node:http'
 import { request } from '@playwright/test'
 import {
   listDeclarations,
+  listAwaitingPrns,
   setDeclarationStatus,
   deleteDeclaration
 } from '../utils/waste-obligations-api.js'
@@ -23,6 +24,8 @@ test('backend authentication over HTTP', async (t) => {
   ]
   const original = keys.map((key) => process.env[key])
   const calls = []
+  let prnStatus = 200
+  let prnBody = { prns: [{ number: 'PRN123' }] }
   let tokenStatus = 200
   let rawTokenBody
   let tokenBody = { access_token: 'test-token' }
@@ -34,6 +37,11 @@ test('backend authentication over HTTP', async (t) => {
     if (req.url === '/token') {
       res.statusCode = tokenStatus
       res.end(rawTokenBody ?? JSON.stringify(tokenBody))
+    } else if (
+      req.url === '/organisations/org/prns?status=AwaitingAcceptance'
+    ) {
+      res.statusCode = prnStatus
+      res.end(JSON.stringify(prnBody))
     } else {
       res.end(JSON.stringify({ complianceDeclarations: [] }))
     }
@@ -62,6 +70,7 @@ test('backend authentication over HTTP', async (t) => {
     WASTE_OBLIGATION_SUBMITTER_EMAIL: 'submitter@example.com'
   })
   const exercise = async () => {
+    assert.deepEqual(await listAwaitingPrns(api, 'org'), [{ number: 'PRN123' }])
     await listDeclarations(api, 'org', 2026)
     await setDeclarationStatus(api, 'org', 'declaration', 'Accepted')
     await deleteDeclaration(api, 'declaration')
@@ -76,11 +85,34 @@ test('backend authentication over HTTP', async (t) => {
         [
           'reader:reader-password',
           'reader:reader-password',
+          'reader:reader-password',
           'admin:admin-password'
         ].map((value) => `Basic ${Buffer.from(value).toString('base64')}`)
       )
     }
   )
+
+  await t.test('PRN read rejects failed or malformed responses', async () => {
+    const validBody = prnBody
+    try {
+      prnStatus = 500
+      await assert.rejects(
+        listAwaitingPrns(api, 'org'),
+        /GET organisation PRNs failed: 500/
+      )
+      prnStatus = 200
+      prnBody = { items: [] }
+      await assert.rejects(
+        listAwaitingPrns(api, 'org'),
+        /unexpected response shape/
+      )
+      prnBody = { prns: [] }
+      assert.deepEqual(await listAwaitingPrns(api, 'org'), [])
+    } finally {
+      prnStatus = 200
+      prnBody = validBody
+    }
+  })
 
   await t.test(
     'OAuth uses form encoding and Bearer for every API operation without Basic credentials',
@@ -101,7 +133,7 @@ test('backend authentication over HTTP', async (t) => {
       }
       await exercise()
       const tokens = calls.filter((call) => call.url === '/token')
-      assert.equal(tokens.length, 3)
+      assert.equal(tokens.length, 4)
       for (const call of tokens) {
         assert.equal(call.method, 'POST')
         assert.equal(call.headers['x-test-context'], undefined)
@@ -118,7 +150,7 @@ test('backend authentication over HTTP', async (t) => {
       const operations = calls.filter((call) => call.url !== '/token')
       assert.deepEqual(
         operations.map((call) => call.method),
-        ['GET', 'PATCH', 'DELETE']
+        ['GET', 'GET', 'PATCH', 'DELETE']
       )
       for (const call of operations)
         assert.equal(call.headers.authorization, 'Bearer test-token')

@@ -1,4 +1,4 @@
-import { test } from '../fixtures/pages.fixture.js'
+import { test, expect } from '../fixtures/pages.fixture.js'
 import { requireEnv } from '../utils/env.js'
 import { submitB2CCredentials } from '../utils/login.js'
 import {
@@ -7,6 +7,7 @@ import {
   getProducerPrnsUrl
 } from '../utils/journey-entry-point.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
+import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
 
 const YEAR = 2026
 
@@ -15,11 +16,29 @@ test.use({ storageState: { cookies: [], origins: [] } })
 test.describe('Producer PRNs list (DP)', () => {
   test('log in and view the PRNs list for the requested year', async ({
     page,
+    request,
     landingPage,
     chooseYearPage,
     obligationsPage,
     prnsListPage
   }) => {
+    const prns =
+      await test.step('read a PRN awaiting acceptance from the backend', async () => {
+        return listAwaitingPrns(request, getOrgId('dp'))
+      })
+    expect(
+      prns.length,
+      'The journey producer needs at least one PRN awaiting acceptance; seed CI or provision deployed test data.'
+    ).toBeGreaterThan(0)
+    const expectedPrn = prns[0]
+    expect(expectedPrn.number).toEqual(expect.any(String))
+    expect(expectedPrn.number.trim()).not.toBe('')
+    expect(expectedPrn.material).toEqual(expect.any(String))
+    expect(expectedPrn.material.trim()).not.toBe('')
+    expect(expectedPrn.issuer?.organisationName).toEqual(expect.any(String))
+    expect(expectedPrn.issuer.organisationName.trim()).not.toBe('')
+    expect(expectedPrn.tonnage).toEqual(expect.any(Number))
+
     const packaging = usesPackagingEntryPoint()
     const prnsUrl = getProducerPrnsUrl(YEAR)
     await test.step('open the entry point and sign in as the producer', async () => {
@@ -56,8 +75,9 @@ test.describe('Producer PRNs list (DP)', () => {
       )
     }
 
-    await test.step('check the CDP PRNs list', async () => {
+    await test.step('check the CDP PRNs list and the returned PRN values', async () => {
       await prnsListPage.expectLoaded()
+      await prnsListPage.expectPrnVisible(expectedPrn)
     })
   })
 })

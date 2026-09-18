@@ -9,6 +9,25 @@ export class PrnsListPage extends BasePage {
     })
   }
 
+  async expectPrnVisible(prn) {
+    const numberLink = this.page.getByRole('link', {
+      name: prn.number,
+      exact: true
+    })
+    const row = this.page.getByRole('row').filter({ has: numberLink })
+    await expect(numberLink).toBeVisible()
+    await expect(row).toHaveCount(1)
+    for (const value of [
+      prn.material,
+      prn.issuer.organisationName,
+      String(prn.tonnage)
+    ]) {
+      await expect(
+        row.getByRole('cell', { name: value, exact: true })
+      ).toBeVisible()
+    }
+  }
+
   async expectLoaded() {
     await expect(this.heading).toBeVisible()
   }
