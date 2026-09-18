@@ -321,4 +321,4 @@ The Open Government Licence (OGL) was developed by the Controller of Her Majesty
 
 It is designed to encourage use and re-use of information freely and flexibly, with only a few conditions.
 
-Journey console logs have blank lines and explicit `START` / `END` boundaries. Each target, page and omitted-step message includes the browser project, scenario name, spec location and attempt number, so messages can be attributed even across retries or interleaved workers. Playwright’s result line remains the source of the final test outcome.
+Journey console logs have blank lines and explicit `START` / `END` boundaries. The heading lists the scenario, browser, attempt and spec location on separate lines. Subsequent messages use a compact identifier such as `[W1.2]` (worker 1, second scenario in that worker), keeping interleaved logs attributable without repeating the heading. Skipped steps and their reason appear on separate lines. Playwright’s result line remains the source of the final test outcome.

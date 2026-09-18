@@ -1,5 +1,5 @@
 import { test as base, expect } from '@playwright/test'
-import { logJourney } from '../utils/journey-log.js'
+import { logJourney, logJourneyStart } from '../utils/journey-log.js'
 import { LandingPage } from '../pages/landing-page.js'
 import { ChooseYearPage } from '../pages/choose-year-page.js'
 import { ObligationsPage } from '../pages/obligations-page.js'
@@ -13,8 +13,7 @@ import { CsocViewPage } from '../pages/csoc-view-page.js'
 export const test = base.extend({
   page: async ({ page, baseURL }, use, testInfo) => {
     const target = new URL(baseURL)
-    process.stdout.write('\n\n')
-    logJourney(testInfo, 'START')
+    logJourneyStart(testInfo)
     logJourney(testInfo, `Target: ${target.origin}${target.pathname}`)
 
     const logNavigation = (frame) => {
@@ -30,7 +29,7 @@ export const test = base.extend({
       await use(page)
     } finally {
       page.off('framenavigated', logNavigation)
-      logJourney(testInfo, 'END')
+      logJourney(testInfo, '=========== END ===========')
       process.stdout.write('\n\n')
     }
   },
