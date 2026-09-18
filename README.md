@@ -197,16 +197,16 @@ Allure results and report are volume-mounted into `./allure-results` and `./allu
 
 ## Production (CDP Portal)
 
-Tests run from the CDP Portal under **Test Suites**. Each push to `main` builds a new Docker image via `.github/workflows/publish.yml`. The portal pulls the latest image when you trigger a run.
+Tests run from the CDP Portal under **Test Suites**. Each push to `main` builds a new Docker image via `.github/workflows/publish.yml`. Select and record the published suite image version for the run; local changes are not included in an already published image.
 
 The container's flow (`entrypoint.sh`):
 
 1. Logs the portal-injected `RUN_ID` and resolved `PROFILE` (defaults to `e2e`) so the run is traceable in the container logs.
-2. If `PROFILE=security`, starts OWASP ZAP as a local daemon and exports `HTTP_PROXY` so Playwright routes browser traffic through it.
-3. Runs `npm test` (Playwright headless against the configured `baseURL`, with `testIgnore` driven by `PROFILE`).
+2. If `PROFILE=security`, runs authentication setup before starting OWASP ZAP, excludes third-party login providers, then exports `HTTP_PROXY` so the authenticated browser journeys use ZAP.
+3. Runs Playwright headlessly against the configured `baseURL`, with specs selected by `PROFILE`. Security reuses the completed authentication setup.
 4. If `PROFILE=security`, optionally runs a ZAP active scan (when `ZAP_ACTIVE=1`), then fetches the HTML report to `./security-report/index.html` and shuts ZAP down.
 5. Publishes the run via `bin/publish-tests.sh` (see [Reporting](#reporting)): Allure goes to the S3 root for every profile (the Portal report link opens it directly), and accessibility/security profiles also upload their findings to `accessibility-report/` or `security-report/`. `test-results/` (Playwright traces/screenshots) uploads alongside in every case.
-6. Exits with Playwright's exit code so the portal shows pass/fail correctly. ZAP findings are report-only and do not affect the exit code.
+6. Preserves Playwright failures and also fails on High/Medium ZAP alerts, a `FAILED` marker or report-publication failure.
 
 `baseURL` is resolved from `ENVIRONMENT` and `JOURNEY_ENTRY_POINT`, unless `EPR_BASE_URL` is supplied explicitly. The CDP Portal can continue to use the Packaging entry point, or set `JOURNEY_ENTRY_POINT=waste-obligations` when it needs to begin at the direct frontend route.
 
@@ -264,7 +264,7 @@ The journey-test repository owns the shared topology and test scenario; it does 
 
 Every source-owned fragment extends the shared target service with a one-shot dependency. For example, a fragment that contributes WireMock mappings adds its generator as a `wiremock.depends_on` entry; a fragment that contributes Floci resources adds its initialiser to the consuming service's `depends_on`. A later service can use the same convention for additional Floci or WireMock setup without changing `ci/compose.yml`; the runner only needs to check out and merge that service's fragment when it is added to the stack.
 
-No test-support images are built or published. The no-SHA route deliberately uses setup assets from `main` with the service's published `latest` image; those assets must remain compatible. Supplying a SHA makes the runtime image and setup assets come from the same source revision.
+No test-support images are built or published. When neither an explicit revision nor a matching service branch is available, the action uses setup assets from `main` with the published `latest` image; those assets must remain compatible. An explicit revision or matching branch provides both the runtime source and setup assets.
 
 ```yaml
 jobs:
