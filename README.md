@@ -56,6 +56,17 @@ The local config (`playwright.local.config.js`) reads `EPR_BASE_URL`; without it
 
 `EPR_BASE_URL` overrides the frontend URL for either entry point. `WASTE_OBLIGATIONS_API_BASE_URL` similarly overrides the lifecycle API URL; use it when the frontend and API are deployed to different hosts. Local scripts now set `ENVIRONMENT=local` automatically.
 
+For local runs against deployed CDP services, connect to the Azure VPN and set
+`WASTE_OBLIGATIONS_API_BASE_URL=https://waste-obligations.api.dev.cdp-int.defra.cloud`
+(use the appropriate environment). Set `WASTE_OBLIGATIONS_API_TOKEN_URL`,
+`WASTE_OBLIGATIONS_API_CLIENT_ID` and `WASTE_OBLIGATIONS_API_CLIENT_SECRET` in
+your local `.env`. With all three configured, API helpers obtain a token using
+the OAuth client-credentials grant and send `Authorization: Bearer <token>`
+for reads, status changes and cleanup. The client needs permission for all these
+operations. A fresh token is requested for each API call. Partial configuration
+fails explicitly; leaving all three empty preserves the existing Basic auth.
+The base URL remains a separate setting; OAuth does not rewrite it.
+
 ### Running locally
 
 Headed (recommended for development):
@@ -130,6 +141,8 @@ The suite covers two accounts in parallel — both run on every `npm run test:*`
 
 Both `*.setup.js` files run unconditionally, producing `dp.json` and `cso.json`. Each spec pins its own `storageState` via `test.use({ storageState })` and threads the account string (`'dp'` or `'cso'`) into the API helpers so backend ops target the right org and submitter. The submission page object auto-detects the CSO variant from the rendered DOM (presence of a "Compliance scheme" summary row and a "Regulation 43" radio fieldset).
 
+The certificate-for-year and PRNs-list journeys also use `EPR_USER_EMAIL` / `EPR_USER_PASSWORD`, signing in from an empty browser context to verify the producer login flow. With the Packaging entry point they navigate through account home and choose a year. With direct entry (the pipeline), they open the certificate URL with that year and omit only those Azure navigation steps. Both modes assert the certificate year, and the PRNs journey continues to the list with the same year and routing prefix. These scenarios run in the E2E profile only.
+
 Shared backend admin credentials (`WASTE_OBLIGATION_USERNAME` / `WASTE_OBLIGATION_PASSWORD` / `JOURNEY_USER` / `JOURNEY_PASSWORD`) are tenant-agnostic and used for both accounts.
 
 ### Debugging locally
@@ -177,11 +190,13 @@ Outbound HTTP from the container goes through the CDP proxy at `localhost:3128`.
 
 The repository workflow runs the `e2e`, `accessibility` and `security` profiles with the Playwright `chrome-android` project. It starts a dedicated Docker Compose stack from [ci/compose.yml](ci/compose.yml), accessed locally through the packaging waste proxy at `https://localhost:8015/manage-recycling-obligations/` and the API at `http://localhost:8007`. It does not start, check out or depend on an `epr-local-environment` profile. The security profile runs its passive ZAP scan in a short-lived container on the runner host network, explicitly including loopback browser traffic so it can inspect the same local stack as the browser.
 
+The CI frontend enables `FEATURE_SHOW_PRNS` so the PRNs route is exercised. Application browser requests use the TLS ingress and `packaging-waste-proxy`, including the certificate and PRNs pages; the frontend is not exposed on a host port.
+
 The stack contains only the journey's runtime dependencies:
 
 - `waste-obligations`, `waste-obligations-frontend` and the published `waste-organisations` image;
 - MongoDB, Redis, Floci, an Nginx TLS ingress and `packaging-waste-proxy`;
-- WireMock in place of the Azure-hosted Backend Account API; and
+- service-owned WireMock contracts for the Azure-hosted Backend Account API, PRN common backend and GOV.UK Notify; and
 - journey-owned organisation scenario data, seeded through the Waste Organisations API.
 
 The runner checks out the backend and frontend at their resolved revisions for CI setup assets, using `main` assets when a matching branch is absent. The workflow is available through **Run workflow** and as a reusable workflow. The [Waste Obligations](https://github.com/DEFRA/waste-obligations#journey-tests) and [Waste Obligations frontend](https://github.com/DEFRA/waste-obligations-frontend#journey-tests) pull-request workflows use the composite runner directly. It requires the two B2C login accounts, `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET`, and `GOVUK_NOTIFY_API_KEY` as GitHub secrets. The journey's organisation and submitter identifiers are non-secret scenario data defined in the workflow.
@@ -215,7 +230,7 @@ The action is deliberately pinned to `run-journey-tests@main`, as GitHub Actions
 
 ### Service-owned CI setup
 
-The journey-test repository owns the shared topology and test scenario; it does not copy a service's setup logic. Waste Obligations owns [its Compose fragment](../waste-obligations/compose/journey-tests.compose.yml), which runs its existing `compose/init-floci.sh` to create and verify the analytics SNS topic, SQS queue, queue policy and subscription before the API starts. It also provides the Account `organisation-with-persons` and GOV.UK Notify mappings it consumes. The frontend owns [its Compose fragment](../waste-obligations-frontend/compose/journey-tests.compose.yml), which provides Account token, user-organisation and compliance-scheme mappings. Those mappings mirror the relevant epr-local-environment account seed: POP QUEST LTD, Organisation Name, and Compliance Scheme Name.
+The journey-test repository owns the shared topology and test scenario; it does not copy a service's setup logic. Waste Obligations owns [its Compose fragment](../waste-obligations/compose/journey-tests.compose.yml), which runs its existing `compose/init-floci.sh` to create and verify the analytics SNS topic, SQS queue, queue policy and subscription before the API starts. It also provides the Account `organisation-with-persons`, GOV.UK Notify and empty producer PRNs-list mappings it consumes. The PRNs mapping belongs to its existing WireMock initialiser, not a separate journey service. Use the matching backend branch (or an explicit backend revision containing the mapping) when validating these journeys before the backend change reaches `main`. The frontend owns [its Compose fragment](../waste-obligations-frontend/compose/journey-tests.compose.yml), which provides Account token, user-organisation and compliance-scheme mappings. Those mappings mirror the relevant epr-local-environment account seed: POP QUEST LTD, Organisation Name, and Compliance Scheme Name.
 
 Every source-owned fragment extends the shared target service with a one-shot dependency. For example, a fragment that contributes WireMock mappings adds its generator as a `wiremock.depends_on` entry; a fragment that contributes Floci resources adds its initialiser to the consuming service's `depends_on`. A later service can use the same convention for additional Floci or WireMock setup without changing `ci/compose.yml`; the runner only needs to check out and merge that service's fragment when it is added to the stack.
 
@@ -239,9 +254,10 @@ jobs:
 Skipped scenarios print an explicit `SKIPPED SCENARIO` warning with the project,
 scenario name and skip reason, followed by a warning total at the end of each
 Playwright run. GitHub Actions also displays these as warning annotations.
-Intentional skips remain non-failing: for example, the packaging-only choose-year
-journeys do not apply to the direct Waste Obligations entry point. A passing run
-with these warnings does not verify the skipped scenarios.
+Whole-scenario skips remain non-failing, but neither the certificate-for-year
+nor the PRNs-list scenario is skipped for direct entry. Their Azure-only steps
+are marked skipped in the report and logged as `SKIPPED STEPS`; the remaining
+scenario still executes and fails normally if an assertion fails.
 
 The CDP Portal's report viewer only renders the `index.html` at the run's S3 root, so Allure always lives there — that's what the Portal "report" link opens for every profile. Profile-specific reports sit at predictable sub-paths and are reachable from the Portal's "report folder contents" listing (or by knowing the URL).
 

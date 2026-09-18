@@ -81,3 +81,8 @@ export function getJourneyViewPath(account, declarationId) {
 
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
 }
+
+export function getProducerPrnsPath(year) {
+  const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
+  return servicePath(`/producer/${organisationId}/prns?year=${year}`)
+}

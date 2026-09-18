@@ -22,8 +22,18 @@ const AUTH_STATE = 'playwright/.auth/dp.json'
 const PROFILE = process.env.PROFILE || 'e2e'
 const PROFILE_IGNORE = {
   e2e: ['**/accessibility.spec.js', '**/security.spec.js'],
-  accessibility: ['**/csoc-submission*.spec.js', '**/security.spec.js'],
-  security: ['**/csoc-submission*.spec.js', '**/accessibility.spec.js']
+  accessibility: [
+    '**/csoc-submission*.spec.js',
+    '**/obligations-choose-year-dp.spec.js',
+    '**/prns-list-journey-dp.spec.js',
+    '**/security.spec.js'
+  ],
+  security: [
+    '**/csoc-submission*.spec.js',
+    '**/obligations-choose-year-dp.spec.js',
+    '**/prns-list-journey-dp.spec.js',
+    '**/accessibility.spec.js'
+  ]
 }
 if (!Object.hasOwn(PROFILE_IGNORE, PROFILE)) {
   throw new Error(
