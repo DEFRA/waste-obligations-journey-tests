@@ -114,7 +114,7 @@ npm run test:local:security      # PROFILE=security (headed, local config)
 
 `PROFILE=security` walks the same CSOC journey as the other profiles but through an OWASP ZAP daemon that runs **inside the test container** — no extra services to spin up. `entrypoint.sh` starts ZAP, points Playwright at it via `HTTP_PROXY`, and after the journey writes an HTML report to `./security-report/index.html`.
 
-Findings are **report-only**: ZAP alerts never fail the suite, only the journey itself does.
+High or Medium ZAP alerts fail the security profile, as do journey failures. Low and Informational alerts are reported without failing the scan.
 
 | Env var      | Effect                                                                                                               |
 | ------------ | -------------------------------------------------------------------------------------------------------------------- |
@@ -226,7 +226,7 @@ The caller's journey job also needs `contents: read` and `id-token: write`. Dock
 
 The service pull-request jobs are independent of their repositories' normal validation jobs. They look for a branch with the same name in this repository and pass it as `journey-tests-ref`; if it does not exist, they use `main`. They then pass their own PR head SHA as the relevant service input. This lets a coordinated change exercise altered journey tests without publishing a test image. Pull requests from forks are excluded because GitHub does not make repository secrets available to them.
 
-The action is deliberately pinned to `run-journey-tests@main`, as GitHub Actions does not support a dynamic `uses:` ref. `journey-tests-ref` checks out the selected test branch and uses its journeys and CI-stack assets.
+The backend, frontend and proxy workflows check out the selected journey branch (falling back to `main`) and invoke `./journey-tests-action/run-journey-tests`. This lets the action and tests use the coordinated branch. `journey-tests-ref` selects the test checkout and its CI-stack assets. Confirm the caller workflow when validating another revision.
 
 ### Service-owned CI setup
 
@@ -247,7 +247,7 @@ jobs:
     secrets: inherit
 ```
 
-`run-journey-tests/action.yml` provides the same runner as a composite action when a caller needs to place it among other workflow steps. Omitting both SHA inputs exercises the latest registry images; supplying one or both exercises those source revisions in the local stack.
+`run-journey-tests/action.yml` provides the same runner as a composite action when a caller needs to place it among other workflow steps. Explicit backend, frontend or proxy SHA inputs select those source revisions. Otherwise, the action builds matching branches when available and uses published images only for services without a matching branch.
 
 ## Reporting
 

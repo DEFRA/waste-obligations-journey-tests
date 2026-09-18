@@ -40,10 +40,10 @@ before merging. Do not add the Azure application estate or depend on a full
 - For each service, an explicit revision wins; otherwise the action builds a
   matching branch when available, or uses the published image with `main` setup
   assets. Keep runtime and setup contracts compatible.
-- `journey-tests-ref` selects the test checkout. Callers can use a matching
-  journey-test branch for coordinated changes. The composite action reference
-  itself is pinned to `main`, so edits to the action require attention to which
-  revision the caller actually executes.
+- `journey-tests-ref` selects the test checkout. The backend, frontend and proxy
+  callers check out the matching journey branch (or main when absent), then
+  invoke its local composite action. Verify both action and test revisions
+  when coordinating changes across repositories.
 - The default browser project is `chrome-android`; the action runs E2E,
   accessibility and security as separate profiles.
 
@@ -135,6 +135,35 @@ not change a shared environment's flags just to make a test pass.
   loading, not PRN rows, acceptance or rejection. Extend the data and assertions
   together when adding those behaviors.
 
+## Reviewing environment-variable changes
+
+For every added, renamed, removed or changed environment variable, feature flag,
+default, credential, endpoint or dependency in a participating service:
+
+1. Identify its owner and whether it affects the Docker PR stack, deployed
+   Azure/CDP journey, runner, or several of these.
+2. Check `ci/compose.yml`, `run-journey-tests/action.yml`, the caller workflows
+   and service-owned `compose/journey-tests.compose.yml` fragments. Update where
+   the target process receives the value, including required action inputs and
+   secret injection. Update `.env.example` for runner/local settings.
+3. Check WireMock contracts, Floci initialisers and
+   `ci/seed-waste-organisations.mjs` for changed dependencies or scenario data.
+   Keep dependency contracts with the consuming service.
+4. Identify any corresponding deployed CDP or Azure flag/secret change and its
+   owner. Do not assume local Docker settings propagate to deployed services.
+5. Coordinate matching branches or explicit service revisions, and record which
+   were tested. Waste Organisations currently uses a published image; its
+   same-named branch is not selected by the action. Use an explicit
+   `WASTE_ORGANISATIONS_IMAGE` for an unpublished change.
+6. Run affected profiles in the applicable modes. State in the change description
+   which journey setup was amended, or why no update is needed, and record any
+   unavailable environment. Do not skip scenarios to hide configuration gaps.
+
+Keep these checks aligned with the participating repositories' `AGENTS.md`
+files. [Waste Organisations](https://github.com/DEFRA/waste-organisations) supplies
+the organisation API and fixtures; Azure Packaging owns year selection, while
+the backend, frontend and proxy consume the shared PR action.
+
 ## Changing and validating journeys
 
 1. Identify the assertions that apply in both modes and the steps that require
@@ -188,8 +217,7 @@ the private backend hostname cannot be used locally.
 6. Use `entrypoint.sh` for security runs so authentication occurs before ZAP is
    enabled. Leave `ZAP_ACTIVE` unset or `0` for passive scanning unless active
    scanning has been separately authorised. Running `PROFILE=security npm test`
-   alone does not start ZAP. The entrypoint also gates Medium-or-higher findings;
-   do not rely on the README's older “report-only” description.
+   alone does not start ZAP. The entrypoint also gates Medium-or-higher findings.
 7. Wait for each profile to finish and inspect its report and logs. Record the
    suite image version, target environment, profile, run/report URL, pass/fail/
    skip counts and distinct failure causes. A completed Portal task is not by
