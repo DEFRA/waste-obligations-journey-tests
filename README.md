@@ -36,6 +36,15 @@ npm install
 npm run install:browsers
 ```
 
+The Chromium install above supports the pipeline's `chrome-android` project.
+For the full matrix on the host, also install the configured browser channels:
+
+```bash
+npx playwright install chromium webkit chrome msedge
+```
+
+The CDP Docker image installs all these browsers during its build.
+
 Copy the example env file and fill in test credentials:
 
 ```bash
@@ -49,12 +58,36 @@ The local config (`playwright.local.config.js`) reads `EPR_BASE_URL`; without it
 
 `JOURNEY_ENTRY_POINT` controls which application receives the first browser request:
 
-| Value                 | Start route                                                                                                                  | Intended use                                     |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `packaging` (default) | Packaging `/report-data`, then the Manage recycling obligations link                                                         | Local journeys through epr-local-environment     |
-| `waste-obligations`   | DP: `/producer/{organisationId}/compliance/certificate?year={year}`; CSO: `/cso/{schemeId}/compliance/statement?year={year}` | CI against a deployed Waste Obligations frontend |
+| Value                 | Start route                                                                                                                  | Intended use                                    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `packaging` (default) | Packaging `/report-data`, then the Manage recycling obligations link                                                         | Full Azure/CDP journey or epr-local-environment |
+| `waste-obligations`   | DP: `/producer/{organisationId}/compliance/certificate?year={year}`; CSO: `/cso/{schemeId}/compliance/statement?year={year}` | CDP-only Docker pipeline through the proxy      |
 
 `EPR_BASE_URL` overrides the frontend URL for either entry point. `WASTE_OBLIGATIONS_API_BASE_URL` similarly overrides the lifecycle API URL; use it when the frontend and API are deployed to different hosts. Local scripts now set `ENVIRONMENT=local` automatically.
+
+For local runs against deployed CDP services, connect to the Azure VPN and set
+`WASTE_OBLIGATIONS_API_BASE_URL=https://waste-obligations.api.dev.cdp-int.defra.cloud`
+(use the appropriate environment). Set `WASTE_OBLIGATIONS_API_TOKEN_URL`,
+`WASTE_OBLIGATIONS_API_CLIENT_ID` and `WASTE_OBLIGATIONS_API_CLIENT_SECRET` in
+your local `.env`. With all three configured, API helpers obtain a token using
+the OAuth client-credentials grant and send `Authorization: Bearer <token>`
+for reads, status changes and cleanup. The client needs permission for all these
+operations, and the gateway must expose the admin cleanup route
+(`DELETE /compliance-declarations/{id}`). Successful token acquisition and reads
+alone do not establish that a full run is possible. A fresh token is requested
+for each API call. Token exchanges are excluded from Playwright tracing; service
+requests and browser traces can still contain sensitive authentication data.
+Partial configuration fails explicitly; leaving all three empty preserves the existing Basic auth.
+The base URL remains a separate setting; OAuth does not rewrite it.
+For the full E2E matrix against deployed dev, override the local browser defaults
+as well as configuring the API gateway values above:
+
+```bash
+ENVIRONMENT=dev JOURNEY_ENTRY_POINT=packaging EPR_BASE_URL=https://rwd-dev9.azure.defra.cloud PROFILE=e2e npm test
+```
+
+This is a local run against deployed services, not a run inside CDP. Azure must
+be available and its journey feature flags enabled.
 
 ### Running locally
 
@@ -80,11 +113,11 @@ npm run report
 
 The suite runs one profile at a time, selected by the `PROFILE` env var. The CDP Portal injects this from the **Profile** field on the test-suite run page; locally you set it yourself.
 
-| `PROFILE`       | Specs run                                                               |
-| --------------- | ----------------------------------------------------------------------- |
-| `e2e` (default) | `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js` |
-| `accessibility` | `tests/accessibility.spec.js`                                           |
-| `security`      | `tests/security.spec.js`                                                |
+| `PROFILE`       | Specs run                                                                                                                                                 |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e` (default) | `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js`, `tests/obligations-choose-year-dp.spec.js`, `tests/prns-list-journey-dp.spec.js` |
+| `accessibility` | `tests/accessibility.spec.js`                                                                                                                             |
+| `security`      | `tests/security.spec.js`                                                                                                                                  |
 
 Unset → `e2e` (so `npm test` and `npm run test:local` keep working as before). Any other value throws at config load and names the valid options.
 
@@ -103,7 +136,7 @@ npm run test:local:security      # PROFILE=security (headed, local config)
 
 `PROFILE=security` walks the same CSOC journey as the other profiles but through an OWASP ZAP daemon that runs **inside the test container** — no extra services to spin up. `entrypoint.sh` starts ZAP, points Playwright at it via `HTTP_PROXY`, and after the journey writes an HTML report to `./security-report/index.html`.
 
-Findings are **report-only**: ZAP alerts never fail the suite, only the journey itself does.
+High or Medium ZAP alerts fail the security profile, as do journey failures. Low and Informational alerts are reported without failing the scan.
 
 | Env var      | Effect                                                                                                               |
 | ------------ | -------------------------------------------------------------------------------------------------------------------- |
@@ -130,6 +163,8 @@ The suite covers two accounts in parallel — both run on every `npm run test:*`
 
 Both `*.setup.js` files run unconditionally, producing `dp.json` and `cso.json`. Each spec pins its own `storageState` via `test.use({ storageState })` and threads the account string (`'dp'` or `'cso'`) into the API helpers so backend ops target the right org and submitter. The submission page object auto-detects the CSO variant from the rendered DOM (presence of a "Compliance scheme" summary row and a "Regulation 43" radio fieldset).
 
+The certificate-for-year and PRNs-list journeys sign in independently with `EPR_USER_EMAIL` / `EPR_USER_PASSWORD` from empty browser contexts. With the Packaging entry point, each explicitly navigates account home and selects a year. The certificate scenario then opens and checks the certificate. The PRNs scenario opens the CDP PRNs URL directly, using `WASTE_OBLIGATIONS_FRONTEND_BASE_URL` (required in Packaging mode; set it to the public frontend/proxy base URL including any routing prefix). Azure's existing PRNs link targets its own page, so this scenario does not assert an Azure-to-CDP PRNs link. In the pipeline, each scenario enters its own CDP destination through `EPR_BASE_URL`, omitting only its Azure steps. PRNs never visits or checks a certificate. These scenarios run in the E2E profile only.
+
 Shared backend admin credentials (`WASTE_OBLIGATION_USERNAME` / `WASTE_OBLIGATION_PASSWORD` / `JOURNEY_USER` / `JOURNEY_PASSWORD`) are tenant-agnostic and used for both accounts.
 
 ### Debugging locally
@@ -148,6 +183,10 @@ npm run test:ui
 
 ### Running locally in Docker
 
+Local Compose loads credentials from `.env` at container runtime. The image
+build excludes `.env`, saved browser authentication state and local reports;
+do not copy these into a published image.
+
 Build the container and run the suite end-to-end (skipping the S3 publish step):
 
 ```bash
@@ -158,30 +197,36 @@ Allure results and report are volume-mounted into `./allure-results` and `./allu
 
 ## Production (CDP Portal)
 
-Tests run from the CDP Portal under **Test Suites**. Each push to `main` builds a new Docker image via `.github/workflows/publish.yml`. The portal pulls the latest image when you trigger a run.
+Tests run from the CDP Portal under **Test Suites**. Each push to `main` builds a new Docker image via `.github/workflows/publish.yml`. Select and record the published suite image version for the run; local changes are not included in an already published image.
 
 The container's flow (`entrypoint.sh`):
 
 1. Logs the portal-injected `RUN_ID` and resolved `PROFILE` (defaults to `e2e`) so the run is traceable in the container logs.
-2. If `PROFILE=security`, starts OWASP ZAP as a local daemon and exports `HTTP_PROXY` so Playwright routes browser traffic through it.
-3. Runs `npm test` (Playwright headless against the configured `baseURL`, with `testIgnore` driven by `PROFILE`).
+2. If `PROFILE=security`, runs authentication setup before starting OWASP ZAP, excludes third-party login providers, then exports `HTTP_PROXY` so the authenticated browser journeys use ZAP.
+3. Runs Playwright headlessly against the configured `baseURL`, with specs selected by `PROFILE`. Security reuses the completed authentication setup.
 4. If `PROFILE=security`, optionally runs a ZAP active scan (when `ZAP_ACTIVE=1`), then fetches the HTML report to `./security-report/index.html` and shuts ZAP down.
 5. Publishes the run via `bin/publish-tests.sh` (see [Reporting](#reporting)): Allure goes to the S3 root for every profile (the Portal report link opens it directly), and accessibility/security profiles also upload their findings to `accessibility-report/` or `security-report/`. `test-results/` (Playwright traces/screenshots) uploads alongside in every case.
-6. Exits with Playwright's exit code so the portal shows pass/fail correctly. ZAP findings are report-only and do not affect the exit code.
+6. Preserves Playwright failures and also fails on High/Medium ZAP alerts, a `FAILED` marker or report-publication failure.
 
 `baseURL` is resolved from `ENVIRONMENT` and `JOURNEY_ENTRY_POINT`, unless `EPR_BASE_URL` is supplied explicitly. The CDP Portal can continue to use the Packaging entry point, or set `JOURNEY_ENTRY_POINT=waste-obligations` when it needs to begin at the direct frontend route.
 
 Outbound HTTP from the container goes through the CDP proxy at `localhost:3128`. Any target host outside CDP-internal must be on your test suite's outbound allowlist; otherwise Chromium fails with `ERR_TUNNEL_CONNECTION_FAILED`.
 
+Helper regression tests run with `npm run test:unit` and are also executed by
+the PR checks and shared CI action. They cover backend authentication, PRN URL
+routing and skipped-scenario reporting without requiring deployed services.
+
 ## Running on GitHub
 
 The repository workflow runs the `e2e`, `accessibility` and `security` profiles with the Playwright `chrome-android` project. It starts a dedicated Docker Compose stack from [ci/compose.yml](ci/compose.yml), accessed locally through the packaging waste proxy at `https://localhost:8015/manage-recycling-obligations/` and the API at `http://localhost:8007`. It does not start, check out or depend on an `epr-local-environment` profile. The security profile runs its passive ZAP scan in a short-lived container on the runner host network, explicitly including loopback browser traffic so it can inspect the same local stack as the browser.
+
+The CI frontend enables `FEATURE_SHOW_PRNS` so the PRNs route is exercised. Application browser requests use the TLS ingress and `packaging-waste-proxy`, including the certificate and PRNs pages; the frontend is not exposed on a host port.
 
 The stack contains only the journey's runtime dependencies:
 
 - `waste-obligations`, `waste-obligations-frontend` and the published `waste-organisations` image;
 - MongoDB, Redis, Floci, an Nginx TLS ingress and `packaging-waste-proxy`;
-- WireMock in place of the Azure-hosted Backend Account API; and
+- service-owned WireMock contracts for the Azure-hosted Backend Account API, PRN common backend and GOV.UK Notify; and
 - journey-owned organisation scenario data, seeded through the Waste Organisations API.
 
 The runner checks out the backend and frontend at their resolved revisions for CI setup assets, using `main` assets when a matching branch is absent. The workflow is available through **Run workflow** and as a reusable workflow. The [Waste Obligations](https://github.com/DEFRA/waste-obligations#journey-tests) and [Waste Obligations frontend](https://github.com/DEFRA/waste-obligations-frontend#journey-tests) pull-request workflows use the composite runner directly. It requires the two B2C login accounts, `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET`, and `GOVUK_NOTIFY_API_KEY` as GitHub secrets. The journey's organisation and submitter identifiers are non-secret scenario data defined in the workflow.
@@ -211,15 +256,15 @@ The caller's journey job also needs `contents: read` and `id-token: write`. Dock
 
 The service pull-request jobs are independent of their repositories' normal validation jobs. They look for a branch with the same name in this repository and pass it as `journey-tests-ref`; if it does not exist, they use `main`. They then pass their own PR head SHA as the relevant service input. This lets a coordinated change exercise altered journey tests without publishing a test image. Pull requests from forks are excluded because GitHub does not make repository secrets available to them.
 
-The action is deliberately pinned to `run-journey-tests@main`, as GitHub Actions does not support a dynamic `uses:` ref. `journey-tests-ref` checks out the selected test branch and uses its journeys and CI-stack assets.
+The backend, frontend and proxy workflows check out the selected journey branch (falling back to `main`) and invoke `./journey-tests-action/run-journey-tests`. This lets the action and tests use the coordinated branch. `journey-tests-ref` selects the test checkout and its CI-stack assets. Confirm the caller workflow when validating another revision.
 
 ### Service-owned CI setup
 
-The journey-test repository owns the shared topology and test scenario; it does not copy a service's setup logic. Waste Obligations owns [its Compose fragment](../waste-obligations/compose/journey-tests.compose.yml), which runs its existing `compose/init-floci.sh` to create and verify the analytics SNS topic, SQS queue, queue policy and subscription before the API starts. It also provides the Account `organisation-with-persons` and GOV.UK Notify mappings it consumes. The frontend owns [its Compose fragment](../waste-obligations-frontend/compose/journey-tests.compose.yml), which provides Account token, user-organisation and compliance-scheme mappings. Those mappings mirror the relevant epr-local-environment account seed: POP QUEST LTD, Organisation Name, and Compliance Scheme Name.
+The journey-test repository owns the shared topology and test scenario; it does not copy a service's setup logic. Waste Obligations owns [its Compose fragment](../waste-obligations/compose/journey-tests.compose.yml), which runs its existing `compose/init-floci.sh` to create and verify the analytics SNS topic, SQS queue, queue policy and subscription before the API starts. It also provides the Account `organisation-with-persons`, GOV.UK Notify and populated producer PRNs-list mappings it consumes. The PRNs mapping belongs to its existing WireMock initialiser, not a separate journey service. Use the matching backend branch (or an explicit backend revision containing the mapping) when validating these journeys before the backend change reaches `main`. The frontend owns [its Compose fragment](../waste-obligations-frontend/compose/journey-tests.compose.yml), which provides Account token, user-organisation and compliance-scheme mappings. Those mappings mirror the relevant epr-local-environment account seed: POP QUEST LTD, Organisation Name, and Compliance Scheme Name.
 
 Every source-owned fragment extends the shared target service with a one-shot dependency. For example, a fragment that contributes WireMock mappings adds its generator as a `wiremock.depends_on` entry; a fragment that contributes Floci resources adds its initialiser to the consuming service's `depends_on`. A later service can use the same convention for additional Floci or WireMock setup without changing `ci/compose.yml`; the runner only needs to check out and merge that service's fragment when it is added to the stack.
 
-No test-support images are built or published. The no-SHA route deliberately uses setup assets from `main` with the service's published `latest` image; those assets must remain compatible. Supplying a SHA makes the runtime image and setup assets come from the same source revision.
+No test-support images are built or published. When neither an explicit revision nor a matching service branch is available, the action uses setup assets from `main` with the published `latest` image; those assets must remain compatible. An explicit revision or matching branch provides both the runtime source and setup assets.
 
 ```yaml
 jobs:
@@ -232,9 +277,17 @@ jobs:
     secrets: inherit
 ```
 
-`run-journey-tests/action.yml` provides the same runner as a composite action when a caller needs to place it among other workflow steps. Omitting both SHA inputs exercises the latest registry images; supplying one or both exercises those source revisions in the local stack.
+`run-journey-tests/action.yml` provides the same runner as a composite action when a caller needs to place it among other workflow steps. Explicit backend, frontend or proxy SHA inputs select those source revisions. Otherwise, the action builds matching branches when available and uses published images only for services without a matching branch.
 
 ## Reporting
+
+Skipped scenarios print an explicit `SKIPPED SCENARIO` warning with the project,
+scenario name and skip reason, followed by a warning total at the end of each
+Playwright run. GitHub Actions also displays these as warning annotations.
+Whole-scenario skips remain non-failing, but neither the certificate-for-year
+nor the PRNs-list scenario is skipped for direct entry. Their Azure-only steps
+are marked skipped in the report and logged as `SKIPPED STEPS`; the remaining
+scenario still executes and fails normally if an assertion fails.
 
 The CDP Portal's report viewer only renders the `index.html` at the run's S3 root, so Allure always lives there — that's what the Portal "report" link opens for every profile. Profile-specific reports sit at predictable sub-paths and are reachable from the Portal's "report folder contents" listing (or by knowing the URL).
 
@@ -267,3 +320,7 @@ The following attribution statement MUST be cited in your products and applicati
 The Open Government Licence (OGL) was developed by the Controller of Her Majesty's Stationery Office (HMSO) to enable information providers in the public sector to license the use and re-use of their information under a common open licence.
 
 It is designed to encourage use and re-use of information freely and flexibly, with only a few conditions.
+
+Journey console logs have blank lines and explicit `START` / `END` boundaries. The heading lists the scenario, browser, attempt and spec location on separate lines. Subsequent messages use a compact identifier such as `[W1.2]` (worker 1, second scenario in that worker), keeping interleaved logs attributable without repeating the heading. Skipped steps and their reason appear on separate lines. Playwright’s result line remains the source of the final test outcome.
+
+For `ENVIRONMENT=local` (including the shared Docker pipeline), the PRNs journey reads an awaiting-acceptance PRN from the backend and requires a matching rendered row: number, material, issuer and tonnage. CI supplies the populated backend-owned WireMock mapping. For deployed targets, PRN data is diagnostic only: the test reads the rendered list, logs PRN numbers, materials and tonnages, and warns in the console/report if rows are absent or cannot be read. It does not make an extra backend request for that diagnostic or require seeded deployed data. Login, navigation and the page-heading assertion remain mandatory in both modes. Names and free-text notes are excluded from diagnostic logs. The list API currently does not filter by obligation year; this check does not establish year filtering.

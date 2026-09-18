@@ -1,37 +1,58 @@
 import { test } from '../fixtures/pages.fixture.js'
-import { loginAsJourneyUserAndChooseYear } from '../utils/choose-year-journey.js'
-import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
+import { requireEnv } from '../utils/env.js'
+import { submitB2CCredentials } from '../utils/login.js'
+import {
+  getJourneyStartPath,
+  usesPackagingEntryPoint
+} from '../utils/journey-entry-point.js'
+import { reportSkippedSteps } from '../utils/skipped-steps.js'
 
-// Direct Producer journey through the multi-year "Choose a year" step
-// (ShowMultiYearObligations) on the packaging Account home page, down into
-// the obligations-home page and the certificate-of-compliance "about" page.
-// Only reachable via the packaging entry point: the waste-obligations entry
-// point opens the CSOC about page directly, bypassing this flow entirely.
-//
-// Unlike the other specs, this one logs in explicitly as JOURNEY_USER rather
-// than reusing the shared dp storageState fixture, so it starts from a clean,
-// unauthenticated context and verifies login succeeds before continuing.
-const ACCOUNT = 'dp'
 const YEAR = 2026
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
-test.describe('Manage recycling obligations - choose a year (JOURNEY_USER)', () => {
-  test('login as JOURNEY_USER, then choose a year and view the certificate of compliance', async ({
+test.describe('Manage recycling obligations - certificate for a year (DP)', () => {
+  test('log in and view the certificate of compliance for the requested year', async ({
     page,
     landingPage,
     chooseYearPage,
     obligationsPage,
     csocAboutPage
   }) => {
-    test.skip(
-      !usesPackagingEntryPoint(),
-      'Choose a year is a packaging entry-point-only step'
-    )
+    const packaging = usesPackagingEntryPoint()
+    await test.step('open the entry point and sign in as the producer', async () => {
+      await page.goto(getJourneyStartPath('dp', YEAR), { timeout: 60_000 })
+      await submitB2CCredentials(
+        page,
+        requireEnv('EPR_USER_EMAIL'),
+        requireEnv('EPR_USER_PASSWORD')
+      )
+    })
 
-    await loginAsJourneyUserAndChooseYear(
-      { page, landingPage, chooseYearPage, obligationsPage, csocAboutPage },
-      { account: ACCOUNT, year: YEAR }
-    )
+    if (packaging) {
+      await test.step('open year selection from Azure account home', async () => {
+        await landingPage.expectLoaded()
+        await landingPage.goToChooseYear()
+        await chooseYearPage.expectLoaded()
+      })
+      await test.step(`select ${YEAR} and check the obligations page`, async () => {
+        await chooseYearPage.selectYear(YEAR)
+        await chooseYearPage.clickContinue()
+        await obligationsPage.expectLoadedForYear(YEAR)
+      })
+      await test.step('open the certificate hub', async () => {
+        await obligationsPage.openCertificateHub()
+      })
+    } else {
+      await reportSkippedSteps(
+        'Azure account home, choose a year and open the certificate hub',
+        'unavailable in the CDP-only pipeline; entered the certificate page directly for ' +
+          YEAR
+      )
+    }
+
+    await test.step('check the certificate for the requested year', async () => {
+      await csocAboutPage.expectLoadedForYear(YEAR)
+    })
   })
 })

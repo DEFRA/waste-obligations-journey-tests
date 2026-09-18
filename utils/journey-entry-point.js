@@ -81,3 +81,17 @@ export function getJourneyViewPath(account, declarationId) {
 
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
 }
+
+// The CDP PRNs destination is independent of any certificate navigation.
+export function getProducerPrnsUrl(year) {
+  const baseUrl = usesPackagingEntryPoint()
+    ? requireEnv('WASTE_OBLIGATIONS_FRONTEND_BASE_URL')
+    : getJourneyBaseUrl()
+  const url = new URL(baseUrl)
+  const prefix = url.pathname.replace(/\/$/, '')
+  const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
+  url.pathname = `${prefix}/producer/${organisationId}/prns`
+  url.search = new URLSearchParams({ year: String(year) }).toString()
+  url.hash = ''
+  return url
+}
