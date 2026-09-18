@@ -145,6 +145,46 @@ not change a shared environment's flags just to make a test pass.
   loading, not PRN rows, acceptance or rejection. Extend the data and assertions
   together when adding those behaviors.
 
+## Coordinating application and journey changes
+
+1. For every application behavior change, assess the shared journey coverage.
+   Add or amend scenarios and assertions alongside the application change when
+   user-visible behavior, API contracts, authentication, routing or error paths
+   change. Record why no journey update is needed when existing coverage suffices.
+2. When coordinating changes, create and push the **exact same branch name**
+   in `waste-obligations-journey-tests` and every affected application repository
+   (`waste-obligations`, `waste-obligations-frontend`, `packaging-waste-proxy`).
+   For example, use `MO-123-description` in each changed repository. A local-only
+   branch is not visible to CI; do not create empty companion branches where
+   no changes are needed.
+3. Push companion changes before the validation run. Service PR workflows select
+   the matching journey branch, falling back to `main` when absent, and pin the
+   calling service to its PR head SHA. For other services, explicit revisions
+   take precedence over matching branches; absent both, the action uses published
+   images and `main` setup assets where applicable. Check the resolved revisions
+   in the run logs: a green fallback run does not validate unpublished changes.
+4. A push to a companion repository does not automatically rerun an existing
+   service PR check. After all companion changes are pushed, rerun the affected
+   service journey jobs (or trigger new runs). Recheck the resolved revisions
+   after further companion changes and before merging.
+5. Update scenario data and service-owned dependency contracts together with
+   assertions. For environment variables and feature flags, follow the
+   environment-change checklist below: check CI injection, runner settings and
+   deployed service configuration separately. Exercise the applicable Docker
+   profiles and the full deployed journey when its environment is available;
+   do not skip whole scenarios to conceal missing coverage or configuration.
+6. Link companion PRs in each PR description. Record the tested service/test
+   revisions, execution mode, results and required configuration changes.
+   Describe merge and deployment dependencies explicitly. Keep intermediate
+   states compatible, or agree a coordinated rollout before merging; do not
+   assume repositories deploy atomically.
+7. Matching branches coordinate **PR checks only**. Deployed CDP runs use a
+   published journey-test image, not the matching source branch. Before relying
+   on post-deployment regression coverage, verify the required journey changes
+   are merged, their image is published and the deployed run selects that image.
+   Coordinate application deployment, journey-image availability and required
+   CDP/Azure configuration; confirm the resulting dev run and its image version.
+
 ## Reviewing environment-variable changes
 
 For every added, renamed, removed or changed environment variable, feature flag,
