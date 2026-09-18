@@ -236,6 +236,13 @@ jobs:
 
 ## Reporting
 
+Skipped scenarios print an explicit `SKIPPED SCENARIO` warning with the project,
+scenario name and skip reason, followed by a warning total at the end of each
+Playwright run. GitHub Actions also displays these as warning annotations.
+Intentional skips remain non-failing: for example, the packaging-only choose-year
+journeys do not apply to the direct Waste Obligations entry point. A passing run
+with these warnings does not verify the skipped scenarios.
+
 The CDP Portal's report viewer only renders the `index.html` at the run's S3 root, so Allure always lives there — that's what the Portal "report" link opens for every profile. Profile-specific reports sit at predictable sub-paths and are reachable from the Portal's "report folder contents" listing (or by knowing the URL).
 
 | `PROFILE`       | `$RESULTS_OUTPUT_S3_PATH/` root | Additional sub-paths                                                  |
