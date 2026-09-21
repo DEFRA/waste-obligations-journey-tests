@@ -75,6 +75,9 @@ test.describe('Cookie banner and cookies page', () => {
         (entry) => entry.kind === 'arguments' && entry.values[0] === 'js'
       )
     ).toBe(true)
+    expect(await readConsentPolicyFromPage(page)).toEqual(
+      expect.objectContaining({ confirmed: true, analytics: true })
+    )
   })
 
   test('does not initialize analytics after rejection', async ({ page }) => {
@@ -146,6 +149,9 @@ test.describe('Cookie banner and cookies page', () => {
   }) => {
     await page.goto(getPublicServicePath('/signed-out'))
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
+    await expect(
+      page.getByText('You’ve accepted analytics cookies.')
+    ).toBeVisible()
     await page.reload()
     await setTestGaCookies(page)
 
@@ -153,10 +159,7 @@ test.describe('Cookie banner and cookies page', () => {
       expect.arrayContaining(['_ga', TEST_GA4_COOKIE_NAME])
     )
 
-    await Promise.all([
-      page.waitForEvent('load'),
-      dispatchPersistedPageshow(page)
-    ])
+    await dispatchPersistedPageshow(page)
 
     expect(await getGaCookieNames(page)).toEqual(
       expect.arrayContaining(['_ga', TEST_GA4_COOKIE_NAME])
@@ -174,6 +177,9 @@ test.describe('Cookie banner and cookies page', () => {
   }) => {
     await page.goto(getPublicServicePath('/signed-out'))
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
+    await expect(
+      page.getByText('You’ve accepted analytics cookies.')
+    ).toBeVisible()
     await page.reload()
     await setTestGaCookies(page)
 
@@ -203,6 +209,9 @@ test.describe('Cookie banner and cookies page', () => {
 
     await page.goto(getPublicServicePath('/signed-out'))
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
+    await expect(
+      page.getByText('You’ve accepted analytics cookies.')
+    ).toBeVisible()
     await page.reload()
     await setTestGaCookies(page)
 
@@ -245,6 +254,8 @@ test.describe('Cookie banner and cookies page', () => {
         level: 2
       })
     ).toBeVisible()
+    await expect(page.getByRole('radio', { name: 'Yes' })).not.toBeChecked()
+    await expect(page.getByRole('radio', { name: 'No' })).not.toBeChecked()
   })
 
   test('translates the session cookie expiry on the Welsh cookies page', async ({

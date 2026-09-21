@@ -63,21 +63,22 @@ export async function setTestGaCookies(page) {
         ?.analyticsCookiePath || '/'
     )
   })
-  const pageUrl = new URL(page.url())
-  const cookieUrl = `${pageUrl.origin}${cookiePath === '/' ? '/' : `${cookiePath}/`}`
+  const { hostname, protocol } = new URL(page.url())
 
   await page.context().addCookies([
     {
       name: '_ga',
       value: 'GA1.1.111.222',
-      url: cookieUrl,
-      path: cookiePath
+      domain: hostname,
+      path: cookiePath,
+      secure: protocol === 'https:'
     },
     {
       name: TEST_GA4_COOKIE_NAME,
       value: 'GS1.1.111',
-      url: cookieUrl,
-      path: cookiePath
+      domain: hostname,
+      path: cookiePath,
+      secure: protocol === 'https:'
     }
   ])
 }
