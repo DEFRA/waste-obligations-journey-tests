@@ -201,6 +201,7 @@ services:
     environment:
       PORT: 3000
       NODE_ENV: production
+      FEATURE_SHOW_PRNS: "true"
       REDIS_HOST: redis
       REDIS_TLS: "false"
       USE_SINGLE_INSTANCE_CACHE: "true"

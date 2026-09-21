@@ -39,6 +39,54 @@ export function getJourneyAuthHeader() {
   )
 }
 
+async function getAuthHeader(journeyAdmin = false) {
+  const names = [
+    'WASTE_OBLIGATIONS_API_TOKEN_URL',
+    'WASTE_OBLIGATIONS_API_CLIENT_ID',
+    'WASTE_OBLIGATIONS_API_CLIENT_SECRET'
+  ]
+  if (!names.some((name) => process.env[name])) {
+    return journeyAdmin ? getJourneyAuthHeader() : getBasicAuthHeader()
+  }
+
+  // Partial OAuth configuration must fail rather than silently use Basic auth.
+  const [tokenUrl, clientId, clientSecret] = names.map(requireEnv)
+  // Playwright traces even standalone API contexts. Use an untraced token
+  // exchange so client credentials and token responses are not saved in reports.
+  let response
+  try {
+    response = await fetch(tokenUrl, {
+      method: 'POST',
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: clientId,
+        client_secret: clientSecret
+      }),
+      headers: { Accept: 'application/json' },
+      redirect: 'error',
+      signal: AbortSignal.timeout(30_000)
+    })
+  } catch {
+    throw new Error('Waste Obligations token request failed')
+  }
+  if (!response.ok) {
+    // Token endpoint bodies can contain credentials; report only the status.
+    throw new Error(
+      `Waste Obligations token request failed: ${response.status}`
+    )
+  }
+  let body
+  try {
+    body = await response.json()
+  } catch {
+    throw new Error('Waste Obligations token response is not valid JSON')
+  }
+  if (typeof body?.access_token !== 'string' || !body.access_token.trim()) {
+    throw new Error('Waste Obligations token response is missing access_token')
+  }
+  return `Bearer ${body.access_token}`
+}
+
 export function getSubmitterUser() {
   return {
     name: 'Journey-test submitter',
@@ -55,10 +103,28 @@ function buildHeaders(authHeader) {
   }
 }
 
+// Match the browser list's default first-page AwaitingAcceptance query.
+export async function listAwaitingPrns(request, orgId) {
+  const response = await request.get(
+    `${getBackendBaseUrl()}/organisations/${orgId}/prns?status=AwaitingAcceptance`,
+    { headers: buildHeaders(await getAuthHeader()) }
+  )
+  if (!response.ok()) {
+    throw new Error(`GET organisation PRNs failed: ${response.status()}`)
+  }
+  const body = await response.json()
+  if (!Array.isArray(body.prns)) {
+    throw new Error(
+      'GET organisation PRNs returned an unexpected response shape'
+    )
+  }
+  return body.prns
+}
+
 export async function listDeclarations(request, orgId, obligationYear) {
   const response = await request.get(
     `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations?obligationYear=${obligationYear}`,
-    { headers: buildHeaders(getBasicAuthHeader()) }
+    { headers: buildHeaders(await getAuthHeader()) }
   )
   if (!response.ok()) {
     throw new Error(
@@ -93,7 +159,7 @@ export async function setDeclarationStatus(
   }
   const response = await request.patch(
     `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations/${declarationId}`,
-    { headers: buildHeaders(getBasicAuthHeader()), data }
+    { headers: buildHeaders(await getAuthHeader()), data }
   )
   if (!response.ok()) {
     throw new Error(
@@ -103,11 +169,12 @@ export async function setDeclarationStatus(
 }
 
 // DELETE lives on a tenant-agnostic admin route (no /organisations/{orgId} scope)
-// and is gated on a separate JOURNEY_USER principal, not the submitter credentials.
+// Basic auth uses the separate JOURNEY_USER principal; gateway OAuth uses the
+// configured client, which must also have permission to delete declarations.
 export async function deleteDeclaration(request, declarationId) {
   const response = await request.delete(
     `${getBackendBaseUrl()}/compliance-declarations/${declarationId}`,
-    { headers: buildHeaders(getJourneyAuthHeader()) }
+    { headers: buildHeaders(await getAuthHeader(true)) }
   )
   if (!response.ok()) {
     throw new Error(

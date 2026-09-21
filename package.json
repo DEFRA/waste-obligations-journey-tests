@@ -13,6 +13,7 @@
     "clean:local": "npm run clean && rm -rf test-results",
     "create:folders": "mkdir -p allure-results && mkdir -p allure-report",
     "test": "playwright test",
+    "test:unit": "node --test unit-tests/*.test.js",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "test:debug": "ENVIRONMENT=local playwright test --config=playwright.local.config.js --debug",

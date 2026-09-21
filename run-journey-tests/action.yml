@@ -182,6 +182,11 @@ runs:
       shell: bash
       run: npm ci
 
+    - name: Check journey helpers
+      working-directory: ${{ env.JOURNEY_TESTS_PATH }}
+      shell: bash
+      run: npm run test:unit
+
     - name: Cache Playwright browsers
       uses: actions/cache@v6
       with:
@@ -260,6 +265,9 @@ runs:
         JOURNEY_ENTRY_POINT: waste-obligations
         EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
+        WASTE_OBLIGATIONS_API_TOKEN_URL: ''
+        WASTE_OBLIGATIONS_API_CLIENT_ID: ''
+        WASTE_OBLIGATIONS_API_CLIENT_SECRET: ''
         WASTE_OBLIGATION_USERNAME: Developer
         WASTE_OBLIGATION_PASSWORD: developer-pwd
         JOURNEY_USER: Developer
@@ -274,6 +282,9 @@ runs:
         JOURNEY_ENTRY_POINT: waste-obligations
         EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
+        WASTE_OBLIGATIONS_API_TOKEN_URL: ''
+        WASTE_OBLIGATIONS_API_CLIENT_ID: ''
+        WASTE_OBLIGATIONS_API_CLIENT_SECRET: ''
         WASTE_OBLIGATION_USERNAME: Developer
         WASTE_OBLIGATION_PASSWORD: developer-pwd
         JOURNEY_USER: Developer
@@ -288,6 +299,9 @@ runs:
         JOURNEY_ENTRY_POINT: waste-obligations
         EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
+        WASTE_OBLIGATIONS_API_TOKEN_URL: ''
+        WASTE_OBLIGATIONS_API_CLIENT_ID: ''
+        WASTE_OBLIGATIONS_API_CLIENT_SECRET: ''
         WASTE_OBLIGATION_USERNAME: Developer
         WASTE_OBLIGATION_PASSWORD: developer-pwd
         JOURNEY_USER: Developer
