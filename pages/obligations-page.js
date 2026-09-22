@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import { isLocatorVisible } from '../utils/environment-features.js'
 import {
   getJourneyStartPath,
   usesPackagingEntryPoint
@@ -60,6 +61,14 @@ export class ObligationsPage extends BasePage {
 
   async openCertificateHub() {
     await this.viewCertificateButton.click()
+  }
+
+  async hasCsocAction() {
+    return isLocatorVisible(
+      this.viewCertificateButton
+        .or(this.submitCertificateButton)
+        .or(this.resubmitButton)
+    )
   }
 
   async expectSubmitCardVisible() {

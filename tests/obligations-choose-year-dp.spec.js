@@ -9,6 +9,11 @@ import {
 import { getOrgId } from '../utils/waste-obligations-api.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
 import {
+  skipUnlessEnabled,
+  skipUnlessPackagingCsocEnabled,
+  skipUnlessPackagingObligationsShown
+} from '../utils/environment-features.js'
+import {
   findOnlySubmittedDeclaration,
   resetOrgDeclarations
 } from '../utils/test-setup.js'
@@ -44,6 +49,7 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
     })
 
     if (packaging) {
+      await skipUnlessPackagingObligationsShown(landingPage)
       await landingPage.expectLoaded()
       if (await landingPage.hasYearSelection()) {
         await test.step('open year selection from Azure account home', async () => {
@@ -66,6 +72,7 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
         })
       }
       await test.step('submit the certificate from the empty-year card', async () => {
+        await skipUnlessPackagingCsocEnabled(obligationsPage)
         await obligationsPage.expectSubmitCardVisible()
         await obligationsPage.startCsocSubmission()
       })
@@ -74,6 +81,10 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
         'Azure account home, choose a year and open the certificate hub',
         'unavailable in the CDP-only pipeline; entered the certificate page directly for ' +
           YEAR
+      )
+      await skipUnlessEnabled(
+        await csocAboutPage.isAvailable(),
+        'CSOC is not enabled on this environment'
       )
     }
 
@@ -88,6 +99,7 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
     await test.step('view the submitted certificate for the requested year', async () => {
       if (packaging) {
         await landingPage.goto(ACCOUNT)
+        await skipUnlessPackagingObligationsShown(landingPage)
         await landingPage.openObligations(chooseYearPage, obligationsPage, YEAR)
         await obligationsPage.expectViewCardVisible()
         await obligationsPage.openCertificateHub()

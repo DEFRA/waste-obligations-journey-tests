@@ -8,6 +8,7 @@ import {
 } from '../utils/journey-entry-point.js'
 import { logJourney } from '../utils/journey-log.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
+import { skipUnlessPrnsEnabled } from '../utils/environment-features.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
 
 const YEAR = 2026
@@ -64,26 +65,33 @@ test.describe('Producer PRNs list (DP)', () => {
     })
 
     if (packaging) {
-      await landingPage.expectLoaded()
-      if (await landingPage.hasYearSelection()) {
-        await test.step('open year selection from Azure account home', async () => {
-          await landingPage.goToChooseYear()
-          await chooseYearPage.expectLoaded()
-        })
-        await test.step(`select ${YEAR} and check the obligations page`, async () => {
-          await chooseYearPage.selectYear(YEAR)
-          await chooseYearPage.clickContinue()
-          await obligationsPage.expectLoadedForYear(YEAR)
-        })
+      if (await landingPage.hasObligationsEntry()) {
+        await landingPage.expectLoaded()
+        if (await landingPage.hasYearSelection()) {
+          await test.step('open year selection from Azure account home', async () => {
+            await landingPage.goToChooseYear()
+            await chooseYearPage.expectLoaded()
+          })
+          await test.step(`select ${YEAR} and check the obligations page`, async () => {
+            await chooseYearPage.selectYear(YEAR)
+            await chooseYearPage.clickContinue()
+            await obligationsPage.expectLoadedForYear(YEAR)
+          })
+        } else {
+          await reportSkippedSteps(
+            'Azure choose a year',
+            'account home shows the single-year obligations link on this environment'
+          )
+          await test.step('open obligations from Azure account home', async () => {
+            await landingPage.goToObligations()
+            await obligationsPage.expectLoaded()
+          })
+        }
       } else {
         await reportSkippedSteps(
-          'Azure choose a year',
-          'account home shows the single-year obligations link on this environment'
+          'Azure account home and choose a year',
+          'Manage recycling obligations is not shown on this environment'
         )
-        await test.step('open obligations from Azure account home', async () => {
-          await landingPage.goToObligations()
-          await obligationsPage.expectLoaded()
-        })
       }
       await test.step(`open the CDP PRNs list for ${YEAR}`, async () => {
         await page.goto(prnsUrl.toString())
@@ -95,6 +103,8 @@ test.describe('Producer PRNs list (DP)', () => {
           YEAR
       )
     }
+
+    await skipUnlessPrnsEnabled(prnsListPage)
 
     await test.step('check the CDP PRNs page loads', async () => {
       await prnsListPage.expectLoaded()

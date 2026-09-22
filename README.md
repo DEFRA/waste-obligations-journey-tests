@@ -165,7 +165,9 @@ Both `*.setup.js` files run unconditionally, producing `dp.json` and `cso.json`.
 
 The certificate-for-year and PRNs-list journeys sign in independently with `EPR_USER_EMAIL` / `EPR_USER_PASSWORD` from empty browser contexts. With the Packaging entry point, each explicitly navigates account home and selects a year when that tile is present. There is no snapshot restore of CSOC data: `resetOrgDeclarations` deletes the org's declarations for the year through the admin API, and the certificate-for-year scenario then submits a new certificate and views it. The PRNs scenario opens the CDP PRNs URL directly. Cookie banner and GA tests also use the CDP frontend; they are public pages and do not go through Azure. `WASTE_OBLIGATIONS_FRONTEND_BASE_URL` is required in Packaging mode (public frontend/proxy base URL including any routing prefix) for PRNs, cookies and GA. Azure's existing PRNs link targets its own page, so this scenario does not assert an Azure-to-CDP PRNs link. In the pipeline, each scenario enters its own CDP destination through `EPR_BASE_URL`, omitting only its Azure steps. PRNs never visits or checks a certificate. These scenarios run in the E2E profile only.
 
-Cookie banner and GA assertions expect `GOOGLE_TAG_MANAGER_KEY=GTM-TEST0001` and `GOOGLE_ANALYTICS_MEASUREMENT_ID=G-TEST000001`. CI Compose sets those on the frontend. Deployed CDP supplies the same keys through CI/CD.
+Journeys follow the features enabled on the target environment. CI Compose and each deployed env can differ. A missing year-selection tile omits only that Azure step. A missing CSOC card, PRNs list or cookie banner skips that scenario with a recorded reason; it does not fail the rest of the suite.
+
+Cookie banner and GA assertions read the GTM and measurement IDs from the rendered page. CI Compose sets `GOOGLE_TAG_MANAGER_KEY=GTM-TEST0001` and `GOOGLE_ANALYTICS_MEASUREMENT_ID=G-TEST000001`. Deployed CDP supplies keys through CI/CD.
 
 Shared backend admin credentials (`WASTE_OBLIGATION_USERNAME` / `WASTE_OBLIGATION_PASSWORD` / `JOURNEY_USER` / `JOURNEY_PASSWORD`) are tenant-agnostic and used for both accounts.
 

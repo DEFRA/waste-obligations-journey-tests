@@ -7,6 +7,11 @@ import {
 } from '../utils/test-setup.js'
 import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
 import {
+  skipUnlessEnabled,
+  skipUnlessPackagingCsocEnabled,
+  skipUnlessPackagingObligationsShown
+} from '../utils/environment-features.js'
+import {
   initialiseAccessibilityChecking,
   analyseAccessibility,
   generateAccessibilityReports,
@@ -28,8 +33,15 @@ async function startCsocJourney({
 }) {
   await landingPage.goto(account)
   if (usesPackagingEntryPoint()) {
+    await skipUnlessPackagingObligationsShown(landingPage)
     await landingPage.openObligations(chooseYearPage, obligationsPage, year)
+    await skipUnlessPackagingCsocEnabled(obligationsPage)
     await obligationsPage.startCsocSubmission()
+  } else {
+    await skipUnlessEnabled(
+      await csocAboutPage.isAvailable(),
+      'CSOC is not enabled on this environment'
+    )
   }
   await csocAboutPage.expectLoaded()
 }

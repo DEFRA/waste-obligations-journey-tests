@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import { isLocatorVisible } from '../utils/environment-features.js'
 
 export class PrnsListPage extends BasePage {
   constructor(page) {
@@ -43,6 +44,10 @@ export class PrnsListPage extends BasePage {
         row.getByRole('cell', { name: value, exact: true })
       ).toBeVisible()
     }
+  }
+
+  async isAvailable() {
+    return isLocatorVisible(this.heading)
   }
 
   async expectLoaded() {

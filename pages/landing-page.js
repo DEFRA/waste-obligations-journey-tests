@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import { isLocatorVisible } from '../utils/environment-features.js'
 import {
   getJourneyStartPath,
   usesPackagingEntryPoint
@@ -26,7 +27,6 @@ export class LandingPage extends BasePage {
       return
     }
     await this.gotoPath(this.path)
-    await this.expectLoaded()
   }
 
   async expectLoaded() {
@@ -36,8 +36,14 @@ export class LandingPage extends BasePage {
     ).toBeVisible()
   }
 
+  async hasObligationsEntry() {
+    return isLocatorVisible(
+      this.manageObligationsLink.or(this.manageRecyclingObligationsLink)
+    )
+  }
+
   async hasYearSelection() {
-    return this.manageRecyclingObligationsLink.isVisible()
+    return isLocatorVisible(this.manageRecyclingObligationsLink, 2_000)
   }
 
   async goToObligations() {

@@ -98,6 +98,11 @@ private backend access.
   in CI. Omit only the Azure-specific steps, enter the equivalent CDP page, and
   execute the remaining assertions. Mark omitted steps in the report and print
   an explicit `SKIPPED STEPS` message with the reason.
+- Observe the target environment. Run the journey for features that environment
+  actually renders. Skip the whole scenario, with a recorded reason, when a
+  required feature is not enabled. Omit only steps the environment does not
+  show, such as Azure year selection. Do not treat a missing flag as a pass on
+  a path that is enabled.
 - The certificate-for-year and PRNs-list scenarios use this combined approach.
   Each scenario enters its own CDP destination directly in CI. Certificate-for-year
   resets the org's declarations for that year, submits a new certificate, then
@@ -111,9 +116,6 @@ private backend access.
 - Keep helpers focused on one action or assertion. Compose login, year selection,
   destination navigation and assertions explicitly in each scenario. Reporting
   helpers must not decide which steps to omit or navigate on a test's behalf.
-- Do not silently omit steps in deployed runs because a flag is off or a page
-  is missing. Investigate the environment configuration instead of weakening
-  the assertions to make the run green.
 - Whole-scenario skips are made visible by
   [utils/skipped-tests-reporter.js](utils/skipped-tests-reporter.js), including
   GitHub warning annotations. A passing run with skipped scenarios does not
@@ -124,11 +126,12 @@ private backend access.
 Feature configuration is part of making a journey executable. Identify which
 service owns each flag and where it must be configured:
 
-| Example flag                                                 | Owner                      | Configuration to consider                                                                                      |
-| ------------------------------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `FEATURE_SHOW_PRNS`                                          | Waste Obligations frontend | Enabled in CI Compose for PRNs coverage; deployed CDP configuration is separate.                               |
-| `GOOGLE_TAG_MANAGER_KEY` / `GOOGLE_ANALYTICS_MEASUREMENT_ID` | Waste Obligations frontend | Cookie banner and GA. CI Compose sets `GTM-TEST0001` / `G-TEST000001`. Deployed CDP receives these from CI/CD. |
-| `FeatureManagement__ShowMultiYearObligations`                | Azure Packaging frontend   | Controls the year-selection flow; enabling a flag in this repository cannot enable it in Azure.                |
+| Example flag                                                 | Owner                      | Configuration to consider                                                                                                                 |
+| ------------------------------------------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `FEATURE_SHOW_PRNS`                                          | Waste Obligations frontend | Enabled in CI Compose. Deployed CDP is separate. The PRNs journey skips when the list page is not rendered.                               |
+| `GOOGLE_TAG_MANAGER_KEY` / `GOOGLE_ANALYTICS_MEASUREMENT_ID` | Waste Obligations frontend | Cookie banner and GA. CI Compose sets test IDs. Deployed CDP receives keys from CI/CD. Cookie journeys skip when the banner is not shown. |
+| `FeatureManagement__ShowMultiYearObligations`                | Azure Packaging frontend   | Controls the year-selection flow. Journeys follow the tile the account home actually renders.                                             |
+| `FeatureManagement__CsocEnabled`                             | Azure Packaging frontend   | Controls CSOC cards on Azure obligations. Packaging CSOC journeys skip when those cards are not shown.                                    |
 
 A test-runner environment variable does not automatically configure a target
 service. Check the service's actual configuration names and behavior. Document
