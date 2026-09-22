@@ -113,11 +113,11 @@ npm run report
 
 The suite runs one profile at a time, selected by the `PROFILE` env var. The CDP Portal injects this from the **Profile** field on the test-suite run page; locally you set it yourself.
 
-| `PROFILE`       | Specs run                                                                                                                                                 |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `e2e` (default) | `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js`, `tests/obligations-choose-year-dp.spec.js`, `tests/prns-list-journey-dp.spec.js` |
-| `accessibility` | `tests/accessibility.spec.js`                                                                                                                             |
-| `security`      | `tests/security.spec.js`                                                                                                                                  |
+| `PROFILE`       | Specs run                                                                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e` (default) | `tests/cookies-banner.spec.js`, `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js`, `tests/obligations-choose-year-dp.spec.js`, `tests/prns-list-journey-dp.spec.js` |
+| `accessibility` | `tests/accessibility.spec.js`                                                                                                                                                             |
+| `security`      | `tests/security.spec.js`                                                                                                                                                                  |
 
 Unset → `e2e` (so `npm test` and `npm run test:local` keep working as before). Any other value throws at config load and names the valid options.
 
@@ -163,7 +163,9 @@ The suite covers two accounts in parallel — both run on every `npm run test:*`
 
 Both `*.setup.js` files run unconditionally, producing `dp.json` and `cso.json`. Each spec pins its own `storageState` via `test.use({ storageState })` and threads the account string (`'dp'` or `'cso'`) into the API helpers so backend ops target the right org and submitter. The submission page object auto-detects the CSO variant from the rendered DOM (presence of a "Compliance scheme" summary row and a "Regulation 43" radio fieldset).
 
-The certificate-for-year and PRNs-list journeys sign in independently with `EPR_USER_EMAIL` / `EPR_USER_PASSWORD` from empty browser contexts. With the Packaging entry point, each explicitly navigates account home and selects a year. The certificate scenario then opens and checks the certificate. The PRNs scenario opens the CDP PRNs URL directly, using `WASTE_OBLIGATIONS_FRONTEND_BASE_URL` (required in Packaging mode; set it to the public frontend/proxy base URL including any routing prefix). Azure's existing PRNs link targets its own page, so this scenario does not assert an Azure-to-CDP PRNs link. In the pipeline, each scenario enters its own CDP destination through `EPR_BASE_URL`, omitting only its Azure steps. PRNs never visits or checks a certificate. These scenarios run in the E2E profile only.
+The certificate-for-year and PRNs-list journeys sign in independently with `EPR_USER_EMAIL` / `EPR_USER_PASSWORD` from empty browser contexts. With the Packaging entry point, each explicitly navigates account home and selects a year when that tile is present. There is no snapshot restore of CSOC data: `resetOrgDeclarations` deletes the org's declarations for the year through the admin API, and the certificate-for-year scenario then submits a new certificate and views it. The PRNs scenario opens the CDP PRNs URL directly. Cookie banner and GA tests also use the CDP frontend; they are public pages and do not go through Azure. `WASTE_OBLIGATIONS_FRONTEND_BASE_URL` is required in Packaging mode (public frontend/proxy base URL including any routing prefix) for PRNs, cookies and GA. Azure's existing PRNs link targets its own page, so this scenario does not assert an Azure-to-CDP PRNs link. In the pipeline, each scenario enters its own CDP destination through `EPR_BASE_URL`, omitting only its Azure steps. PRNs never visits or checks a certificate. These scenarios run in the E2E profile only.
+
+Cookie banner and GA assertions expect `GOOGLE_TAG_MANAGER_KEY=GTM-TEST0001` and `GOOGLE_ANALYTICS_MEASUREMENT_ID=G-TEST000001`. CI Compose sets those on the frontend. Deployed CDP supplies the same keys through CI/CD.
 
 Shared backend admin credentials (`WASTE_OBLIGATION_USERNAME` / `WASTE_OBLIGATION_PASSWORD` / `JOURNEY_USER` / `JOURNEY_PASSWORD`) are tenant-agnostic and used for both accounts.
 

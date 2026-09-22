@@ -62,6 +62,16 @@ export class ObligationsPage extends BasePage {
     await this.viewCertificateButton.click()
   }
 
+  async expectSubmitCardVisible() {
+    await expect(this.submitCertificateButton).toBeVisible()
+    await expect(this.viewCertificateButton).toHaveCount(0)
+  }
+
+  async expectViewCardVisible() {
+    await expect(this.viewCertificateButton).toBeVisible()
+    await expect(this.submitCertificateButton).toHaveCount(0)
+  }
+
   async expectResubmitCardVisible() {
     await expect(this.resubmitButton).toBeVisible()
     await expect(this.viewCertificateButton).toHaveCount(0)

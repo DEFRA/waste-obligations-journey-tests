@@ -99,11 +99,15 @@ private backend access.
   execute the remaining assertions. Mark omitted steps in the report and print
   an explicit `SKIPPED STEPS` message with the reason.
 - The certificate-for-year and PRNs-list scenarios use this combined approach.
-  Each scenario enters its own CDP destination directly in CI. PRNs must not
-  navigate through or assert a certificate. In Packaging mode, configure
+  Each scenario enters its own CDP destination directly in CI. Certificate-for-year
+  resets the org's declarations for that year, submits a new certificate, then
+  views it. There is no snapshot restore. PRNs must not navigate through or
+  assert a certificate. In Packaging mode, configure
   `WASTE_OBLIGATIONS_FRONTEND_BASE_URL` with the public CDP frontend/proxy URL
-  and routing prefix for the PRNs destination; Azure currently owns its PRNs link.
-  Do not claim to test that link or Azure year selection in direct-entry mode.
+  and routing prefix for the PRNs, cookie banner and GA destinations; Azure
+  currently owns its PRNs link. Do not claim to test that link or Azure year
+  selection in direct-entry mode. Cookie banner and GA tests always hit the CDP
+  frontend, including in Packaging/Portal runs.
 - Keep helpers focused on one action or assertion. Compose login, year selection,
   destination navigation and assertions explicitly in each scenario. Reporting
   helpers must not decide which steps to omit or navigate on a test's behalf.
@@ -120,10 +124,11 @@ private backend access.
 Feature configuration is part of making a journey executable. Identify which
 service owns each flag and where it must be configured:
 
-| Example flag                                  | Owner                      | Configuration to consider                                                                       |
-| --------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
-| `FEATURE_SHOW_PRNS`                           | Waste Obligations frontend | Enabled in CI Compose for PRNs coverage; deployed CDP configuration is separate.                |
-| `FeatureManagement__ShowMultiYearObligations` | Azure Packaging frontend   | Controls the year-selection flow; enabling a flag in this repository cannot enable it in Azure. |
+| Example flag                                                 | Owner                      | Configuration to consider                                                                                      |
+| ------------------------------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `FEATURE_SHOW_PRNS`                                          | Waste Obligations frontend | Enabled in CI Compose for PRNs coverage; deployed CDP configuration is separate.                               |
+| `GOOGLE_TAG_MANAGER_KEY` / `GOOGLE_ANALYTICS_MEASUREMENT_ID` | Waste Obligations frontend | Cookie banner and GA. CI Compose sets `GTM-TEST0001` / `G-TEST000001`. Deployed CDP receives these from CI/CD. |
+| `FeatureManagement__ShowMultiYearObligations`                | Azure Packaging frontend   | Controls the year-selection flow; enabling a flag in this repository cannot enable it in Azure.                |
 
 A test-runner environment variable does not automatically configure a target
 service. Check the service's actual configuration names and behavior. Document
@@ -146,6 +151,10 @@ not change a shared environment's flags just to make a test pass.
   tonnages diagnostically, warning if unavailable; they do not require seeded
   PRNs. Page loading remains mandatory. Do not log names or free-text notes.
   No acceptance or rejection is performed.
+- CSOC declarations are not restored from a snapshot. `resetOrgDeclarations`
+  deletes the organisation's declarations for a year through the admin DELETE
+  API. Specs that need a submitted certificate recreate it through the UI after
+  that reset.
 
 ## Coordinating application and journey changes
 

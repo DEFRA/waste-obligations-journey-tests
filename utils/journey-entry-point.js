@@ -70,6 +70,35 @@ export function getPublicServicePath(path) {
   return servicePath(path.startsWith('/') ? path : `/${path}`)
 }
 
+function wasteObligationsFrontendUrl(pathname, search = '') {
+  const url = new URL(getWasteObligationsFrontendBaseUrl())
+  const prefix = url.pathname.replace(/\/$/, '')
+  const path = pathname.startsWith('/') ? pathname : `/${pathname}`
+  url.pathname = `${prefix}${path}`
+  url.search = search
+  url.hash = ''
+  return url
+}
+
+// Public CDP frontend origin, including any reverse-proxy prefix. Packaging
+// runs use WASTE_OBLIGATIONS_FRONTEND_BASE_URL because Playwright's baseURL is
+// the Azure application.
+export function getWasteObligationsFrontendBaseUrl() {
+  const raw = usesPackagingEntryPoint()
+    ? requireEnv('WASTE_OBLIGATIONS_FRONTEND_BASE_URL')
+    : getJourneyBaseUrl()
+  const url = new URL(raw)
+  const pathname = url.pathname.replace(/\/+$/, '')
+
+  return `${url.origin}${pathname}/`
+}
+
+export function getPublicFrontendUrl(path, search = '') {
+  const query = search.startsWith('?') ? search.slice(1) : search
+
+  return wasteObligationsFrontendUrl(path, query).href
+}
+
 export function getJourneyViewPath(account, declarationId) {
   if (account === 'cso') {
     const schemeId = requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')
@@ -88,14 +117,10 @@ export function getJourneyViewPath(account, declarationId) {
 
 // The CDP PRNs destination is independent of any certificate navigation.
 export function getProducerPrnsUrl(year) {
-  const baseUrl = usesPackagingEntryPoint()
-    ? requireEnv('WASTE_OBLIGATIONS_FRONTEND_BASE_URL')
-    : getJourneyBaseUrl()
-  const url = new URL(baseUrl)
-  const prefix = url.pathname.replace(/\/$/, '')
   const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
-  url.pathname = `${prefix}/producer/${organisationId}/prns`
-  url.search = new URLSearchParams({ year: String(year) }).toString()
-  url.hash = ''
-  return url
+
+  return wasteObligationsFrontendUrl(
+    `/producer/${organisationId}/prns`,
+    new URLSearchParams({ year: String(year) }).toString()
+  )
 }

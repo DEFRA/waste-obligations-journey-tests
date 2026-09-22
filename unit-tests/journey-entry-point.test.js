@@ -2,7 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   getProducerPrnsUrl,
-  getPublicServicePath
+  getPublicFrontendUrl,
+  getPublicServicePath,
+  getWasteObligationsFrontendBaseUrl
 } from '../utils/journey-entry-point.js'
 
 test('PRNs resolves its own destination without a certificate URL', () => {
@@ -71,6 +73,64 @@ test('public service paths keep the proxy prefix for CDP entry', () => {
     process.env.JOURNEY_ENTRY_POINT = 'packaging'
     process.env.EPR_BASE_URL = 'https://localhost:7084/report-data'
     assert.equal(getPublicServicePath('/signed-out'), '/signed-out')
+  } finally {
+    for (const key of keys) {
+      if (original[key] === undefined) delete process.env[key]
+      else process.env[key] = original[key]
+    }
+  }
+})
+
+test('public frontend URLs use the CDP frontend in Packaging mode', () => {
+  const keys = [
+    'JOURNEY_ENTRY_POINT',
+    'EPR_BASE_URL',
+    'WASTE_OBLIGATIONS_FRONTEND_BASE_URL'
+  ]
+  const original = Object.fromEntries(
+    keys.map((key) => [key, process.env[key]])
+  )
+
+  try {
+    process.env.JOURNEY_ENTRY_POINT = 'waste-obligations'
+    process.env.EPR_BASE_URL =
+      'https://localhost:8015/manage-recycling-obligations/'
+    process.env.WASTE_OBLIGATIONS_FRONTEND_BASE_URL = 'https://ignored.example'
+    assert.equal(
+      getPublicFrontendUrl('/signed-out'),
+      'https://localhost:8015/manage-recycling-obligations/signed-out'
+    )
+    assert.equal(
+      getPublicFrontendUrl('/cookies', 'lang=cy'),
+      'https://localhost:8015/manage-recycling-obligations/cookies?lang=cy'
+    )
+    assert.equal(
+      getWasteObligationsFrontendBaseUrl(),
+      'https://localhost:8015/manage-recycling-obligations/'
+    )
+
+    process.env.JOURNEY_ENTRY_POINT = 'packaging'
+    process.env.EPR_BASE_URL = 'https://azure.example/report-data'
+    process.env.WASTE_OBLIGATIONS_FRONTEND_BASE_URL =
+      'https://deployed-proxy.example/manage-recycling-obligations/?old=1#old'
+    assert.equal(
+      getPublicFrontendUrl('/signed-out'),
+      'https://deployed-proxy.example/manage-recycling-obligations/signed-out'
+    )
+    assert.equal(
+      getPublicFrontendUrl('cookies'),
+      'https://deployed-proxy.example/manage-recycling-obligations/cookies'
+    )
+    assert.equal(
+      getWasteObligationsFrontendBaseUrl(),
+      'https://deployed-proxy.example/manage-recycling-obligations/'
+    )
+
+    delete process.env.WASTE_OBLIGATIONS_FRONTEND_BASE_URL
+    assert.throws(
+      () => getPublicFrontendUrl('/signed-out'),
+      /WASTE_OBLIGATIONS_FRONTEND_BASE_URL/
+    )
   } finally {
     for (const key of keys) {
       if (original[key] === undefined) delete process.env[key]

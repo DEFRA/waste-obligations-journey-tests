@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures/pages.fixture.js'
 import {
-  getPublicServicePath,
-  usesPackagingEntryPoint
+  getPublicFrontendUrl,
+  getWasteObligationsFrontendBaseUrl
 } from '../utils/journey-entry-point.js'
 import {
   TEST_GA4_COOKIE_NAME,
@@ -27,10 +27,9 @@ import {
 test.use({ storageState: { cookies: [], origins: [] } })
 
 test.describe('Cookie banner and cookies page', () => {
-  test.skip(
-    usesPackagingEntryPoint(),
-    'Cookie consent is owned by the waste-obligations frontend'
-  )
+  // Cookie consent is owned by the waste-obligations frontend. In Packaging
+  // mode Playwright's baseURL is Azure, so these tests open the CDP frontend
+  // through WASTE_OBLIGATIONS_FRONTEND_BASE_URL.
 
   test.beforeEach(async ({ page }) => {
     await interceptAnalyticsTraffic(page)
@@ -39,7 +38,7 @@ test.describe('Cookie banner and cookies page', () => {
   test('does not initialize analytics before consent and initializes them without a reload on accept', async ({
     page
   }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await page.goto(getPublicFrontendUrl('/signed-out'))
 
     await expect(
       page.getByRole('button', { name: 'Accept analytics cookies' })
@@ -81,7 +80,7 @@ test.describe('Cookie banner and cookies page', () => {
   })
 
   test('does not initialize analytics after rejection', async ({ page }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await page.goto(getPublicFrontendUrl('/signed-out'))
 
     await page.getByRole('button', { name: 'Reject analytics cookies' }).click()
 
@@ -94,14 +93,13 @@ test.describe('Cookie banner and cookies page', () => {
   })
 
   test('failed accept and reject XHRs save the selected preference and return to the page', async ({
-    page,
-    baseURL
+    page
   }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await page.goto(getPublicFrontendUrl('/signed-out'))
 
     await expect(page.locator('form[action$="/cookies"]')).toHaveAttribute(
       'action',
-      servicePath(baseURL, 'cookies')
+      servicePath(getWasteObligationsFrontendBaseUrl(), 'cookies')
     )
     await expect(page.locator('input[name="returnUrl"]')).toHaveValue(
       /\/signed-out$/
@@ -123,13 +121,13 @@ test.describe('Cookie banner and cookies page', () => {
       page.getByRole('button', { name: 'Accept analytics cookies' })
     ).toHaveCount(0)
 
-    await page.goto(getPublicServicePath('/cookies'))
+    await page.goto(getPublicFrontendUrl('/cookies'))
     await expect(page.getByRole('radio', { name: 'Yes' })).toBeChecked()
 
     await page.context().clearCookies({
       name: CONSENT_COOKIE_NAME
     })
-    await page.goto(getPublicServicePath('/signed-out'))
+    await page.goto(getPublicFrontendUrl('/signed-out'))
     const rejectFallback = page.waitForRequest((request) =>
       isCookieFormPost(request, 'false')
     )
@@ -140,14 +138,14 @@ test.describe('Cookie banner and cookies page', () => {
     expect(await readConsentPolicyFromPage(page)).toEqual(
       expect.objectContaining({ confirmed: true, analytics: false })
     )
-    await page.goto(getPublicServicePath('/cookies'))
+    await page.goto(getPublicFrontendUrl('/cookies'))
     await expect(page.getByRole('radio', { name: 'No' })).toBeChecked()
   })
 
   test('history restoration keeps GA cookies while consent remains accepted', async ({
     page
   }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await page.goto(getPublicFrontendUrl('/signed-out'))
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
@@ -175,7 +173,7 @@ test.describe('Cookie banner and cookies page', () => {
   test('history restoration after rejection clears GA cookies and does not restart analytics', async ({
     page
   }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await page.goto(getPublicFrontendUrl('/signed-out'))
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
@@ -183,7 +181,7 @@ test.describe('Cookie banner and cookies page', () => {
     await page.reload()
     await setTestGaCookies(page)
 
-    await page.goto(getPublicServicePath('/cookies'))
+    await page.goto(getPublicFrontendUrl('/cookies'))
     await page.getByRole('radio', { name: 'No' }).check()
     await page.getByRole('button', { name: 'Save cookie settings' }).click()
     await setTestGaCookies(page)
@@ -202,12 +200,13 @@ test.describe('Cookie banner and cookies page', () => {
   })
 
   test('scopes Google Analytics cookies to the public service path', async ({
-    page,
-    baseURL
+    page
   }) => {
-    const expectedPath = expectedAnalyticsCookiePath(baseURL)
+    const expectedPath = expectedAnalyticsCookiePath(
+      getWasteObligationsFrontendBaseUrl()
+    )
 
-    await page.goto(getPublicServicePath('/signed-out'))
+    await page.goto(getPublicFrontendUrl('/signed-out'))
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
@@ -233,7 +232,7 @@ test.describe('Cookie banner and cookies page', () => {
   test('shows analytics cookies and settings on the cookies page', async ({
     page
   }) => {
-    await page.goto(getPublicServicePath('/cookies'))
+    await page.goto(getPublicFrontendUrl('/cookies'))
 
     const main = page.locator('#main-content')
 
@@ -261,7 +260,7 @@ test.describe('Cookie banner and cookies page', () => {
   test('translates the session cookie expiry on the Welsh cookies page', async ({
     page
   }) => {
-    await page.goto(`${getPublicServicePath('/cookies')}?lang=cy`)
+    await page.goto(getPublicFrontendUrl('/cookies', 'lang=cy'))
 
     const main = page.locator('#main-content')
 

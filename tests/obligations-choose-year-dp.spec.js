@@ -1,27 +1,41 @@
 import { test } from '../fixtures/pages.fixture.js'
+import { TEST_USER_NAME } from '../data/csoc.data.js'
 import { requireEnv } from '../utils/env.js'
 import { submitB2CCredentials } from '../utils/login.js'
 import {
   getJourneyStartPath,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
+import { getOrgId } from '../utils/waste-obligations-api.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
+import {
+  findOnlySubmittedDeclaration,
+  resetOrgDeclarations
+} from '../utils/test-setup.js'
 
+const ACCOUNT = 'dp'
 const YEAR = 2026
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
 test.describe('Manage recycling obligations - certificate for a year (DP)', () => {
-  test('log in and view the certificate of compliance for the requested year', async ({
+  test.beforeAll(() => resetOrgDeclarations(ACCOUNT, YEAR))
+
+  test('log in, submit and view the certificate of compliance for the requested year', async ({
     page,
+    request,
     landingPage,
     chooseYearPage,
     obligationsPage,
-    csocAboutPage
+    csocAboutPage,
+    csocSubmissionPage,
+    csocConfirmationPage,
+    csocViewPage
   }) => {
+    test.setTimeout(180_000)
     const packaging = usesPackagingEntryPoint()
     await test.step('open the entry point and sign in as the producer', async () => {
-      await page.goto(getJourneyStartPath('dp', YEAR), { timeout: 60_000 })
+      await page.goto(getJourneyStartPath(ACCOUNT, YEAR), { timeout: 60_000 })
       await submitB2CCredentials(
         page,
         requireEnv('EPR_USER_EMAIL'),
@@ -51,8 +65,9 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
           await obligationsPage.expectLoaded()
         })
       }
-      await test.step('open the certificate hub', async () => {
-        await obligationsPage.openCertificateHub()
+      await test.step('submit the certificate from the empty-year card', async () => {
+        await obligationsPage.expectSubmitCardVisible()
+        await obligationsPage.startCsocSubmission()
       })
     } else {
       await reportSkippedSteps(
@@ -62,8 +77,30 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
       )
     }
 
-    await test.step('check the certificate for the requested year', async () => {
+    await test.step(`submit the ${YEAR} certificate of compliance`, async () => {
       await csocAboutPage.expectLoadedForYear(YEAR)
+      await csocAboutPage.clickContinue()
+      await csocSubmissionPage.expectLoaded()
+      await csocSubmissionPage.submit(TEST_USER_NAME)
+      await csocConfirmationPage.expectSubmitted(YEAR)
+    })
+
+    await test.step('view the submitted certificate for the requested year', async () => {
+      if (packaging) {
+        await landingPage.goto(ACCOUNT)
+        await landingPage.openObligations(chooseYearPage, obligationsPage, YEAR)
+        await obligationsPage.expectViewCardVisible()
+        await obligationsPage.openCertificateHub()
+      } else {
+        const declaration = await findOnlySubmittedDeclaration(
+          request,
+          getOrgId(ACCOUNT),
+          YEAR
+        )
+        await csocViewPage.goto(ACCOUNT, declaration.id)
+      }
+      await csocViewPage.expectLoaded(YEAR)
+      await csocViewPage.expectOrgIdentity()
     })
   })
 })
