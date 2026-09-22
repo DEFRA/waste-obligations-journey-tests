@@ -36,15 +36,6 @@ export class LandingPage extends BasePage {
     ).toBeVisible()
   }
 
-  async goToObligations() {
-    if (!usesPackagingEntryPoint()) {
-      throw new Error(
-        'The waste-obligations entry point opens the CSOC about page directly.'
-      )
-    }
-    await this.manageObligationsLink.click()
-  }
-
   async goToChooseYear() {
     if (!usesPackagingEntryPoint()) {
       throw new Error(

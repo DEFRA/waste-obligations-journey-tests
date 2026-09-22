@@ -32,6 +32,7 @@ const APP_HOST =
 const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
   const {
     landingPage,
+    chooseYearPage,
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
@@ -52,10 +53,19 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
       await expect(page).toHaveURL(APP_HOST)
     })
 
+    if (usesPackagingEntryPoint()) {
+      await test.step(`${prefix} > Choose a year`, async () => {
+        await landingPage.goToChooseYear()
+        await chooseYearPage.expectLoaded()
+        await chooseYearPage.selectYear(year)
+        await chooseYearPage.clickContinue()
+        await expect(page).toHaveURL(APP_HOST)
+      })
+    }
+
     await test.step(`${prefix} > Obligations page`, async () => {
       if (usesPackagingEntryPoint()) {
-        await landingPage.goToObligations()
-        await obligationsPage.expectLoaded()
+        await obligationsPage.expectLoadedForYear(year)
       } else {
         await csocAboutPage.expectLoaded()
       }
@@ -137,6 +147,7 @@ test.describe('Security scan — CSOC journey', () => {
       page,
       request,
       landingPage,
+      chooseYearPage,
       obligationsPage,
       csocAboutPage,
       csocSubmissionPage,
@@ -150,6 +161,7 @@ test.describe('Security scan — CSOC journey', () => {
         request,
         pages: {
           landingPage,
+          chooseYearPage,
           obligationsPage,
           csocAboutPage,
           csocSubmissionPage,
@@ -167,6 +179,7 @@ test.describe('Security scan — CSOC journey', () => {
       page,
       request,
       landingPage,
+      chooseYearPage,
       obligationsPage,
       csocAboutPage,
       csocSubmissionPage,
@@ -180,6 +193,7 @@ test.describe('Security scan — CSOC journey', () => {
         request,
         pages: {
           landingPage,
+          chooseYearPage,
           obligationsPage,
           csocAboutPage,
           csocSubmissionPage,

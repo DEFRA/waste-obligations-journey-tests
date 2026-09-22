@@ -25,6 +25,7 @@ test.describe('CSOC lifecycle journey (DP)', () => {
   test('Submit → cancel → resubmit → accept lifecycle', async ({
     request,
     landingPage,
+    chooseYearPage,
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
@@ -65,8 +66,11 @@ test.describe('CSOC lifecycle journey (DP)', () => {
     const submitCsoc = async () => {
       await landingPage.goto(ACCOUNT)
       if (usesPackagingEntryPoint()) {
-        await landingPage.goToObligations()
-        await obligationsPage.expectLoaded()
+        await landingPage.goToChooseYear()
+        await chooseYearPage.expectLoaded()
+        await chooseYearPage.selectYear(year)
+        await chooseYearPage.clickContinue()
+        await obligationsPage.expectLoadedForYear(year)
         obligationsRows = await obligationsPage.readObligationsTable()
         expect(obligationsRows.length).toBeGreaterThan(0)
         await obligationsPage.startCsocSubmission()

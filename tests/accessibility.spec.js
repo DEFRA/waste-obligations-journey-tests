@@ -20,14 +20,19 @@ test.describe.configure({ mode: 'serial' })
 
 async function startCsocJourney({
   account,
+  year,
   landingPage,
+  chooseYearPage,
   obligationsPage,
   csocAboutPage
 }) {
   await landingPage.goto(account)
   if (usesPackagingEntryPoint()) {
-    await landingPage.goToObligations()
-    await obligationsPage.expectLoaded()
+    await landingPage.goToChooseYear()
+    await chooseYearPage.expectLoaded()
+    await chooseYearPage.selectYear(year)
+    await chooseYearPage.clickContinue()
+    await obligationsPage.expectLoadedForYear(year)
     await obligationsPage.startCsocSubmission()
   }
   await csocAboutPage.expectLoaded()
@@ -73,6 +78,7 @@ test.describe('Accessibility testing — CSOC journey', () => {
       page,
       request,
       landingPage,
+      chooseYearPage,
       obligationsPage,
       csocAboutPage,
       csocSubmissionPage,
@@ -87,7 +93,9 @@ test.describe('Accessibility testing — CSOC journey', () => {
       // are out of scope for the accessibility scan, so we just step through.
       await startCsocJourney({
         account: 'dp',
+        year,
         landingPage,
+        chooseYearPage,
         obligationsPage,
         csocAboutPage
       })
@@ -134,6 +142,7 @@ test.describe('Accessibility testing — CSOC journey', () => {
       page,
       request,
       landingPage,
+      chooseYearPage,
       obligationsPage,
       csocAboutPage,
       csocSubmissionPage,
@@ -148,7 +157,9 @@ test.describe('Accessibility testing — CSOC journey', () => {
       // are out of scope for the accessibility scan, so we just step through.
       await startCsocJourney({
         account: 'cso',
+        year,
         landingPage,
+        chooseYearPage,
         obligationsPage,
         csocAboutPage
       })
