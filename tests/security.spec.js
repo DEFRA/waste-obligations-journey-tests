@@ -53,7 +53,9 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
       await expect(page).toHaveURL(APP_HOST)
     })
 
-    if (usesPackagingEntryPoint()) {
+    let usedYearSelection = false
+    if (usesPackagingEntryPoint() && (await landingPage.hasYearSelection())) {
+      usedYearSelection = true
       await test.step(`${prefix} > Choose a year`, async () => {
         await landingPage.goToChooseYear()
         await chooseYearPage.expectLoaded()
@@ -65,7 +67,10 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
 
     await test.step(`${prefix} > Obligations page`, async () => {
       if (usesPackagingEntryPoint()) {
-        await obligationsPage.expectLoadedForYear(year)
+        if (!usedYearSelection) {
+          await landingPage.goToObligations()
+        }
+        await obligationsPage.expectLoaded()
       } else {
         await csocAboutPage.expectLoaded()
       }

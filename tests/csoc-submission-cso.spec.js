@@ -68,11 +68,7 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     const submitCsoc = async () => {
       await landingPage.goto(ACCOUNT)
       if (usesPackagingEntryPoint()) {
-        await landingPage.goToChooseYear()
-        await chooseYearPage.expectLoaded()
-        await chooseYearPage.selectYear(year)
-        await chooseYearPage.clickContinue()
-        await obligationsPage.expectLoadedForYear(year)
+        await landingPage.openObligations(chooseYearPage, obligationsPage, year)
         obligationsRows = await obligationsPage.readObligationsTable()
         expect(obligationsRows.length).toBeGreaterThan(0)
         await obligationsPage.startCsocSubmission()

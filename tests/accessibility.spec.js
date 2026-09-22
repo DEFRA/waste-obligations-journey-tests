@@ -28,11 +28,7 @@ async function startCsocJourney({
 }) {
   await landingPage.goto(account)
   if (usesPackagingEntryPoint()) {
-    await landingPage.goToChooseYear()
-    await chooseYearPage.expectLoaded()
-    await chooseYearPage.selectYear(year)
-    await chooseYearPage.clickContinue()
-    await obligationsPage.expectLoadedForYear(year)
+    await landingPage.openObligations(chooseYearPage, obligationsPage, year)
     await obligationsPage.startCsocSubmission()
   }
   await csocAboutPage.expectLoaded()

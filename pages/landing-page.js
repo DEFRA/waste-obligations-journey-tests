@@ -36,6 +36,19 @@ export class LandingPage extends BasePage {
     ).toBeVisible()
   }
 
+  async hasYearSelection() {
+    return this.manageRecyclingObligationsLink.isVisible()
+  }
+
+  async goToObligations() {
+    if (!usesPackagingEntryPoint()) {
+      throw new Error(
+        'The waste-obligations entry point opens the CSOC about page directly.'
+      )
+    }
+    await this.manageObligationsLink.click()
+  }
+
   async goToChooseYear() {
     if (!usesPackagingEntryPoint()) {
       throw new Error(
@@ -43,5 +56,22 @@ export class LandingPage extends BasePage {
       )
     }
     await this.manageRecyclingObligationsLink.click()
+  }
+
+  // Follows the tile this environment actually renders. Returns true when
+  // Azure year selection was used.
+  async openObligations(chooseYearPage, obligationsPage, year) {
+    if (await this.hasYearSelection()) {
+      await this.goToChooseYear()
+      await chooseYearPage.expectLoaded()
+      await chooseYearPage.selectYear(year)
+      await chooseYearPage.clickContinue()
+      await obligationsPage.expectLoadedForYear(year)
+      return true
+    }
+
+    await this.goToObligations()
+    await obligationsPage.expectLoaded()
+    return false
   }
 }

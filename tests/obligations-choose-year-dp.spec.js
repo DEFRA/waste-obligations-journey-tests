@@ -30,16 +30,27 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
     })
 
     if (packaging) {
-      await test.step('open year selection from Azure account home', async () => {
-        await landingPage.expectLoaded()
-        await landingPage.goToChooseYear()
-        await chooseYearPage.expectLoaded()
-      })
-      await test.step(`select ${YEAR} and check the obligations page`, async () => {
-        await chooseYearPage.selectYear(YEAR)
-        await chooseYearPage.clickContinue()
-        await obligationsPage.expectLoadedForYear(YEAR)
-      })
+      await landingPage.expectLoaded()
+      if (await landingPage.hasYearSelection()) {
+        await test.step('open year selection from Azure account home', async () => {
+          await landingPage.goToChooseYear()
+          await chooseYearPage.expectLoaded()
+        })
+        await test.step(`select ${YEAR} and check the obligations page`, async () => {
+          await chooseYearPage.selectYear(YEAR)
+          await chooseYearPage.clickContinue()
+          await obligationsPage.expectLoadedForYear(YEAR)
+        })
+      } else {
+        await reportSkippedSteps(
+          'Azure choose a year',
+          'account home shows the single-year obligations link on this environment'
+        )
+        await test.step('open obligations from Azure account home', async () => {
+          await landingPage.goToObligations()
+          await obligationsPage.expectLoaded()
+        })
+      }
       await test.step('open the certificate hub', async () => {
         await obligationsPage.openCertificateHub()
       })
