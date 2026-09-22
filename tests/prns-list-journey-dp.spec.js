@@ -8,7 +8,10 @@ import {
 } from '../utils/journey-entry-point.js'
 import { logJourney } from '../utils/journey-log.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
-import { skipUnlessPrnsEnabled } from '../utils/environment-features.js'
+import {
+  skipUnlessPrnsEnabled,
+  skipUnlessPrnsSignInOffered
+} from '../utils/environment-features.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
 
 const YEAR = 2026
@@ -52,11 +55,17 @@ test.describe('Producer PRNs list (DP)', () => {
 
     const packaging = usesPackagingEntryPoint()
     const prnsUrl = getProducerPrnsUrl(YEAR)
-    await test.step('open the entry point and sign in as the producer', async () => {
+    await test.step('open the entry point', async () => {
       await page.goto(
         packaging ? getJourneyStartPath('dp', YEAR) : prnsUrl.toString(),
         { timeout: 60_000 }
       )
+    })
+    if (!packaging) {
+      await skipUnlessPrnsSignInOffered(page)
+    }
+
+    await test.step('sign in as the producer', async () => {
       await submitB2CCredentials(
         page,
         requireEnv('EPR_USER_EMAIL'),
