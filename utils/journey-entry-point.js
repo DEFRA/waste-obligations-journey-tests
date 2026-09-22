@@ -66,6 +66,10 @@ export function getJourneyStartPath(account, year = new Date().getFullYear()) {
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
 }
 
+export function getPublicServicePath(path) {
+  return servicePath(path.startsWith('/') ? path : `/${path}`)
+}
+
 export function getJourneyViewPath(account, declarationId) {
   if (account === 'cso') {
     const schemeId = requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')
