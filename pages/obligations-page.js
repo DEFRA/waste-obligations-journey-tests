@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
 import {
+  describeCsocActionHref,
   getJourneyStartPath,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
@@ -57,12 +58,28 @@ export class ObligationsPage extends BasePage {
     await expect(this.headingFor(year)).toBeVisible()
   }
 
+  expectCsocActionHref(href) {
+    const error = describeCsocActionHref(href)
+    expect(error, error ?? href).toBeNull()
+  }
+
+  async openCsocAction(action) {
+    await expect(action).toBeVisible()
+    await Promise.all([
+      this.page.waitForURL(/\/compliance\/(certificate|statement)(\/|\?|$)/, {
+        waitUntil: 'load'
+      }),
+      action.click()
+    ])
+    this.expectCsocActionHref(this.page.url())
+  }
+
   async startCsocSubmission() {
-    await this.submitCertificateButton.click()
+    await this.openCsocAction(this.submitCertificateButton)
   }
 
   async openCertificateHub() {
-    await this.viewCertificateButton.click()
+    await this.openCsocAction(this.viewCertificateButton)
   }
 
   async expectSubmitCardVisible() {
@@ -89,7 +106,10 @@ export class ObligationsPage extends BasePage {
       'FEATURE_SHOW_PRNS_ON_CDP is enabled but the Azure link still points at Packaging PRNs'
     ).toMatch(/\/prns(\?|$)/)
     expect(href).not.toContain('view-awaiting-acceptance-alt')
-    await link.click()
+    await Promise.all([
+      this.page.waitForURL(/\/prns(\?|$)/, { waitUntil: 'load' }),
+      link.click()
+    ])
   }
 
   async readObligationsTable() {

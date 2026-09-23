@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  describeCsocActionHref,
   getProducerPrnsUrl,
   getPublicFrontendUrl,
   getPublicServicePath,
@@ -130,6 +131,55 @@ test('public frontend URLs use the CDP frontend in Packaging mode', () => {
     assert.throws(
       () => getPublicFrontendUrl('/signed-out'),
       /WASTE_OBLIGATIONS_FRONTEND_BASE_URL/
+    )
+  } finally {
+    for (const key of keys) {
+      if (original[key] === undefined) delete process.env[key]
+      else process.env[key] = original[key]
+    }
+  }
+})
+
+test('CSOC Azure actions must use the public CDP frontend', () => {
+  const keys = ['JOURNEY_ENTRY_POINT', 'WASTE_OBLIGATIONS_FRONTEND_BASE_URL']
+  const original = Object.fromEntries(
+    keys.map((key) => [key, process.env[key]])
+  )
+
+  try {
+    process.env.JOURNEY_ENTRY_POINT = 'packaging'
+    process.env.WASTE_OBLIGATIONS_FRONTEND_BASE_URL =
+      'https://packaging-waste-proxy.dev.cdp-int.defra.cloud/manage-recycling-obligations/'
+
+    assert.equal(
+      describeCsocActionHref(
+        'https://packaging-waste-proxy.dev.cdp-int.defra.cloud/manage-recycling-obligations/producer/org/compliance/certificate?year=2026'
+      ),
+      null
+    )
+    assert.match(
+      describeCsocActionHref(
+        'https://waste-obligations-frontend.dev.cdp-int.defra.cloud/producer/org/compliance/certificate?year=2026'
+      ),
+      /does not match the public CDP frontend/
+    )
+    assert.match(
+      describeCsocActionHref(
+        'https://packaging-waste-proxy.dev.cdp-int.defra.cloud/producer/org/compliance/certificate?year=2026'
+      ),
+      /proxy prefix/
+    )
+    assert.match(
+      describeCsocActionHref('/report-data/manage-your-recycling-obligations'),
+      /not a CDP certificate or statement URL/
+    )
+
+    process.env.JOURNEY_ENTRY_POINT = 'waste-obligations'
+    assert.equal(
+      describeCsocActionHref(
+        'https://localhost:8015/manage-recycling-obligations/producer/org/compliance/certificate?year=2026'
+      ),
+      null
     )
   } finally {
     for (const key of keys) {

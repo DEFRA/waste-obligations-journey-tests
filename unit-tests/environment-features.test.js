@@ -5,7 +5,8 @@ import {
   PAGE_NOT_FOUND_HEADING,
   isFeatureFlagEnabled,
   readBooleanEnv,
-  resolvePrnsAvailability
+  resolvePrnsAvailability,
+  usesShowPrnsOnCdp
 } from '../utils/environment-features.js'
 
 test('analytics accept button name matches English and Welsh banner copy', () => {
@@ -97,4 +98,35 @@ test('resolvePrnsAvailability runs when the PRNs page is shown', () => {
     resolvePrnsAvailability({ configured: undefined, pageShown: true }),
     { action: 'run' }
   )
+})
+
+test('usesShowPrnsOnCdp follows FEATURE_SHOW_PRNS_ON_CDP in Packaging mode', () => {
+  const keys = [
+    'JOURNEY_ENTRY_POINT',
+    'FEATURE_SHOW_PRNS',
+    'FEATURE_SHOW_PRNS_ON_CDP'
+  ]
+  const original = Object.fromEntries(
+    keys.map((key) => [key, process.env[key]])
+  )
+
+  try {
+    process.env.JOURNEY_ENTRY_POINT = 'packaging'
+    process.env.FEATURE_SHOW_PRNS = 'false'
+    process.env.FEATURE_SHOW_PRNS_ON_CDP = 'true'
+    assert.equal(usesShowPrnsOnCdp(), true)
+
+    process.env.FEATURE_SHOW_PRNS = 'true'
+    process.env.FEATURE_SHOW_PRNS_ON_CDP = 'false'
+    assert.equal(usesShowPrnsOnCdp(), false)
+
+    process.env.JOURNEY_ENTRY_POINT = 'waste-obligations'
+    process.env.FEATURE_SHOW_PRNS_ON_CDP = 'true'
+    assert.equal(usesShowPrnsOnCdp(), false)
+  } finally {
+    for (const key of keys) {
+      if (original[key] === undefined) delete process.env[key]
+      else process.env[key] = original[key]
+    }
+  }
 })

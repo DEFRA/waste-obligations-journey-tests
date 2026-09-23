@@ -160,7 +160,7 @@ test.describe('Cookie banner and cookies page', () => {
       page.getByText('You’ve accepted analytics cookies.')
     ).toBeVisible()
     await page.reload()
-    await setTestGaCookies(page)
+    await setTestGaCookies(page, measurementId)
 
     const expectedNames = ga4CookieName ? ['_ga', ga4CookieName] : ['_ga']
     expect(await getGaCookieNames(page)).toEqual(
@@ -186,17 +186,18 @@ test.describe('Cookie banner and cookies page', () => {
     page
   }) => {
     await openPublicFrontend(page, '/signed-out')
+    const { measurementId } = await readAnalyticsIds(page)
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
     ).toBeVisible()
     await page.reload()
-    await setTestGaCookies(page)
+    await setTestGaCookies(page, measurementId)
 
     await page.goto(getPublicFrontendUrl('/cookies'))
     await page.getByRole('radio', { name: 'No' }).check()
     await page.getByRole('button', { name: 'Save cookie settings' }).click()
-    await setTestGaCookies(page)
+    await setTestGaCookies(page, measurementId)
 
     const restored = page.waitForEvent('load')
     await dispatchPersistedPageshow(page)
@@ -219,12 +220,13 @@ test.describe('Cookie banner and cookies page', () => {
     )
 
     await openPublicFrontend(page, '/signed-out')
+    const { measurementId } = await readAnalyticsIds(page)
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
     ).toBeVisible()
     await page.reload()
-    await setTestGaCookies(page)
+    await setTestGaCookies(page, measurementId)
 
     await expect(page.locator('.js-cookie-consent-config')).toHaveAttribute(
       'data-analytics-cookie-path',
