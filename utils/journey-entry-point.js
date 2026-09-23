@@ -93,6 +93,49 @@ export function getWasteObligationsFrontendBaseUrl() {
   return `${url.origin}${pathname}/`
 }
 
+const CSOC_ACTION_PATH = /\/compliance\/(certificate|statement)(\/|$)/
+
+// Azure CSOC buttons must open the public CDP frontend/proxy. A private
+// service hostname such as waste-obligations-frontend.dev.cdp-int.defra.cloud
+// is not reachable from the journey browser.
+export function describeCsocActionHref(href) {
+  if (!href) {
+    return 'CSOC action is missing an href to the CDP certificate or statement page'
+  }
+
+  let actual
+  try {
+    actual = new URL(href, getWasteObligationsFrontendBaseUrl())
+  } catch {
+    return `CSOC action href is not a valid URL: ${href}`
+  }
+
+  if (!CSOC_ACTION_PATH.test(actual.pathname)) {
+    return `CSOC action href is not a CDP certificate or statement URL: ${href}`
+  }
+
+  if (!usesPackagingEntryPoint()) {
+    return null
+  }
+
+  const expected = new URL(getWasteObligationsFrontendBaseUrl())
+  const expectedPrefix = expected.pathname.replace(/\/$/, '')
+
+  if (actual.origin !== expected.origin) {
+    return `CSOC action href origin ${actual.origin} does not match the public CDP frontend ${expected.origin}`
+  }
+
+  if (
+    expectedPrefix &&
+    actual.pathname !== expectedPrefix &&
+    !actual.pathname.startsWith(`${expectedPrefix}/`)
+  ) {
+    return `CSOC action href is missing the ${expectedPrefix} proxy prefix: ${href}`
+  }
+
+  return null
+}
+
 export function getPublicFrontendUrl(path, search = '') {
   const query = search.startsWith('?') ? search.slice(1) : search
 

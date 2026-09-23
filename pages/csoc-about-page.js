@@ -16,7 +16,10 @@ export class CsocAboutPage extends BasePage {
 
   headingFor(year) {
     return this.page.getByRole('heading', {
-      name: new RegExp(`${year} (certificate|statement) of compliance`, 'i')
+      name: new RegExp(
+        `^About your ${year} (certificate|statement) of compliance$`,
+        'i'
+      )
     })
   }
 

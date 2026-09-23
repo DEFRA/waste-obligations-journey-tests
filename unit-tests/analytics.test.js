@@ -26,13 +26,14 @@ test('ga4 cookie names follow the measurement ID on the page', () => {
   assert.equal(ga4CookieNameFromMeasurementId(''), '')
 })
 
-test('setTestGaCookies uses domain and path without url', async () => {
-  const added = []
-  const page = {
+function pageWithCookieConfig(config, added) {
+  return {
     url: () => 'https://localhost:8015/manage-recycling-obligations/signed-out',
     evaluate: async () => ({
       cookiePath: '/manage-recycling-obligations',
-      measurementId: 'G-TEST000001'
+      bannerMeasurementId: '',
+      gtagSrc: '',
+      ...config
     }),
     context: () => ({
       addCookies: async (cookies) => {
@@ -40,6 +41,14 @@ test('setTestGaCookies uses domain and path without url', async () => {
       }
     })
   }
+}
+
+test('setTestGaCookies uses domain and path without url', async () => {
+  const added = []
+  const page = pageWithCookieConfig(
+    { bannerMeasurementId: 'G-TEST000001' },
+    added
+  )
 
   await setTestGaCookies(page)
 
@@ -55,4 +64,43 @@ test('setTestGaCookies uses domain and path without url', async () => {
     assert.equal(cookie.secure, true)
     assert.equal('url' in cookie, false)
   }
+})
+
+test('setTestGaCookies follows the environment measurement ID after the banner is gone', async () => {
+  const added = []
+  const page = pageWithCookieConfig({}, added)
+
+  await setTestGaCookies(page, 'G-ELWVZY60SF')
+
+  assert.deepEqual(
+    added.map((cookie) => cookie.name),
+    ['_ga', '_ga_ELWVZY60SF']
+  )
+})
+
+test('setTestGaCookies reads the measurement ID from the loaded gtag script', async () => {
+  const added = []
+  const page = pageWithCookieConfig(
+    { gtagSrc: 'https://www.googletagmanager.com/gtag/js?id=G-ELWVZY60SF' },
+    added
+  )
+
+  await setTestGaCookies(page)
+
+  assert.deepEqual(
+    added.map((cookie) => cookie.name),
+    ['_ga', '_ga_ELWVZY60SF']
+  )
+})
+
+test('setTestGaCookies does not invent a CI measurement ID', async () => {
+  const added = []
+  const page = pageWithCookieConfig({}, added)
+
+  await setTestGaCookies(page)
+
+  assert.deepEqual(
+    added.map((cookie) => cookie.name),
+    ['_ga']
+  )
 })

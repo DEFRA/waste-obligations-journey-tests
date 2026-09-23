@@ -81,37 +81,56 @@ export async function getDataLayerEntries(page) {
   )
 }
 
-export async function setTestGaCookies(page) {
+function measurementIdFromGtagSrc(src) {
+  const match = String(src ?? '').match(/[?&]id=([^&]+)/)
+
+  return match ? decodeURIComponent(match[1]).trim() : ''
+}
+
+export async function setTestGaCookies(page, measurementId) {
   const cookieConfig = await page.evaluate(() => {
     const consent = document.querySelector('.js-cookie-consent-config')?.dataset
     const banner = document.querySelector('.js-cookies-banner')?.dataset
+    const gtagSrc =
+      document
+        .querySelector('script[src*="gtag/js?id="]')
+        ?.getAttribute('src') || ''
 
     return {
       cookiePath: consent?.analyticsCookiePath || '/',
-      measurementId: banner?.measurementId || ''
+      bannerMeasurementId: banner?.measurementId || '',
+      gtagSrc
     }
   })
-  const ga4CookieName =
-    ga4CookieNameFromMeasurementId(cookieConfig.measurementId) ||
-    TEST_GA4_COOKIE_NAME
+  const resolvedMeasurementId = String(
+    measurementId ||
+      cookieConfig.bannerMeasurementId ||
+      measurementIdFromGtagSrc(cookieConfig.gtagSrc) ||
+      ''
+  ).trim()
+  const ga4CookieName = ga4CookieNameFromMeasurementId(resolvedMeasurementId)
   const { hostname, protocol } = new URL(page.url())
-
-  await page.context().addCookies([
+  const cookies = [
     {
       name: '_ga',
       value: 'GA1.1.111.222',
       domain: hostname,
       path: cookieConfig.cookiePath,
       secure: protocol === 'https:'
-    },
-    {
+    }
+  ]
+
+  if (ga4CookieName) {
+    cookies.push({
       name: ga4CookieName,
       value: 'GS1.1.111',
       domain: hostname,
       path: cookieConfig.cookiePath,
       secure: protocol === 'https:'
-    }
-  ])
+    })
+  }
+
+  await page.context().addCookies(cookies)
 }
 
 export function expectedAnalyticsCookiePath(baseURL) {

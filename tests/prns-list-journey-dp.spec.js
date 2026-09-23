@@ -1,6 +1,9 @@
 import { test, expect } from '../fixtures/pages.fixture.js'
 import { requireEnv } from '../utils/env.js'
-import { submitB2CCredentials } from '../utils/login.js'
+import {
+  submitB2CCredentials,
+  submitB2CCredentialsIfNeeded
+} from '../utils/login.js'
 import {
   getJourneyStartPath,
   usesPackagingEntryPoint,
@@ -79,9 +82,8 @@ test.describe('Producer PRNs list (DP)', () => {
     })
 
     if (packaging) {
-      const showPrnsOnCdp = usesShowPrnsOnCdp()
+      await landingPage.expectLoaded()
       if (usesMultiYearObligations()) {
-        await landingPage.expectLoaded()
         await test.step('open year selection from Azure account home', async () => {
           await landingPage.goToChooseYear()
           await chooseYearPage.expectLoaded()
@@ -91,36 +93,36 @@ test.describe('Producer PRNs list (DP)', () => {
           await chooseYearPage.clickContinue()
           await obligationsPage.expectLoadedForYear(YEAR)
         })
-      } else if (showPrnsOnCdp) {
-        await reportSkippedSteps(
-          'Azure choose a year',
-          'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS is false for this environment'
-        )
-        await landingPage.expectLoaded()
-        await test.step('open obligations from Azure account home', async () => {
-          await landingPage.goToObligations()
-          await obligationsPage.expectLoaded()
-        })
       } else {
         await reportSkippedSteps(
           'Azure choose a year',
           'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS is false for this environment'
         )
+        await test.step('open obligations from Azure account home', async () => {
+          await landingPage.goToObligations()
+          await obligationsPage.expectLoaded()
+        })
       }
 
-      if (showPrnsOnCdp) {
+      if (usesShowPrnsOnCdp()) {
         await test.step(`open the CDP PRNs list from Azure obligations for ${YEAR}`, async () => {
           await obligationsPage.openWasteObligationsPrns()
         })
       } else {
         await reportSkippedSteps(
-          'Azure PRNs on CDP',
-          'FEATURE_SHOW_PRNS_ON_CDP is false for this environment'
+          'Azure CDP PRNs link',
+          'FEATURE_SHOW_PRNS_ON_CDP is false for this environment; entered the PRNs page directly for ' +
+            YEAR
         )
-        await test.step(`open the CDP PRNs list for ${YEAR}`, async () => {
-          await page.goto(prnsUrl.toString())
-        })
+        await page.goto(prnsUrl.toString(), { timeout: 60_000 })
       }
+
+      await skipUnlessPrnsSignInOffered(page)
+      await submitB2CCredentialsIfNeeded(
+        page,
+        requireEnv('EPR_USER_EMAIL'),
+        requireEnv('EPR_USER_PASSWORD')
+      )
     } else {
       await reportSkippedSteps(
         'Azure account home and choose a year',

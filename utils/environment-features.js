@@ -91,8 +91,18 @@ export async function skipUnlessPrnsSignInOffered(page) {
 
   const notFound = pageNotFoundHeading(page)
   const email = page.getByLabel(/email/i)
+  const signIn = page.getByRole('link', { name: /^sign in$/i })
 
-  await email.or(notFound).waitFor({ state: 'visible', timeout: 15_000 })
+  await email
+    .or(notFound)
+    .or(signIn)
+    .waitFor({ state: 'visible', timeout: 15_000 })
+
+  if ((await signIn.isVisible()) && !(await email.isVisible())) {
+    await signIn.click()
+    await email.or(notFound).waitFor({ state: 'visible', timeout: 15_000 })
+  }
+
   applyPrnsAvailability({
     configured,
     pageShown: !(await notFound.isVisible())

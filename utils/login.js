@@ -17,3 +17,11 @@ export async function submitB2CCredentials(page, email, password) {
   await page.getByLabel(/password/i).fill(password)
   await page.getByRole('button', { name: /sign in|continue|next/i }).click()
 }
+
+export async function submitB2CCredentialsIfNeeded(page, email, password) {
+  const emailField = page.getByLabel(/email/i)
+
+  if (page.url().includes('b2clogin') || (await emailField.isVisible())) {
+    await submitB2CCredentials(page, email, password)
+  }
+}
