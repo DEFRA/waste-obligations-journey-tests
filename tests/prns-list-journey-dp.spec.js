@@ -8,6 +8,13 @@ import {
 } from '../utils/journey-entry-point.js'
 import { logJourney } from '../utils/journey-log.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
+import {
+  skipUnlessPrnsConfigured,
+  skipUnlessPrnsEnabled,
+  skipUnlessPrnsSignInOffered,
+  usesMultiYearObligations,
+  usesShowPrnsOnCdp
+} from '../utils/environment-features.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
 
 const YEAR = 2026
@@ -23,6 +30,8 @@ test.describe('Producer PRNs list (DP)', () => {
     obligationsPage,
     prnsListPage
   }) => {
+    skipUnlessPrnsConfigured()
+
     // ENVIRONMENT identifies the target, independently of the browser entry point.
     // The shared Docker action sets local; deployed targets default to tst.
     const requirePrnData = process.env.ENVIRONMENT === 'local'
@@ -51,11 +60,17 @@ test.describe('Producer PRNs list (DP)', () => {
 
     const packaging = usesPackagingEntryPoint()
     const prnsUrl = getProducerPrnsUrl(YEAR)
-    await test.step('open the entry point and sign in as the producer', async () => {
+    await test.step('open the entry point', async () => {
       await page.goto(
         packaging ? getJourneyStartPath('dp', YEAR) : prnsUrl.toString(),
         { timeout: 60_000 }
       )
+    })
+    if (!packaging) {
+      await skipUnlessPrnsSignInOffered(page)
+    }
+
+    await test.step('sign in as the producer', async () => {
       await submitB2CCredentials(
         page,
         requireEnv('EPR_USER_EMAIL'),
@@ -64,19 +79,48 @@ test.describe('Producer PRNs list (DP)', () => {
     })
 
     if (packaging) {
-      await test.step('open year selection from Azure account home', async () => {
+      const showPrnsOnCdp = usesShowPrnsOnCdp()
+      if (usesMultiYearObligations()) {
         await landingPage.expectLoaded()
-        await landingPage.goToChooseYear()
-        await chooseYearPage.expectLoaded()
-      })
-      await test.step(`select ${YEAR} and check the obligations page`, async () => {
-        await chooseYearPage.selectYear(YEAR)
-        await chooseYearPage.clickContinue()
-        await obligationsPage.expectLoadedForYear(YEAR)
-      })
-      await test.step('open the CDP PRNs list for the selected year', async () => {
-        await page.goto(prnsUrl.toString())
-      })
+        await test.step('open year selection from Azure account home', async () => {
+          await landingPage.goToChooseYear()
+          await chooseYearPage.expectLoaded()
+        })
+        await test.step(`select ${YEAR} and check the obligations page`, async () => {
+          await chooseYearPage.selectYear(YEAR)
+          await chooseYearPage.clickContinue()
+          await obligationsPage.expectLoadedForYear(YEAR)
+        })
+      } else if (showPrnsOnCdp) {
+        await reportSkippedSteps(
+          'Azure choose a year',
+          'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS is false for this environment'
+        )
+        await landingPage.expectLoaded()
+        await test.step('open obligations from Azure account home', async () => {
+          await landingPage.goToObligations()
+          await obligationsPage.expectLoaded()
+        })
+      } else {
+        await reportSkippedSteps(
+          'Azure choose a year',
+          'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS is false for this environment'
+        )
+      }
+
+      if (showPrnsOnCdp) {
+        await test.step(`open the CDP PRNs list from Azure obligations for ${YEAR}`, async () => {
+          await obligationsPage.openWasteObligationsPrns()
+        })
+      } else {
+        await reportSkippedSteps(
+          'Azure PRNs on CDP',
+          'FEATURE_SHOW_PRNS_ON_CDP is false for this environment'
+        )
+        await test.step(`open the CDP PRNs list for ${YEAR}`, async () => {
+          await page.goto(prnsUrl.toString())
+        })
+      }
     } else {
       await reportSkippedSteps(
         'Azure account home and choose a year',
@@ -84,6 +128,8 @@ test.describe('Producer PRNs list (DP)', () => {
           YEAR
       )
     }
+
+    await skipUnlessPrnsEnabled(prnsListPage)
 
     await test.step('check the CDP PRNs page loads', async () => {
       await prnsListPage.expectLoaded()

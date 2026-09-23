@@ -12,6 +12,10 @@ import {
   getJourneyBaseUrl,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
+import {
+  skipUnlessCsocEnabled,
+  usesMultiYearObligations
+} from '../utils/environment-features.js'
 
 // Single worker owns each org's declaration state across submit → cancel.
 test.describe.configure({ mode: 'serial' })
@@ -32,6 +36,7 @@ const APP_HOST =
 const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
   const {
     landingPage,
+    chooseYearPage,
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
@@ -47,14 +52,33 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
     const year = new Date().getFullYear()
     let submittedDeclaration
 
+    skipUnlessCsocEnabled()
+
     await test.step(`${prefix} > Landing page`, async () => {
       await landingPage.goto(account)
       await expect(page).toHaveURL(APP_HOST)
+      if (usesPackagingEntryPoint()) {
+        await landingPage.expectLoaded()
+      }
     })
+
+    let usedYearSelection = false
+    if (usesMultiYearObligations()) {
+      usedYearSelection = true
+      await test.step(`${prefix} > Choose a year`, async () => {
+        await landingPage.goToChooseYear()
+        await chooseYearPage.expectLoaded()
+        await chooseYearPage.selectYear(year)
+        await chooseYearPage.clickContinue()
+        await expect(page).toHaveURL(APP_HOST)
+      })
+    }
 
     await test.step(`${prefix} > Obligations page`, async () => {
       if (usesPackagingEntryPoint()) {
-        await landingPage.goToObligations()
+        if (!usedYearSelection) {
+          await landingPage.goToObligations()
+        }
         await obligationsPage.expectLoaded()
       } else {
         await csocAboutPage.expectLoaded()
@@ -137,6 +161,7 @@ test.describe('Security scan — CSOC journey', () => {
       page,
       request,
       landingPage,
+      chooseYearPage,
       obligationsPage,
       csocAboutPage,
       csocSubmissionPage,
@@ -150,6 +175,7 @@ test.describe('Security scan — CSOC journey', () => {
         request,
         pages: {
           landingPage,
+          chooseYearPage,
           obligationsPage,
           csocAboutPage,
           csocSubmissionPage,
@@ -167,6 +193,7 @@ test.describe('Security scan — CSOC journey', () => {
       page,
       request,
       landingPage,
+      chooseYearPage,
       obligationsPage,
       csocAboutPage,
       csocSubmissionPage,
@@ -180,6 +207,7 @@ test.describe('Security scan — CSOC journey', () => {
         request,
         pages: {
           landingPage,
+          chooseYearPage,
           obligationsPage,
           csocAboutPage,
           csocSubmissionPage,

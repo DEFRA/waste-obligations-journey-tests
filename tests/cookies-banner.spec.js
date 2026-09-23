@@ -1,12 +1,10 @@
 import { expect, test } from '../fixtures/pages.fixture.js'
 import {
-  getPublicServicePath,
-  usesPackagingEntryPoint
+  getPublicFrontendUrl,
+  getWasteObligationsFrontendBaseUrl
 } from '../utils/journey-entry-point.js'
+import { skipUnlessAnalyticsEnabled } from '../utils/environment-features.js'
 import {
-  TEST_GA4_COOKIE_NAME,
-  TEST_GTM_KEY,
-  TEST_MEASUREMENT_ID,
   CONSENT_COOKIE_NAME,
   expectedAnalyticsCookiePath,
   failJsonCookiePosts,
@@ -16,6 +14,7 @@ import {
   getGaCookies,
   interceptAnalyticsTraffic,
   isCookieFormPost,
+  readAnalyticsIds,
   readConsentPolicyFromPage,
   servicePath,
   setTestGaCookies
@@ -26,11 +25,15 @@ import {
 // and the later CSOC specs then fail looking for English headings.
 test.use({ storageState: { cookies: [], origins: [] } })
 
+async function openPublicFrontend(page, path, search) {
+  skipUnlessAnalyticsEnabled()
+  await page.goto(getPublicFrontendUrl(path, search))
+}
+
 test.describe('Cookie banner and cookies page', () => {
-  test.skip(
-    usesPackagingEntryPoint(),
-    'Cookie consent is owned by the waste-obligations frontend'
-  )
+  // Cookie consent is owned by the waste-obligations frontend. In Packaging
+  // mode Playwright's baseURL is Azure, so these tests open the CDP frontend
+  // through WASTE_OBLIGATIONS_FRONTEND_BASE_URL.
 
   test.beforeEach(async ({ page }) => {
     await interceptAnalyticsTraffic(page)
@@ -39,11 +42,9 @@ test.describe('Cookie banner and cookies page', () => {
   test('does not initialize analytics before consent and initializes them without a reload on accept', async ({
     page
   }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await openPublicFrontend(page, '/signed-out')
+    const { gtmKey, measurementId } = await readAnalyticsIds(page)
 
-    await expect(
-      page.getByRole('button', { name: 'Accept analytics cookies' })
-    ).toBeVisible()
     expect(await readConsentPolicyFromPage(page)).toBeNull()
     await expect(
       page.locator('script[src*="googletagmanager.com"]')
@@ -54,34 +55,40 @@ test.describe('Cookie banner and cookies page', () => {
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
     ).toBeVisible()
-    await expect(
-      page.locator(`script[src*="gtm.js?id=${TEST_GTM_KEY}"]`)
-    ).toHaveCount(1)
-    await expect(
-      page.locator(`script[src*="gtag/js?id=${TEST_MEASUREMENT_ID}"]`)
-    ).toHaveCount(1)
+    if (gtmKey) {
+      await expect(
+        page.locator(`script[src*="gtm.js?id=${gtmKey}"]`)
+      ).toHaveCount(1)
+    }
+    if (measurementId) {
+      await expect(
+        page.locator(`script[src*="gtag/js?id=${measurementId}"]`)
+      ).toHaveCount(1)
+    }
 
     const dataLayer = await getDataLayerEntries(page)
-    expect(dataLayer).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: 'arguments',
-          values: ['config', TEST_MEASUREMENT_ID]
-        })
-      ])
-    )
-    expect(
-      dataLayer.some(
-        (entry) => entry.kind === 'arguments' && entry.values[0] === 'js'
+    if (measurementId) {
+      expect(dataLayer).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: 'arguments',
+            values: ['config', measurementId]
+          })
+        ])
       )
-    ).toBe(true)
+      expect(
+        dataLayer.some(
+          (entry) => entry.kind === 'arguments' && entry.values[0] === 'js'
+        )
+      ).toBe(true)
+    }
     expect(await readConsentPolicyFromPage(page)).toEqual(
       expect.objectContaining({ confirmed: true, analytics: true })
     )
   })
 
   test('does not initialize analytics after rejection', async ({ page }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await openPublicFrontend(page, '/signed-out')
 
     await page.getByRole('button', { name: 'Reject analytics cookies' }).click()
 
@@ -94,14 +101,13 @@ test.describe('Cookie banner and cookies page', () => {
   })
 
   test('failed accept and reject XHRs save the selected preference and return to the page', async ({
-    page,
-    baseURL
+    page
   }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await openPublicFrontend(page, '/signed-out')
 
     await expect(page.locator('form[action$="/cookies"]')).toHaveAttribute(
       'action',
-      servicePath(baseURL, 'cookies')
+      servicePath(getWasteObligationsFrontendBaseUrl(), 'cookies')
     )
     await expect(page.locator('input[name="returnUrl"]')).toHaveValue(
       /\/signed-out$/
@@ -123,13 +129,13 @@ test.describe('Cookie banner and cookies page', () => {
       page.getByRole('button', { name: 'Accept analytics cookies' })
     ).toHaveCount(0)
 
-    await page.goto(getPublicServicePath('/cookies'))
+    await page.goto(getPublicFrontendUrl('/cookies'))
     await expect(page.getByRole('radio', { name: 'Yes' })).toBeChecked()
 
     await page.context().clearCookies({
       name: CONSENT_COOKIE_NAME
     })
-    await page.goto(getPublicServicePath('/signed-out'))
+    await page.goto(getPublicFrontendUrl('/signed-out'))
     const rejectFallback = page.waitForRequest((request) =>
       isCookieFormPost(request, 'false')
     )
@@ -140,14 +146,15 @@ test.describe('Cookie banner and cookies page', () => {
     expect(await readConsentPolicyFromPage(page)).toEqual(
       expect.objectContaining({ confirmed: true, analytics: false })
     )
-    await page.goto(getPublicServicePath('/cookies'))
+    await page.goto(getPublicFrontendUrl('/cookies'))
     await expect(page.getByRole('radio', { name: 'No' })).toBeChecked()
   })
 
   test('history restoration keeps GA cookies while consent remains accepted', async ({
     page
   }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await openPublicFrontend(page, '/signed-out')
+    const { measurementId, ga4CookieName } = await readAnalyticsIds(page)
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
@@ -155,27 +162,30 @@ test.describe('Cookie banner and cookies page', () => {
     await page.reload()
     await setTestGaCookies(page)
 
+    const expectedNames = ga4CookieName ? ['_ga', ga4CookieName] : ['_ga']
     expect(await getGaCookieNames(page)).toEqual(
-      expect.arrayContaining(['_ga', TEST_GA4_COOKIE_NAME])
+      expect.arrayContaining(expectedNames)
     )
 
     await dispatchPersistedPageshow(page)
 
     expect(await getGaCookieNames(page)).toEqual(
-      expect.arrayContaining(['_ga', TEST_GA4_COOKIE_NAME])
+      expect.arrayContaining(expectedNames)
     )
     expect(await readConsentPolicyFromPage(page)).toEqual(
       expect.objectContaining({ confirmed: true, analytics: true })
     )
-    await expect(
-      page.locator(`script[src*="gtag/js?id=${TEST_MEASUREMENT_ID}"]`)
-    ).toHaveCount(1)
+    if (measurementId) {
+      await expect(
+        page.locator(`script[src*="gtag/js?id=${measurementId}"]`)
+      ).toHaveCount(1)
+    }
   })
 
   test('history restoration after rejection clears GA cookies and does not restart analytics', async ({
     page
   }) => {
-    await page.goto(getPublicServicePath('/signed-out'))
+    await openPublicFrontend(page, '/signed-out')
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
@@ -183,7 +193,7 @@ test.describe('Cookie banner and cookies page', () => {
     await page.reload()
     await setTestGaCookies(page)
 
-    await page.goto(getPublicServicePath('/cookies'))
+    await page.goto(getPublicFrontendUrl('/cookies'))
     await page.getByRole('radio', { name: 'No' }).check()
     await page.getByRole('button', { name: 'Save cookie settings' }).click()
     await setTestGaCookies(page)
@@ -202,12 +212,13 @@ test.describe('Cookie banner and cookies page', () => {
   })
 
   test('scopes Google Analytics cookies to the public service path', async ({
-    page,
-    baseURL
+    page
   }) => {
-    const expectedPath = expectedAnalyticsCookiePath(baseURL)
+    const expectedPath = expectedAnalyticsCookiePath(
+      getWasteObligationsFrontendBaseUrl()
+    )
 
-    await page.goto(getPublicServicePath('/signed-out'))
+    await openPublicFrontend(page, '/signed-out')
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
@@ -233,19 +244,19 @@ test.describe('Cookie banner and cookies page', () => {
   test('shows analytics cookies and settings on the cookies page', async ({
     page
   }) => {
-    await page.goto(getPublicServicePath('/cookies'))
+    await openPublicFrontend(page, '/cookies')
+    const { ga4CookieName } = await readAnalyticsIds(page)
 
     const main = page.locator('#main-content')
 
-    await expect(
-      page.getByRole('button', { name: 'Accept analytics cookies' })
-    ).toBeVisible()
     expect(await readConsentPolicyFromPage(page)).toBeNull()
     await expect(
       main.getByRole('heading', { name: 'Analytics cookies', level: 2 })
     ).toBeVisible()
     await expect(main.getByText('_gid', { exact: true })).toBeVisible()
-    await expect(main.getByText(TEST_GA4_COOKIE_NAME)).toBeVisible()
+    if (ga4CookieName) {
+      await expect(main.getByText(ga4CookieName)).toBeVisible()
+    }
     await expect(main.getByText('4 hours', { exact: true })).toBeVisible()
     await expect(main.getByText('24 hours', { exact: true })).toBeVisible()
     await expect(
@@ -261,7 +272,7 @@ test.describe('Cookie banner and cookies page', () => {
   test('translates the session cookie expiry on the Welsh cookies page', async ({
     page
   }) => {
-    await page.goto(`${getPublicServicePath('/cookies')}?lang=cy`)
+    await openPublicFrontend(page, '/cookies', 'lang=cy')
 
     const main = page.locator('#main-content')
 

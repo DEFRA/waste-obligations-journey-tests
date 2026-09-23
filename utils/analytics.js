@@ -3,6 +3,31 @@ export const TEST_MEASUREMENT_ID = 'G-TEST000001'
 export const TEST_GA4_COOKIE_NAME = `_ga_${TEST_MEASUREMENT_ID.slice(2)}`
 export const CONSENT_COOKIE_NAME = 'waste-obligations-cookie-policy'
 
+export function ga4CookieNameFromMeasurementId(measurementId) {
+  const value = String(measurementId ?? '').trim()
+  if (!value) {
+    return ''
+  }
+
+  const tagId = /^G-/i.test(value) ? value.slice(2) : value
+
+  return `_ga_${tagId}`
+}
+
+export async function readAnalyticsIds(page) {
+  const banner = page.locator('.js-cookies-banner')
+  const gtmKey = ((await banner.getAttribute('data-gtm-key')) ?? '').trim()
+  const measurementId = (
+    (await banner.getAttribute('data-measurement-id')) ?? ''
+  ).trim()
+
+  return {
+    gtmKey,
+    measurementId,
+    ga4CookieName: ga4CookieNameFromMeasurementId(measurementId)
+  }
+}
+
 export async function interceptAnalyticsTraffic(page) {
   const fulfillEmpty = (route) =>
     route.fulfill({
@@ -57,12 +82,18 @@ export async function getDataLayerEntries(page) {
 }
 
 export async function setTestGaCookies(page) {
-  const cookiePath = await page.evaluate(() => {
-    return (
-      document.querySelector('.js-cookie-consent-config')?.dataset
-        ?.analyticsCookiePath || '/'
-    )
+  const cookieConfig = await page.evaluate(() => {
+    const consent = document.querySelector('.js-cookie-consent-config')?.dataset
+    const banner = document.querySelector('.js-cookies-banner')?.dataset
+
+    return {
+      cookiePath: consent?.analyticsCookiePath || '/',
+      measurementId: banner?.measurementId || ''
+    }
   })
+  const ga4CookieName =
+    ga4CookieNameFromMeasurementId(cookieConfig.measurementId) ||
+    TEST_GA4_COOKIE_NAME
   const { hostname, protocol } = new URL(page.url())
 
   await page.context().addCookies([
@@ -70,14 +101,14 @@ export async function setTestGaCookies(page) {
       name: '_ga',
       value: 'GA1.1.111.222',
       domain: hostname,
-      path: cookiePath,
+      path: cookieConfig.cookiePath,
       secure: protocol === 'https:'
     },
     {
-      name: TEST_GA4_COOKIE_NAME,
+      name: ga4CookieName,
       value: 'GS1.1.111',
       domain: hostname,
-      path: cookiePath,
+      path: cookieConfig.cookiePath,
       secure: protocol === 'https:'
     }
   ])

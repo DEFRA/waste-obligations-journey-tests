@@ -98,18 +98,25 @@ private backend access.
   in CI. Omit only the Azure-specific steps, enter the equivalent CDP page, and
   execute the remaining assertions. Mark omitted steps in the report and print
   an explicit `SKIPPED STEPS` message with the reason.
+- Observe the runner flags for the target environment. Skip the whole scenario,
+  with a recorded reason, when a required flag is explicitly false. Omit only
+  steps the environment is not configured to show, such as Azure year selection
+  when `FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS` is false. A missing page or tile
+  when the flag is enabled is a failure, not a skip.
 - The certificate-for-year and PRNs-list scenarios use this combined approach.
-  Each scenario enters its own CDP destination directly in CI. PRNs must not
-  navigate through or assert a certificate. In Packaging mode, configure
+  Each scenario enters its own CDP destination directly in CI. Certificate-for-year
+  resets the org's declarations for that year, submits a new certificate, then
+  views it. There is no snapshot restore. PRNs must not navigate through or
+  assert a certificate. In Packaging mode, configure
   `WASTE_OBLIGATIONS_FRONTEND_BASE_URL` with the public CDP frontend/proxy URL
-  and routing prefix for the PRNs destination; Azure currently owns its PRNs link.
-  Do not claim to test that link or Azure year selection in direct-entry mode.
+  and routing prefix for the PRNs, cookie banner and GA destinations. Packaging
+  follows `FEATURE_SHOW_PRNS_ON_CDP` for the Azure-to-CDP PRNs link; when that
+  flag is false the scenario opens the CDP PRNs URL directly. Do not claim to
+  test Azure year selection in direct-entry mode. Cookie banner and GA tests
+  always hit the CDP frontend, including in Packaging/Portal runs.
 - Keep helpers focused on one action or assertion. Compose login, year selection,
   destination navigation and assertions explicitly in each scenario. Reporting
   helpers must not decide which steps to omit or navigate on a test's behalf.
-- Do not silently omit steps in deployed runs because a flag is off or a page
-  is missing. Investigate the environment configuration instead of weakening
-  the assertions to make the run green.
 - Whole-scenario skips are made visible by
   [utils/skipped-tests-reporter.js](utils/skipped-tests-reporter.js), including
   GitHub warning annotations. A passing run with skipped scenarios does not
@@ -120,10 +127,14 @@ private backend access.
 Feature configuration is part of making a journey executable. Identify which
 service owns each flag and where it must be configured:
 
-| Example flag                                  | Owner                      | Configuration to consider                                                                       |
-| --------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
-| `FEATURE_SHOW_PRNS`                           | Waste Obligations frontend | Enabled in CI Compose for PRNs coverage; deployed CDP configuration is separate.                |
-| `FeatureManagement__ShowMultiYearObligations` | Azure Packaging frontend   | Controls the year-selection flow; enabling a flag in this repository cannot enable it in Azure. |
+| Example flag                          | Owner                      | Configuration to consider                                                                                                                                                                                                                      |
+| ------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FEATURE_SHOW_PRNS`                   | Waste Obligations frontend | Enabled in CI Compose and on the CI runner. Portal runner config in `cdp-app-config` records the expected value per env. Explicit `false` skips PRNs; otherwise a missing PRNs page fails.                                                     |
+| `FEATURE_MANAGE_OBLIGATIONS`          | Waste Obligations frontend | Recorded on the Portal runner to match frontend config. Does not skip CSOC or certificate journeys.                                                                                                                                            |
+| `FEATURE_CSOC_ENABLED`                | Azure Packaging frontend   | Maps to `FeatureManagement__CsocEnabled`. Portal runner config records the expected value. Explicit `false` skips CSOC and certificate journeys; otherwise a missing card or about page fails.                                                 |
+| `FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS` | Azure Packaging frontend   | Maps to `FeatureManagement__ShowMultiYearObligations`. Chooses the Azure year-selection path vs the single-year obligations link. A missing tile for the configured path fails.                                                                |
+| `FEATURE_SHOW_PRNS_ON_CDP`            | Azure Packaging frontend   | Maps to `FeatureManagement__ShowPrnsOnCdp`. Connects Azure obligations to the CDP PRNs list. Explicit `false` omits that Azure link and opens CDP PRNs directly; otherwise a Packaging-only PRNs href fails.                                   |
+| `FEATURE_ANALYTICS`                   | Waste Obligations frontend | True when `GOOGLE_TAG_MANAGER_KEY` or `GOOGLE_ANALYTICS_MEASUREMENT_ID` is set on the frontend. Enabled in CI Compose, the CI runner, and Dev/Test Portal config. Explicit `false` skips cookie/GA journeys; otherwise a missing banner fails. |
 
 A test-runner environment variable does not automatically configure a target
 service. Check the service's actual configuration names and behavior. Document
@@ -146,6 +157,10 @@ not change a shared environment's flags just to make a test pass.
   tonnages diagnostically, warning if unavailable; they do not require seeded
   PRNs. Page loading remains mandatory. Do not log names or free-text notes.
   No acceptance or rejection is performed.
+- CSOC declarations are not restored from a snapshot. `resetOrgDeclarations`
+  deletes the organisation's declarations for a year through the admin DELETE
+  API. Specs that need a submitted certificate recreate it through the UI after
+  that reset.
 
 ## Coordinating application and journey changes
 
@@ -197,7 +212,11 @@ default, credential, endpoint or dependency in a participating service:
 2. Check `ci/compose.yml`, `run-journey-tests/action.yml`, the caller workflows
    and service-owned `compose/journey-tests.compose.yml` fragments. Update where
    the target process receives the value, including required action inputs and
-   secret injection. Update `.env.example` for runner/local settings.
+   secret injection. Update `.env.example` for runner/local settings. For Portal
+   runner flags such as `FEATURE_SHOW_PRNS`, `FEATURE_CSOC_ENABLED` and
+   `FEATURE_ANALYTICS`, also keep
+   `cdp-app-config` `services/waste-obligations-journey-tests` env files aligned
+   with the frontend and Azure Packaging contracts.
 3. Check WireMock contracts, Floci initialisers and
    `ci/seed-waste-organisations.mjs` for changed dependencies or scenario data.
    Keep dependency contracts with the consuming service.

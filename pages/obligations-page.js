@@ -21,6 +21,9 @@ export class ObligationsPage extends BasePage {
     this.resubmitButton = page.getByRole('button', {
       name: /resubmit/i
     })
+    this.acceptRejectPrnsLink = page.getByRole('link', {
+      name: /accept or reject prns and perns/i
+    })
     // Filter by a cell's data-header attribute rather than `getByRole('columnheader')`:
     // the responsive-table CSS hides <thead> on mobile, removing th columnheader roles.
     this.materialObligationsTable = page
@@ -62,9 +65,31 @@ export class ObligationsPage extends BasePage {
     await this.viewCertificateButton.click()
   }
 
+  async expectSubmitCardVisible() {
+    await expect(this.submitCertificateButton).toBeVisible()
+    await expect(this.viewCertificateButton).toHaveCount(0)
+  }
+
+  async expectViewCardVisible() {
+    await expect(this.viewCertificateButton).toBeVisible()
+    await expect(this.submitCertificateButton).toHaveCount(0)
+  }
+
   async expectResubmitCardVisible() {
     await expect(this.resubmitButton).toBeVisible()
     await expect(this.viewCertificateButton).toHaveCount(0)
+  }
+
+  async openWasteObligationsPrns() {
+    const link = this.acceptRejectPrnsLink.first()
+    await expect(link).toBeVisible()
+    const href = await link.getAttribute('href')
+    expect(
+      href,
+      'FEATURE_SHOW_PRNS_ON_CDP is enabled but the Azure link still points at Packaging PRNs'
+    ).toMatch(/\/prns(\?|$)/)
+    expect(href).not.toContain('view-awaiting-acceptance-alt')
+    await link.click()
   }
 
   async readObligationsTable() {

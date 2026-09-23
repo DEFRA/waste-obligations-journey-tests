@@ -1,6 +1,10 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
 import {
+  FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS,
+  isFeatureFlagEnabled
+} from '../utils/environment-features.js'
+import {
   getJourneyStartPath,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
@@ -26,7 +30,6 @@ export class LandingPage extends BasePage {
       return
     }
     await this.gotoPath(this.path)
-    await this.expectLoaded()
   }
 
   async expectLoaded() {
@@ -52,5 +55,22 @@ export class LandingPage extends BasePage {
       )
     }
     await this.manageRecyclingObligationsLink.click()
+  }
+
+  // Follows FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS. A missing tile is a failure,
+  // not a skipped feature. Returns true when Azure year selection was used.
+  async openObligations(chooseYearPage, obligationsPage, year) {
+    if (isFeatureFlagEnabled(FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS)) {
+      await this.goToChooseYear()
+      await chooseYearPage.expectLoaded()
+      await chooseYearPage.selectYear(year)
+      await chooseYearPage.clickContinue()
+      await obligationsPage.expectLoadedForYear(year)
+      return true
+    }
+
+    await this.goToObligations()
+    await obligationsPage.expectLoaded()
+    return false
   }
 }

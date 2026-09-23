@@ -6,6 +6,7 @@ import {
   setDeclarationStatus
 } from '../utils/waste-obligations-api.js'
 import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
+import { skipUnlessCsocEnabled } from '../utils/environment-features.js'
 import { resetOrgDeclarations } from '../utils/test-setup.js'
 
 // CSO twin of csoc-submission-dp.spec.js. Same submit → cancel → resubmit →
@@ -27,6 +28,7 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
   test('Submit → cancel → resubmit → accept lifecycle', async ({
     request,
     landingPage,
+    chooseYearPage,
     obligationsPage,
     csocAboutPage,
     csocSubmissionPage,
@@ -65,10 +67,11 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     }
 
     const submitCsoc = async () => {
+      skipUnlessCsocEnabled()
       await landingPage.goto(ACCOUNT)
       if (usesPackagingEntryPoint()) {
-        await landingPage.goToObligations()
-        await obligationsPage.expectLoaded()
+        await landingPage.expectLoaded()
+        await landingPage.openObligations(chooseYearPage, obligationsPage, year)
         obligationsRows = await obligationsPage.readObligationsTable()
         expect(obligationsRows.length).toBeGreaterThan(0)
         await obligationsPage.startCsocSubmission()

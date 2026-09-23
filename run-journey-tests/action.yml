@@ -272,6 +272,11 @@ runs:
         WASTE_OBLIGATION_PASSWORD: developer-pwd
         JOURNEY_USER: Developer
         JOURNEY_PASSWORD: developer-pwd
+        FEATURE_SHOW_PRNS: 'true'
+        FEATURE_CSOC_ENABLED: 'true'
+        FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS: 'false'
+        FEATURE_SHOW_PRNS_ON_CDP: 'false'
+        FEATURE_ANALYTICS: 'true'
       run: PROFILE=e2e npx playwright test --project=${{ inputs.project }} --output=test-results/e2e
 
     - name: Run accessibility journeys
@@ -289,6 +294,11 @@ runs:
         WASTE_OBLIGATION_PASSWORD: developer-pwd
         JOURNEY_USER: Developer
         JOURNEY_PASSWORD: developer-pwd
+        FEATURE_SHOW_PRNS: 'true'
+        FEATURE_CSOC_ENABLED: 'true'
+        FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS: 'false'
+        FEATURE_SHOW_PRNS_ON_CDP: 'false'
+        FEATURE_ANALYTICS: 'true'
       run: PROFILE=accessibility npx playwright test --project=${{ inputs.project }} --output=test-results/accessibility
 
     - name: Run security journeys
@@ -306,6 +316,11 @@ runs:
         WASTE_OBLIGATION_PASSWORD: developer-pwd
         JOURNEY_USER: Developer
         JOURNEY_PASSWORD: developer-pwd
+        FEATURE_SHOW_PRNS: 'true'
+        FEATURE_CSOC_ENABLED: 'true'
+        FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS: 'false'
+        FEATURE_SHOW_PRNS_ON_CDP: 'false'
+        FEATURE_ANALYTICS: 'true'
       run: ./ci/run-security-profile.sh ${{ inputs.project }}
 
     - name: Generate Allure report

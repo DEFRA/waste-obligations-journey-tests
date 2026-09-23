@@ -6,17 +6,17 @@ import {
   listDeclarations
 } from './waste-obligations-api.js'
 
-// Wipes the shared backend org so a single-worker serial test starts from a
-// known-empty state. Mirrors the pattern used in every journey spec.
-export async function resetOrgDeclarations(account = 'dp') {
+// Wipes the shared backend org so a spec starts from a known-empty year.
+// There is no snapshot restore: callers that need a submitted certificate
+// recreate it through the UI after this reset.
+export async function resetOrgDeclarations(
+  account = 'dp',
+  obligationYear = new Date().getFullYear()
+) {
   const apiContext = await apiRequest.newContext({ ignoreHTTPSErrors: true })
   let primaryError
   try {
-    await deleteAllDeclarations(
-      apiContext,
-      getOrgId(account),
-      new Date().getFullYear()
-    )
+    await deleteAllDeclarations(apiContext, getOrgId(account), obligationYear)
   } catch (error) {
     primaryError = error
   }
