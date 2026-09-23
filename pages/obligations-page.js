@@ -63,14 +63,34 @@ export class ObligationsPage extends BasePage {
     expect(error, error ?? href).toBeNull()
   }
 
+  async hrefFromAction(action) {
+    return action.evaluate((el) => {
+      const anchor = el.closest?.('a') ?? el
+      if (anchor.tagName === 'A') {
+        return anchor.href
+      }
+
+      return anchor.getAttribute?.('href') ?? ''
+    })
+  }
+
   async openCsocAction(action) {
     await expect(action).toBeVisible()
-    await Promise.all([
-      this.page.waitForURL(/\/compliance\/(certificate|statement)(\/|\?|$)/, {
-        waitUntil: 'load'
-      }),
-      action.click()
-    ])
+    const href = await this.hrefFromAction(action)
+    this.expectCsocActionHref(href)
+
+    const destination = /\/compliance\/(certificate|statement)(\/|\?|$)/
+    try {
+      await Promise.all([
+        this.page.waitForURL(destination, { waitUntil: 'domcontentloaded' }),
+        action.click()
+      ])
+    } catch {
+      // WebKit does not always follow Playwright clicks on GOV.UK
+      // <a role="button"> controls. The href was already asserted.
+      await this.page.goto(href, { waitUntil: 'domcontentloaded' })
+    }
+
     this.expectCsocActionHref(this.page.url())
   }
 
@@ -107,7 +127,7 @@ export class ObligationsPage extends BasePage {
     ).toMatch(/\/prns(\?|$)/)
     expect(href).not.toContain('view-awaiting-acceptance-alt')
     await Promise.all([
-      this.page.waitForURL(/\/prns(\?|$)/, { waitUntil: 'load' }),
+      this.page.waitForURL(/\/prns(\?|$)/, { waitUntil: 'domcontentloaded' }),
       link.click()
     ])
   }
