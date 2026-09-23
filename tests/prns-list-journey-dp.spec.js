@@ -9,8 +9,11 @@ import {
 import { logJourney } from '../utils/journey-log.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
 import {
+  skipUnlessPrnsConfigured,
   skipUnlessPrnsEnabled,
-  skipUnlessPrnsSignInOffered
+  skipUnlessPrnsSignInOffered,
+  usesMultiYearObligations,
+  usesShowPrnsOnCdp
 } from '../utils/environment-features.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
 
@@ -27,6 +30,8 @@ test.describe('Producer PRNs list (DP)', () => {
     obligationsPage,
     prnsListPage
   }) => {
+    skipUnlessPrnsConfigured()
+
     // ENVIRONMENT identifies the target, independently of the browser entry point.
     // The shared Docker action sets local; deployed targets default to tst.
     const requirePrnData = process.env.ENVIRONMENT === 'local'
@@ -74,37 +79,48 @@ test.describe('Producer PRNs list (DP)', () => {
     })
 
     if (packaging) {
-      if (await landingPage.hasObligationsEntry()) {
+      const showPrnsOnCdp = usesShowPrnsOnCdp()
+      if (usesMultiYearObligations()) {
         await landingPage.expectLoaded()
-        if (await landingPage.hasYearSelection()) {
-          await test.step('open year selection from Azure account home', async () => {
-            await landingPage.goToChooseYear()
-            await chooseYearPage.expectLoaded()
-          })
-          await test.step(`select ${YEAR} and check the obligations page`, async () => {
-            await chooseYearPage.selectYear(YEAR)
-            await chooseYearPage.clickContinue()
-            await obligationsPage.expectLoadedForYear(YEAR)
-          })
-        } else {
-          await reportSkippedSteps(
-            'Azure choose a year',
-            'account home shows the single-year obligations link on this environment'
-          )
-          await test.step('open obligations from Azure account home', async () => {
-            await landingPage.goToObligations()
-            await obligationsPage.expectLoaded()
-          })
-        }
+        await test.step('open year selection from Azure account home', async () => {
+          await landingPage.goToChooseYear()
+          await chooseYearPage.expectLoaded()
+        })
+        await test.step(`select ${YEAR} and check the obligations page`, async () => {
+          await chooseYearPage.selectYear(YEAR)
+          await chooseYearPage.clickContinue()
+          await obligationsPage.expectLoadedForYear(YEAR)
+        })
+      } else if (showPrnsOnCdp) {
+        await reportSkippedSteps(
+          'Azure choose a year',
+          'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS is false for this environment'
+        )
+        await landingPage.expectLoaded()
+        await test.step('open obligations from Azure account home', async () => {
+          await landingPage.goToObligations()
+          await obligationsPage.expectLoaded()
+        })
       } else {
         await reportSkippedSteps(
-          'Azure account home and choose a year',
-          'Manage recycling obligations is not shown on this environment'
+          'Azure choose a year',
+          'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS is false for this environment'
         )
       }
-      await test.step(`open the CDP PRNs list for ${YEAR}`, async () => {
-        await page.goto(prnsUrl.toString())
-      })
+
+      if (showPrnsOnCdp) {
+        await test.step(`open the CDP PRNs list from Azure obligations for ${YEAR}`, async () => {
+          await obligationsPage.openWasteObligationsPrns()
+        })
+      } else {
+        await reportSkippedSteps(
+          'Azure PRNs on CDP',
+          'FEATURE_SHOW_PRNS_ON_CDP is false for this environment'
+        )
+        await test.step(`open the CDP PRNs list for ${YEAR}`, async () => {
+          await page.goto(prnsUrl.toString())
+        })
+      }
     } else {
       await reportSkippedSteps(
         'Azure account home and choose a year',

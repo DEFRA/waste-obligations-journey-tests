@@ -1,6 +1,5 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
-import { isLocatorVisible } from '../utils/environment-features.js'
 
 export class CsocAboutPage extends BasePage {
   constructor(page) {
@@ -9,10 +8,6 @@ export class CsocAboutPage extends BasePage {
       name: /About your \d{4} (certificate|statement) of compliance/i
     })
     this.continueButton = page.getByRole('button', { name: /^continue$/i })
-  }
-
-  async isAvailable() {
-    return isLocatorVisible(this.heading)
   }
 
   async expectLoaded() {

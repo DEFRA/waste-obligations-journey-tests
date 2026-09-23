@@ -6,11 +6,7 @@ import {
   setDeclarationStatus
 } from '../utils/waste-obligations-api.js'
 import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
-import {
-  skipUnlessEnabled,
-  skipUnlessPackagingCsocEnabled,
-  skipUnlessPackagingObligationsShown
-} from '../utils/environment-features.js'
+import { skipUnlessCsocEnabled } from '../utils/environment-features.js'
 import { resetOrgDeclarations } from '../utils/test-setup.js'
 
 // Direct Producer journey. Mirrors the CSO twin in csoc-submission-cso.spec.js
@@ -69,19 +65,14 @@ test.describe('CSOC lifecycle journey (DP)', () => {
     }
 
     const submitCsoc = async () => {
+      skipUnlessCsocEnabled()
       await landingPage.goto(ACCOUNT)
       if (usesPackagingEntryPoint()) {
-        await skipUnlessPackagingObligationsShown(landingPage)
+        await landingPage.expectLoaded()
         await landingPage.openObligations(chooseYearPage, obligationsPage, year)
-        await skipUnlessPackagingCsocEnabled(obligationsPage)
         obligationsRows = await obligationsPage.readObligationsTable()
         expect(obligationsRows.length).toBeGreaterThan(0)
         await obligationsPage.startCsocSubmission()
-      } else {
-        await skipUnlessEnabled(
-          await csocAboutPage.isAvailable(),
-          'CSOC is not enabled on this environment'
-        )
       }
       await csocAboutPage.expectLoaded()
       await csocAboutPage.expectRegulatorEmail()

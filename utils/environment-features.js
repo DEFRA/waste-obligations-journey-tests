@@ -7,39 +7,75 @@ export const ANALYTICS_ACCEPT_BUTTON_NAME =
 export const PAGE_NOT_FOUND_HEADING =
   /page not found|heb ddod o hyd i['’]r dudalen/i
 
-export async function isLocatorVisible(locator, timeout = 10_000) {
-  try {
-    await locator.waitFor({ state: 'visible', timeout })
-    return true
-  } catch {
-    return false
-  }
-}
+export const FEATURE_SHOW_PRNS = 'FEATURE_SHOW_PRNS'
+export const FEATURE_CSOC_ENABLED = 'FEATURE_CSOC_ENABLED'
+export const FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS =
+  'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS'
+export const FEATURE_ANALYTICS = 'FEATURE_ANALYTICS'
+export const FEATURE_SHOW_PRNS_ON_CDP = 'FEATURE_SHOW_PRNS_ON_CDP'
 
 export function skipUnlessEnabled(enabled, reason) {
   test.skip(!enabled, reason)
 }
 
-export async function skipUnlessPackagingObligationsShown(landingPage) {
-  if (!usesPackagingEntryPoint()) {
-    return
+export function readBooleanEnv(name, env = process.env) {
+  const value = env[name]
+  if (value === undefined || value === '') {
+    return undefined
   }
 
-  skipUnlessEnabled(
-    await landingPage.hasObligationsEntry(),
-    'Manage recycling obligations is not shown on this environment'
-  )
+  return /^(true|1|yes)$/i.test(String(value).trim())
 }
 
-export async function skipUnlessPackagingCsocEnabled(obligationsPage) {
-  if (!usesPackagingEntryPoint()) {
-    return
+export function isFeatureFlagEnabled(name, env = process.env) {
+  return readBooleanEnv(name, env) === true
+}
+
+export function skipUnlessFeatureFlagEnabled(name) {
+  if (readBooleanEnv(name) === false) {
+    skipUnlessEnabled(false, `${name} is false for this environment`)
+  }
+}
+
+export function resolvePrnsAvailability({ configured, pageShown }) {
+  if (configured === false) {
+    return {
+      action: 'skip',
+      reason: 'FEATURE_SHOW_PRNS is false for this environment'
+    }
   }
 
-  skipUnlessEnabled(
-    await obligationsPage.hasCsocAction(),
-    'CSOC is not enabled on this environment'
-  )
+  if (pageShown) {
+    return { action: 'run' }
+  }
+
+  return {
+    action: 'fail',
+    reason: 'FEATURE_SHOW_PRNS is enabled but the PRNs page was not found'
+  }
+}
+
+function applyPrnsAvailability({ configured, pageShown }) {
+  const result = resolvePrnsAvailability({ configured, pageShown })
+  if (result.action === 'fail') {
+    throw new Error(result.reason)
+  }
+
+  if (result.action === 'skip') {
+    skipUnlessEnabled(false, result.reason)
+  }
+}
+
+export function skipUnlessPrnsConfigured() {
+  skipUnlessFeatureFlagEnabled(FEATURE_SHOW_PRNS)
+}
+
+export function skipUnlessCsocEnabled() {
+  skipUnlessFeatureFlagEnabled(FEATURE_CSOC_ENABLED)
+}
+
+export function skipUnlessAnalyticsEnabled() {
+  skipUnlessFeatureFlagEnabled(FEATURE_ANALYTICS)
 }
 
 export function pageNotFoundHeading(page) {
@@ -47,33 +83,49 @@ export function pageNotFoundHeading(page) {
 }
 
 export async function skipUnlessPrnsSignInOffered(page) {
+  const configured = readBooleanEnv(FEATURE_SHOW_PRNS)
+  if (configured === false) {
+    applyPrnsAvailability({ configured, pageShown: false })
+    return
+  }
+
   const notFound = pageNotFoundHeading(page)
   const email = page.getByLabel(/email/i)
 
   await email.or(notFound).waitFor({ state: 'visible', timeout: 15_000 })
-  skipUnlessEnabled(
-    !(await notFound.isVisible()),
-    'PRNs are not enabled on this environment'
-  )
+  applyPrnsAvailability({
+    configured,
+    pageShown: !(await notFound.isVisible())
+  })
 }
 
 export async function skipUnlessPrnsEnabled(prnsListPage) {
+  const configured = readBooleanEnv(FEATURE_SHOW_PRNS)
+  if (configured === false) {
+    applyPrnsAvailability({ configured, pageShown: false })
+    return
+  }
+
   const notFound = pageNotFoundHeading(prnsListPage.page)
 
   await prnsListPage.heading
     .or(notFound)
     .waitFor({ state: 'visible', timeout: 15_000 })
-  skipUnlessEnabled(
-    !(await notFound.isVisible()),
-    'PRNs are not enabled on this environment'
+  applyPrnsAvailability({
+    configured,
+    pageShown: !(await notFound.isVisible())
+  })
+}
+
+export function usesMultiYearObligations() {
+  return (
+    usesPackagingEntryPoint() &&
+    isFeatureFlagEnabled(FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS)
   )
 }
 
-export async function skipUnlessAnalyticsEnabled(page) {
-  skipUnlessEnabled(
-    await isLocatorVisible(
-      page.getByRole('button', { name: ANALYTICS_ACCEPT_BUTTON_NAME })
-    ),
-    'Cookie banner is not shown; analytics is not configured on this environment'
+export function usesShowPrnsOnCdp() {
+  return (
+    usesPackagingEntryPoint() && isFeatureFlagEnabled(FEATURE_SHOW_PRNS_ON_CDP)
   )
 }

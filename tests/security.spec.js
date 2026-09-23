@@ -13,9 +13,8 @@ import {
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
 import {
-  skipUnlessEnabled,
-  skipUnlessPackagingCsocEnabled,
-  skipUnlessPackagingObligationsShown
+  skipUnlessCsocEnabled,
+  usesMultiYearObligations
 } from '../utils/environment-features.js'
 
 // Single worker owns each org's declaration state across submit → cancel.
@@ -53,17 +52,18 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
     const year = new Date().getFullYear()
     let submittedDeclaration
 
+    skipUnlessCsocEnabled()
+
     await test.step(`${prefix} > Landing page`, async () => {
       await landingPage.goto(account)
       await expect(page).toHaveURL(APP_HOST)
+      if (usesPackagingEntryPoint()) {
+        await landingPage.expectLoaded()
+      }
     })
 
-    if (usesPackagingEntryPoint()) {
-      await skipUnlessPackagingObligationsShown(landingPage)
-    }
-
     let usedYearSelection = false
-    if (usesPackagingEntryPoint() && (await landingPage.hasYearSelection())) {
+    if (usesMultiYearObligations()) {
       usedYearSelection = true
       await test.step(`${prefix} > Choose a year`, async () => {
         await landingPage.goToChooseYear()
@@ -80,12 +80,7 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
           await landingPage.goToObligations()
         }
         await obligationsPage.expectLoaded()
-        await skipUnlessPackagingCsocEnabled(obligationsPage)
       } else {
-        await skipUnlessEnabled(
-          await csocAboutPage.isAvailable(),
-          'CSOC is not enabled on this environment'
-        )
         await csocAboutPage.expectLoaded()
       }
       await expect(page).toHaveURL(APP_HOST)

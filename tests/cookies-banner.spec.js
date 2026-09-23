@@ -26,8 +26,8 @@ import {
 test.use({ storageState: { cookies: [], origins: [] } })
 
 async function openPublicFrontend(page, path, search) {
+  skipUnlessAnalyticsEnabled()
   await page.goto(getPublicFrontendUrl(path, search))
-  await skipUnlessAnalyticsEnabled(page)
 }
 
 test.describe('Cookie banner and cookies page', () => {

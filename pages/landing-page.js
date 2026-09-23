@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
-import { isLocatorVisible } from '../utils/environment-features.js'
+import {
+  FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS,
+  isFeatureFlagEnabled
+} from '../utils/environment-features.js'
 import {
   getJourneyStartPath,
   usesPackagingEntryPoint
@@ -36,16 +39,6 @@ export class LandingPage extends BasePage {
     ).toBeVisible()
   }
 
-  async hasObligationsEntry() {
-    return isLocatorVisible(
-      this.manageObligationsLink.or(this.manageRecyclingObligationsLink)
-    )
-  }
-
-  async hasYearSelection() {
-    return isLocatorVisible(this.manageRecyclingObligationsLink, 2_000)
-  }
-
   async goToObligations() {
     if (!usesPackagingEntryPoint()) {
       throw new Error(
@@ -64,10 +57,10 @@ export class LandingPage extends BasePage {
     await this.manageRecyclingObligationsLink.click()
   }
 
-  // Follows the tile this environment actually renders. Returns true when
-  // Azure year selection was used.
+  // Follows FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS. A missing tile is a failure,
+  // not a skipped feature. Returns true when Azure year selection was used.
   async openObligations(chooseYearPage, obligationsPage, year) {
-    if (await this.hasYearSelection()) {
+    if (isFeatureFlagEnabled(FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS)) {
       await this.goToChooseYear()
       await chooseYearPage.expectLoaded()
       await chooseYearPage.selectYear(year)

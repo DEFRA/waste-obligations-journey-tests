@@ -6,11 +6,7 @@ import {
   resetOrgDeclarations
 } from '../utils/test-setup.js'
 import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
-import {
-  skipUnlessEnabled,
-  skipUnlessPackagingCsocEnabled,
-  skipUnlessPackagingObligationsShown
-} from '../utils/environment-features.js'
+import { skipUnlessCsocEnabled } from '../utils/environment-features.js'
 import {
   initialiseAccessibilityChecking,
   analyseAccessibility,
@@ -31,17 +27,12 @@ async function startCsocJourney({
   obligationsPage,
   csocAboutPage
 }) {
+  skipUnlessCsocEnabled()
   await landingPage.goto(account)
   if (usesPackagingEntryPoint()) {
-    await skipUnlessPackagingObligationsShown(landingPage)
+    await landingPage.expectLoaded()
     await landingPage.openObligations(chooseYearPage, obligationsPage, year)
-    await skipUnlessPackagingCsocEnabled(obligationsPage)
     await obligationsPage.startCsocSubmission()
-  } else {
-    await skipUnlessEnabled(
-      await csocAboutPage.isAvailable(),
-      'CSOC is not enabled on this environment'
-    )
   }
   await csocAboutPage.expectLoaded()
 }
