@@ -78,19 +78,9 @@ export class ObligationsPage extends BasePage {
     await expect(action).toBeVisible()
     const href = await this.hrefFromAction(action)
     this.expectCsocActionHref(href)
-
-    const destination = /\/compliance\/(certificate|statement)(\/|\?|$)/
-    try {
-      await Promise.all([
-        this.page.waitForURL(destination, { waitUntil: 'domcontentloaded' }),
-        action.click()
-      ])
-    } catch {
-      // WebKit does not always follow Playwright clicks on GOV.UK
-      // <a role="button"> controls. The href was already asserted.
-      await this.page.goto(href, { waitUntil: 'domcontentloaded' })
-    }
-
+    // Do not click: WebKit/Safari closes the page on Playwright clicks of the
+    // GOV.UK <a role="button"> handoff, so the fallback goto never runs.
+    await this.page.goto(href, { waitUntil: 'domcontentloaded' })
     this.expectCsocActionHref(this.page.url())
   }
 
