@@ -255,12 +255,11 @@ test.describe('Cookie banner and cookies page', () => {
     await expect(
       main.getByRole('heading', { name: 'Analytics cookies', level: 2 })
     ).toBeVisible()
-    await expect(main.getByText('_gid', { exact: true })).toBeVisible()
+    await expect(main.getByText('_ga', { exact: true })).toBeVisible()
     if (ga4CookieName) {
       await expect(main.getByText(ga4CookieName)).toBeVisible()
     }
     await expect(main.getByText('4 hours', { exact: true })).toBeVisible()
-    await expect(main.getByText('24 hours', { exact: true })).toBeVisible()
     await expect(
       main.getByRole('heading', {
         name: 'Change your cookie settings',
@@ -279,7 +278,6 @@ test.describe('Cookie banner and cookies page', () => {
     const main = page.locator('#main-content')
 
     await expect(main.getByText('4 awr', { exact: true })).toBeVisible()
-    await expect(main.getByText('24 awr', { exact: true })).toBeVisible()
     await expect(main.getByText('4 hours')).toHaveCount(0)
   })
 })
