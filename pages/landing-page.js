@@ -45,7 +45,7 @@ export class LandingPage extends BasePage {
         'The waste-obligations entry point opens the CSOC about page directly.'
       )
     }
-    await this.manageObligationsLink.click()
+    await this.manageRecyclingObligationsLink.click()
   }
 
   async goToChooseYear() {
