@@ -6,11 +6,16 @@ import {
   getJourneyStartPath,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
+import { establishProxySession } from '../utils/proxy-session.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'dp.json')
 
 setup('authenticate', async ({ page }) => {
+  // Sign-in plus the proxy session hop each allow up to 60s per step, so the
+  // default 60s test timeout would expire before storageState is saved.
+  setup.setTimeout(240_000)
+
   const email = requireEnv('EPR_USER_EMAIL')
   const password = requireEnv('EPR_USER_PASSWORD')
 
@@ -41,6 +46,8 @@ setup('authenticate', async ({ page }) => {
       })
     ).toBeVisible({ timeout: 60_000 })
   }
+
+  await establishProxySession(page, 'dp')
 
   await page.context().storageState({ path: authFile })
 })
