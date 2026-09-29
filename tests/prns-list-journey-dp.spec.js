@@ -144,17 +144,14 @@ test.describe('Producer PRNs list (DP)', () => {
       await test.step('assert the seeded PRN values in the list', async () => {
         await prnsListPage.expectPrnVisible(expectedPrn)
       })
-      if (selectablePrn) {
-        await test.step('check the standard PRN can be selected for bulk accept', async () => {
-          await prnsListPage.expectPrnSelectable(selectablePrn)
-          await prnsListPage.expectAcceptSelectedButtonVisible()
-        })
-      } else {
-        await reportSkippedSteps(
-          'PRN multi-select',
-          'no standard PRN for the current compliance year is awaiting acceptance'
-        )
-      }
+      await test.step('check the standard PRN can be selected for bulk accept', async () => {
+        expect(
+          selectablePrn,
+          'The local journey fixture must contain a standard PRN for the current compliance year awaiting acceptance.'
+        ).toBeDefined()
+        await prnsListPage.expectPrnSelectable(selectablePrn)
+        await prnsListPage.expectAcceptSelectedButtonVisible()
+      })
     } else {
       await test.step('report deployed PRN data (diagnostic only)', async () => {
         try {
