@@ -48,6 +48,9 @@ export class PrnsListPage extends BasePage {
     this.heading = page.getByRole('heading', {
       name: /^accept or reject prns and perns/i
     })
+    this.acceptSelectedButton = page.getByRole('button', {
+      name: /^accept selected prns and perns$/i
+    })
 
     this.sortSelect = page.locator('#sort')
     this.materialSelect = page.locator('#filter')
@@ -105,6 +108,19 @@ export class PrnsListPage extends BasePage {
 
   async clickClearAll() {
     await clickAndWaitForNavigation(this.page, this.clearAllLink)
+  }
+
+  // Reads the material column for every currently rendered row. Used to
+  // assert a material filter actually narrows the list, without depending
+  // on which specific PRNs are seeded in a given environment.
+  async readRowMaterials() {
+    return this.page
+      .locator('table.app-prns-table tbody tr')
+      .evaluateAll((rows) =>
+        rows.map(
+          (row) => row.querySelectorAll('td')[1]?.textContent?.trim() || ''
+        )
+      )
   }
 
   // Read only the list's operational values, excluding names and free-text notes.
