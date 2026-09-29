@@ -19,6 +19,7 @@ import {
   usesShowPrnsOnCdp
 } from '../utils/environment-features.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
+import { findStandardSelectablePrn } from '../utils/prn-selection.js'
 
 const YEAR = 2026
 
@@ -39,10 +40,12 @@ test.describe('Producer PRNs list (DP)', () => {
     // The shared Docker action sets local; deployed targets default to tst.
     const requirePrnData = process.env.ENVIRONMENT === 'local'
     let expectedPrn
+    let selectablePrn
     if (requirePrnData) {
       expectedPrn =
         await test.step('read the seeded PRN awaiting acceptance', async () => {
           const prns = await listAwaitingPrns(request, getOrgId('dp'))
+          selectablePrn = findStandardSelectablePrn(prns)
           expect(
             prns.length,
             'The local journey fixture must contain a PRN awaiting acceptance.'
@@ -141,6 +144,17 @@ test.describe('Producer PRNs list (DP)', () => {
       await test.step('assert the seeded PRN values in the list', async () => {
         await prnsListPage.expectPrnVisible(expectedPrn)
       })
+      if (selectablePrn) {
+        await test.step('check the standard PRN can be selected for bulk accept', async () => {
+          await prnsListPage.expectPrnSelectable(selectablePrn)
+          await prnsListPage.expectAcceptSelectedButtonVisible()
+        })
+      } else {
+        await reportSkippedSteps(
+          'PRN multi-select',
+          'no standard PRN for the current compliance year is awaiting acceptance'
+        )
+      }
     } else {
       await test.step('report deployed PRN data (diagnostic only)', async () => {
         try {
