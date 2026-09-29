@@ -85,13 +85,63 @@ async function countExistingScreenshots(dir) {
   }
 }
 
-async function runProducer(matrixEntry, evidenceDir, headed) {
+// Ordered phase list per journey. Each phase is a [side, phase-name] pair;
+// the runner iterates them in order, spawning one Playwright process per
+// phase. SCREENSHOT_START_AT flows forward so all phases contribute to a
+// single continuous screenshot sequence in the evidence pack.
+//
+// Journey-01.x remain single-phase (producer → regulator) but drive through
+// the same iterator so the code path is unified.
+const PHASES_BY_JOURNEY = {
+  'E2E-01.1': [
+    ['producer', 'submit'],
+    ['regulator', 'approve']
+  ],
+  'E2E-01.2': [
+    ['producer', 'submit'],
+    ['regulator', 'approve']
+  ],
+  // E2E-01.3a / E2E-01.3c: CS Reg 43 = NO variants. Same phase shape as
+  // E2E-01.2 — one producer submit followed by regulator approve. The
+  // difference between 03a and 03c is the obligation seed (MET vs NOT
+  // MET) — a data-only distinction that lives outside this runner.
+  'E2E-01.3a': [
+    ['producer', 'submit'],
+    ['regulator', 'approve']
+  ],
+  'E2E-01.3c': [
+    ['producer', 'submit'],
+    ['regulator', 'approve']
+  ],
+  'E2E-04': [
+    ['producer', 'submit'],
+    ['regulator', 'cancel'],
+    ['producer', 'resubmit'],
+    ['regulator', 'view-history', { expectedActions: 'Cancelled,Submitted' }]
+  ],
+  'E2E-08': [
+    ['producer', 'submit'],
+    ['regulator', 'approve'],
+    ['regulator', 'cancel'],
+    ['producer', 'resubmit'],
+    ['regulator', 'approve'],
+    [
+      'regulator',
+      'view-history',
+      { expectedActions: 'Accepted,Cancelled,Accepted' }
+    ]
+  ]
+}
+
+async function runProducer(matrixEntry, evidenceDir, startAt, headed, phase) {
   const env = {
     ...process.env,
     JOURNEY: matrixEntry.journey,
     REGULATOR: matrixEntry.regulator,
     ORG_TYPE: matrixEntry.orgType,
+    PHASE: phase,
     EVIDENCE_DIR: evidenceDir,
+    SCREENSHOT_START_AT: String(startAt),
     // Route the producer auth/setup to the matrix-selected accounts.
     EPR_USER_EMAIL: matrixEntry.username,
     EPR_USER_PASSWORD: matrixEntry.password,
@@ -119,11 +169,11 @@ async function runProducer(matrixEntry, evidenceDir, headed) {
   return spawnPlaywright('npx', args, {
     cwd: REPO_ROOT,
     env,
-    label: 'producer'
+    label: `producer:${phase}`
   })
 }
 
-async function runRegulator(matrixEntry, evidenceDir, startAt, headed) {
+async function runRegulator(matrixEntry, evidenceDir, startAt, headed, phase, phaseOpts = {}) {
   const nationId = REGULATOR_TO_NATION_ID[matrixEntry.regulator]
   const regulatorTestsPath = requireEnv('REGULATOR_TESTS_PATH')
   const emailKey = `REGULATOR_EMAIL_${matrixEntry.regulator}`
@@ -135,6 +185,7 @@ async function runRegulator(matrixEntry, evidenceDir, startAt, headed) {
     REGULATOR: matrixEntry.regulator,
     ORG_TYPE: matrixEntry.orgType,
     ORG_ID: matrixEntry.orgId,
+    PHASE: phase,
     EVIDENCE_DIR: evidenceDir,
     SCREENSHOT_START_AT: String(startAt),
     NATION_ID: nationId,
@@ -148,6 +199,9 @@ async function runRegulator(matrixEntry, evidenceDir, startAt, headed) {
     // don't pay for a login the spec is going to discard anyway.
     SKIP_AUTH_SETUP: '1'
   }
+  if (phaseOpts.expectedActions) {
+    env.EXPECTED_HISTORY_ACTIONS = phaseOpts.expectedActions
+  }
   const args = ['playwright', 'test', 'test/specs/csoc-e2e-external.spec.js']
   if (headed) args.push('--headed')
   // Wipe cached auth so a different nation triggers a fresh login.
@@ -158,7 +212,7 @@ async function runRegulator(matrixEntry, evidenceDir, startAt, headed) {
   return spawnPlaywright('npx', args, {
     cwd: regulatorTestsPath,
     env,
-    label: 'regulator'
+    label: `regulator:${phase}`
   })
 }
 
@@ -241,16 +295,46 @@ async function runOne({ journey, regulator, orgType, headed }) {
   process.env.WASTE_OBLIGATION_CSO_ORG_ID = matrixEntry.organisationId
   await resetBackendOrg(matrixEntry)
 
-  const producerResult = await runProducer(matrixEntry, evidenceDir, headed)
-  const startAt = await countExistingScreenshots(evidenceDir)
-  const regulatorResult = await runRegulator(
-    matrixEntry,
-    evidenceDir,
-    Math.max(startAt, 100),
-    headed
-  )
+  const phases = PHASES_BY_JOURNEY[journey]
+  if (!phases) {
+    throw new Error(
+      `No phase plan for ${journey}. Add one to PHASES_BY_JOURNEY in runner.mjs.`
+    )
+  }
 
-  const passed = producerResult.code === 0 && regulatorResult.code === 0
+  const phaseResults = []
+  for (const [side, phase, phaseOpts] of phases) {
+    // Screenshots must number continuously across phases so the docx
+    // builder orders them correctly. Each phase spec resumes from where
+    // the previous one left off.
+    // eslint-disable-next-line no-await-in-loop
+    const currentCount = await countExistingScreenshots(evidenceDir)
+    // Producer specs start at 1 by default; regulator specs start at 100
+    // so a mixed phase run still keeps the producer/regulator groupings
+    // visually separated by number band on the first sequence.
+    const startAt = Math.max(currentCount, side === 'regulator' && phaseResults.length === 0 ? 100 : 0)
+    console.log(`\n--- phase ${side}/${phase} (screenshots from ${startAt + 1}) ---`)
+    // eslint-disable-next-line no-await-in-loop
+    const result =
+      side === 'producer'
+        ? await runProducer(matrixEntry, evidenceDir, startAt, headed, phase)
+        : await runRegulator(
+            matrixEntry,
+            evidenceDir,
+            startAt,
+            headed,
+            phase,
+            phaseOpts
+          )
+    phaseResults.push({ side, phase, code: result.code })
+    if (result.code !== 0) {
+      console.warn(
+        `[runner] phase ${side}/${phase} failed (exit ${result.code}) — subsequent phases may fail too, continuing to capture whatever evidence is possible`
+      )
+    }
+  }
+
+  const passed = phaseResults.every((r) => r.code === 0)
   const status = passed ? 'PASSED' : 'FAILED'
   const docPath = await buildEvidencePack({
     journey,
@@ -261,7 +345,12 @@ async function runOne({ journey, regulator, orgType, headed }) {
     status
   })
   console.log(`[runner] evidence pack: ${docPath}`)
-  return { passed, docPath, evidenceDir, producerResult, regulatorResult }
+  console.log(
+    `[runner] phase results: ${phaseResults
+      .map((r) => `${r.side}/${r.phase}:${r.code === 0 ? 'PASS' : 'FAIL'}`)
+      .join(', ')}`
+  )
+  return { passed, docPath, evidenceDir, phaseResults }
 }
 
 async function main() {

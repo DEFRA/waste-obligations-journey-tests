@@ -8,13 +8,54 @@ import {
   PageBreak,
   Packer,
   Paragraph,
-  TextRun
+  ShadingType,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  WidthType
 } from 'docx'
 
 // A4 minus 1-inch (72pt) margins → 6.5in width. docx expects pixels; screenshots
-// come out at browser resolution (1280w default) and docx scales them down to fit.
+// come out at browser resolution (1280w default). We scale each image to fit
+// within these bounds while preserving its native aspect ratio, so full-page
+// tall screenshots don't get squashed and wide ones don't get stretched.
 const PAGE_WIDTH_PX = 620
 const MAX_HEIGHT_PX = 800
+
+// Reads the intrinsic width/height from a PNG buffer's IHDR chunk. The
+// PNG signature is 8 bytes; the first chunk is always IHDR (4 length +
+// 4 "IHDR" + 4 width + 4 height, all big-endian). Cheaper than adding a
+// dependency (image-size, sharp, etc.) for a value we only need once.
+function readPngDimensions(buffer) {
+  if (buffer.length < 24) return null
+  // Bytes 12..15 spell "IHDR" for a well-formed PNG.
+  if (buffer.toString('ascii', 12, 16) !== 'IHDR') return null
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20)
+  }
+}
+
+// Given a source image size, returns the { width, height } that fits
+// inside (PAGE_WIDTH_PX, MAX_HEIGHT_PX) with the same aspect ratio.
+// Falls back to the box size if dimensions can't be read.
+function fittedDimensions(buffer) {
+  const dims = readPngDimensions(buffer)
+  if (!dims || !dims.width || !dims.height) {
+    return { width: PAGE_WIDTH_PX, height: MAX_HEIGHT_PX }
+  }
+  const ratio = Math.min(
+    PAGE_WIDTH_PX / dims.width,
+    MAX_HEIGHT_PX / dims.height
+  )
+  // Never upscale — if the source is smaller than the box, keep it as-is.
+  const scale = ratio < 1 ? ratio : 1
+  return {
+    width: Math.round(dims.width * scale),
+    height: Math.round(dims.height * scale)
+  }
+}
 
 async function readCaption(pngPath) {
   try {
@@ -23,6 +64,222 @@ async function readCaption(pngPath) {
   } catch {
     return path.basename(pngPath, '.png')
   }
+}
+
+// Colours for the per-test status cells. Green for pass, red for fail,
+// amber for skipped/timed-out, grey for unknown. Kept as hex without the
+// leading # (docx expects that).
+const STATUS_COLOR = {
+  passed: 'C8E6C9',
+  failed: 'FFCDD2',
+  timedOut: 'FFCDD2',
+  interrupted: 'FFE0B2',
+  skipped: 'ECEFF1'
+}
+
+const STATUS_LABEL = {
+  passed: 'PASS',
+  failed: 'FAIL',
+  timedOut: 'TIMEOUT',
+  interrupted: 'DID NOT RUN',
+  skipped: 'SKIPPED'
+}
+
+// Strips characters that corrupt OOXML: ANSI escape codes (Playwright's
+// error strings include them for terminal colouring), C0 control chars
+// except tab/newline, and stray surrogate pairs. Also guards against empty
+// strings — Word rejects TextRuns whose text is `''`.
+function sanitizeText(input, { fallback = ' ', maxLength = 400 } = {}) {
+  if (input === null || input === undefined) return fallback
+  let s = String(input)
+  // Drop ANSI CSI sequences. The control-char in the regex is deliberate.
+  // eslint-disable-next-line no-control-regex
+  s = s.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, '')
+  // Drop lone C0 controls (keep tab, LF, CR). Same rationale.
+  // eslint-disable-next-line no-control-regex
+  s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+  if (s.length > maxLength) s = s.slice(0, maxLength) + '…'
+  return s.length ? s : fallback
+}
+
+function statusRun(status) {
+  const label =
+    STATUS_LABEL[status] ?? String(status ?? 'unknown').toUpperCase()
+  return new TextRun({ text: sanitizeText(label), bold: true, size: 18 })
+}
+
+function cell(children, { fill } = {}) {
+  return new TableCell({
+    shading: fill
+      ? { type: ShadingType.CLEAR, fill, color: 'auto' }
+      : undefined,
+    children
+  })
+}
+
+function summaryTableParagraphs(testResults) {
+  if (!Array.isArray(testResults) || testResults.length === 0) return []
+
+  const counts = testResults.reduce((acc, r) => {
+    const key = r.status ?? 'unknown'
+    acc[key] = (acc[key] ?? 0) + 1
+    return acc
+  }, {})
+  const summaryLine = sanitizeText(
+    Object.entries(counts)
+      .map(([k, v]) => `${STATUS_LABEL[k] ?? k}: ${v}`)
+      .join('   ·   '),
+    { maxLength: 200 }
+  )
+
+  const header = new TableRow({
+    tableHeader: true,
+    children: [
+      cell(
+        [
+          new Paragraph({
+            children: [new TextRun({ text: 'Test', bold: true, size: 18 })]
+          })
+        ],
+        { fill: 'CFD8DC' }
+      ),
+      cell(
+        [
+          new Paragraph({
+            children: [new TextRun({ text: 'Status', bold: true, size: 18 })]
+          })
+        ],
+        { fill: 'CFD8DC' }
+      ),
+      cell(
+        [
+          new Paragraph({
+            children: [new TextRun({ text: 'Duration', bold: true, size: 18 })]
+          })
+        ],
+        { fill: 'CFD8DC' }
+      ),
+      cell(
+        [
+          new Paragraph({
+            children: [new TextRun({ text: 'Detail', bold: true, size: 18 })]
+          })
+        ],
+        { fill: 'CFD8DC' }
+      )
+    ]
+  })
+
+  const rows = testResults.map(
+    (r) =>
+      new TableRow({
+        children: [
+          cell([
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: sanitizeText(r.title, { maxLength: 300 }),
+                  size: 16
+                })
+              ]
+            })
+          ]),
+          cell([new Paragraph({ children: [statusRun(r.status)] })], {
+            fill: STATUS_COLOR[r.status]
+          }),
+          cell([
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: sanitizeText(
+                    r.durationMs ? `${(r.durationMs / 1000).toFixed(1)}s` : '—',
+                    { maxLength: 20 }
+                  ),
+                  size: 16
+                })
+              ]
+            })
+          ]),
+          cell([
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: sanitizeText(r.error, {
+                    fallback: '—',
+                    maxLength: 400
+                  }),
+                  size: 14,
+                  color: r.status === 'passed' ? '607D8B' : 'B71C1C'
+                })
+              ]
+            })
+          ])
+        ]
+      })
+  )
+
+  return [
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      children: [new TextRun('Test summary')]
+    }),
+    new Paragraph({ children: [new TextRun({ text: summaryLine, size: 20 })] }),
+    new Paragraph({ children: [new TextRun('')] }),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [header, ...rows]
+    }),
+    new Paragraph({ children: [new PageBreak()] })
+  ]
+}
+
+async function loadTranscriptParagraphs(transcriptsDir) {
+  if (!transcriptsDir) return []
+  let entries
+  try {
+    entries = await readdir(transcriptsDir)
+  } catch {
+    return []
+  }
+  const txts = entries.filter((f) => f.endsWith('.txt')).sort()
+  const paragraphs = []
+  for (let i = 0; i < txts.length; i += 1) {
+    const file = txts[i]
+    const fullPath = path.join(transcriptsDir, file)
+    const raw = await readFile(fullPath, 'utf8')
+    paragraphs.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        children: [new TextRun(`Transcript: ${file}`)]
+      })
+    )
+    // Preserve line breaks: emit one Paragraph per source line, each rendered
+    // in a monospace font with a light grey background so it reads as a code
+    // block in Word rather than reflowing as prose. Sanitize per-line so any
+    // control chars in captured HTTP bodies don't corrupt the doc.
+    for (const line of raw.split(/\r?\n/)) {
+      paragraphs.push(
+        new Paragraph({
+          shading: {
+            type: ShadingType.CLEAR,
+            fill: 'F5F5F5',
+            color: 'auto'
+          },
+          children: [
+            new TextRun({
+              text: sanitizeText(line, { maxLength: 4000 }),
+              font: 'Courier New',
+              size: 18
+            })
+          ]
+        })
+      )
+    }
+    if (i < txts.length - 1) {
+      paragraphs.push(new Paragraph({ children: [new PageBreak()] }))
+    }
+  }
+  return paragraphs
 }
 
 async function loadImageParagraphs(screenshotsDir) {
@@ -51,7 +308,7 @@ async function loadImageParagraphs(screenshotsDir) {
         children: [
           new ImageRun({
             data,
-            transformation: { width: PAGE_WIDTH_PX, height: MAX_HEIGHT_PX },
+            transformation: fittedDimensions(data),
             type: 'png'
           })
         ]
@@ -69,12 +326,19 @@ async function loadImageParagraphs(screenshotsDir) {
   return paragraphs
 }
 
-function coverParagraphs({ journey, regulator, orgType, timestamp, status }) {
+function coverParagraphs({
+  title,
+  journey,
+  regulator,
+  orgType,
+  timestamp,
+  status
+}) {
   return [
     new Paragraph({
       heading: HeadingLevel.TITLE,
       alignment: AlignmentType.CENTER,
-      children: [new TextRun('CSoC E2E Evidence Pack')]
+      children: [new TextRun(title)]
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -107,26 +371,42 @@ function coverParagraphs({ journey, regulator, orgType, timestamp, status }) {
 
 export async function buildEvidenceDoc({
   screenshotsDir,
+  transcriptsDir,
   outputPath,
   journey,
   regulator,
   orgType,
   timestamp,
-  status
+  status,
+  title = 'CSoC E2E Evidence Pack',
+  testResults
 }) {
   const cover = coverParagraphs({
+    title,
     journey,
     regulator,
     orgType,
     timestamp,
     status
   })
-  const body = await loadImageParagraphs(screenshotsDir)
+  const summary = summaryTableParagraphs(testResults)
+  const transcripts = await loadTranscriptParagraphs(transcriptsDir)
+  const images = await loadImageParagraphs(screenshotsDir)
+  // Transcripts first so security evidence leads with the raw HTTP proof;
+  // screenshots follow to demonstrate UI behaviour.
+  const body =
+    transcripts.length && images.length
+      ? [
+          ...transcripts,
+          new Paragraph({ children: [new PageBreak()] }),
+          ...images
+        ]
+      : [...transcripts, ...images]
   const doc = new Document({
     creator: 'waste-obligations-journey-tests',
-    title: `CSoC E2E ${journey} ${regulator} ${orgType}`,
-    description: 'Automated CSoC E2E evidence pack',
-    sections: [{ children: [...cover, ...body] }]
+    title: `${title} — ${journey} ${regulator} ${orgType}`,
+    description: 'Automated evidence pack',
+    sections: [{ children: [...cover, ...summary, ...body] }]
   })
   const buffer = await Packer.toBuffer(doc)
   await writeFile(outputPath, buffer)

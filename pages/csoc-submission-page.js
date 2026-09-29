@@ -18,6 +18,9 @@ export class CsocSubmissionPage extends BasePage {
     this.regulation43YesRadio = this.regulation43Fieldset.getByRole('radio', {
       name: /^yes$/i
     })
+    this.regulation43NoRadio = this.regulation43Fieldset.getByRole('radio', {
+      name: /^no$/i
+    })
     this.complianceSchemeLabel = page.locator(
       'xpath=//dt[normalize-space()="Compliance scheme"]'
     )
@@ -67,9 +70,18 @@ export class CsocSubmissionPage extends BasePage {
     return this.readGovukTable(this.materialObligationsTable)
   }
 
-  async submit(fullName) {
+  // regulation43: 'YES' (default) | 'NO' | null.
+  //  - YES: tick the "has met Reg 43 obligation" radio (compliant path)
+  //  - NO:  tick the "has NOT met Reg 43 obligation" radio (non-compliant)
+  //  - null: don't touch the radio (test wants to submit without selecting)
+  // DP has no Reg 43 fieldset — the radio work is a no-op when absent.
+  async submit(fullName, { regulation43 = 'YES' } = {}) {
     if ((await this.regulation43Fieldset.count()) > 0) {
-      await this.regulation43YesRadio.check()
+      if (regulation43 === 'YES') {
+        await this.regulation43YesRadio.check()
+      } else if (regulation43 === 'NO') {
+        await this.regulation43NoRadio.check()
+      }
     }
     await this.fullNameInput.fill(fullName)
     await this.confirmAndSubmitButton.click()

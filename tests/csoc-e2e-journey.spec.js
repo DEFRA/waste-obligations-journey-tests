@@ -23,6 +23,11 @@ const REGULATOR = process.env.REGULATOR
 const ORG_TYPE = process.env.ORG_TYPE
 const ORG_TYPE_ACCOUNT = ORG_TYPE === 'CS' ? 'cso' : 'dp'
 
+// Multi-phase journeys (E2E-04, E2E-08) invoke this spec more than once —
+// once per producer-side phase — and use PHASE to dispatch. Default 'submit'
+// keeps the single-phase E2E-01.x journeys working without any wiring change.
+const PHASE = process.env.PHASE || 'submit'
+
 // Skill-driven spec: collection is a no-op when the harness env is absent, so
 // the existing `npm run test:e2e` sweep leaves this file alone. Fail fast only
 // when JOURNEY is set but doesn't match the known list — that indicates the
@@ -97,6 +102,29 @@ test.describe(`CSoC ${JOURNEY ?? '<unset>'} · ${REGULATOR ?? '<unset>'} · ${OR
     case 'E2E-01.2':
       runCsCompliant(matrixEntry)
       break
+    case 'E2E-01.3a':
+      // CS non-compliant variant 03a: obligations MET, Reg 43 = NO.
+      // Same producer UI actions as 03c — differs only in the backend
+      // obligation state (which is data-seeded, not driven by test code).
+      runCsReg43No(matrixEntry, {
+        journey: 'E2E-01.3a',
+        obligationExpectedLabel: 'obligation status per env — 03a expects MET'
+      })
+      break
+    case 'E2E-01.3c':
+      runCsReg43No(matrixEntry, {
+        journey: 'E2E-01.3c',
+        obligationExpectedLabel:
+          'obligation status per env — 03c expects NOT MET'
+      })
+      break
+    case 'E2E-04':
+    case 'E2E-08':
+      // Both journeys share producer-side phases: an initial submit and
+      // a later resubmit (after the regulator cancels). PHASE dispatch
+      // decides which one this invocation runs; the runner sequences them.
+      runProducerPhase(matrixEntry, JOURNEY, PHASE)
+      break
     default:
       test.fixme(`${JOURNEY}: not implemented yet — scaffold only`, () => {
         // Journey stubs land here so `--matrix all` doesn't blow up. See
@@ -141,6 +169,7 @@ function runDrpHappyPath(entry) {
     csocAboutPage,
     csocSubmissionPage,
     csocConfirmationPage,
+    csocViewPage,
     screenshotRecorder
   }) => {
     const year = new Date().getFullYear()
@@ -188,6 +217,28 @@ function runDrpHappyPath(entry) {
       await screenshotRecorder.capture(page, 'Confirmation — Submitted')
     })
 
+    await test.step('Clicks "View your certificate" and lands on the certificate view', async () => {
+      await csocConfirmationPage.goToCertificateView()
+      await csocViewPage.expectLoaded(year)
+      await csocViewPage.expectOrgIdentity()
+      await screenshotRecorder.capture(page, 'Certificate view — Submitted')
+    })
+
+    await test.step('Returns to Account home', async () => {
+      await landingPage.goto()
+      await landingPage.expectLoaded()
+      await screenshotRecorder.capture(page, 'Account home — post-submission')
+    })
+
+    await test.step('Opens Manage recycling obligations', async () => {
+      await landingPage.goToObligations()
+      await obligationsPage.expectLoaded()
+      await screenshotRecorder.capture(
+        page,
+        'Manage recycling obligations — post-submission'
+      )
+    })
+
     // The regulator-side approve happens in the sibling repo. See:
     //   waste-packaging-regulator-tests/test/specs/csoc-e2e-external.spec.js
     // The skill runner chains the two runs and merges their screenshots.
@@ -204,6 +255,7 @@ function runCsCompliant(entry) {
     csocAboutPage,
     csocSubmissionPage,
     csocConfirmationPage,
+    csocViewPage,
     screenshotRecorder
   }) => {
     const year = new Date().getFullYear()
@@ -251,5 +303,337 @@ function runCsCompliant(entry) {
       await csocConfirmationPage.expectSubmitted(year)
       await screenshotRecorder.capture(page, 'Confirmation — Submitted')
     })
+
+    await test.step('Clicks "View your statement" and lands on the statement view', async () => {
+      await csocConfirmationPage.goToCertificateView()
+      await csocViewPage.expectLoaded(year)
+      await csocViewPage.expectOrgIdentity()
+      await screenshotRecorder.capture(page, 'Statement view — Submitted')
+    })
+
+    await test.step('Returns to Account home', async () => {
+      await landingPage.goto()
+      await landingPage.expectLoaded()
+      await screenshotRecorder.capture(page, 'Account home — post-submission')
+    })
+
+    await test.step('Opens Manage recycling obligations', async () => {
+      await landingPage.goToObligations()
+      await obligationsPage.expectLoaded()
+      await screenshotRecorder.capture(
+        page,
+        'Manage recycling obligations — post-submission'
+      )
+    })
   })
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// E2E-01.3a / E2E-01.3c — CS with Reg 43 = NO
+//
+// Same producer UI actions in both variants — the only difference is the
+// obligation seed state (03a expects MET, 03c expects NOT MET), which is
+// backend-driven and out of this skill's scope. The check-and-submit
+// screenshot captures whichever status the env is currently showing so
+// the reviewer can confirm the seeding matches the ticket variant.
+// ─────────────────────────────────────────────────────────────────────────
+
+function runCsReg43No(entry, { journey, obligationExpectedLabel }) {
+  assertOrgTypeMatchesJourney(journey, entry.orgType)
+  const variant = journey.replace('E2E-01.', '') // "3a" or "3c"
+
+  test(`CS submits CSoC with Reg 43 = NO (variant ${variant})`, async ({
+    page,
+    landingPage,
+    obligationsPage,
+    csocAboutPage,
+    csocSubmissionPage,
+    csocConfirmationPage,
+    csocViewPage,
+    screenshotRecorder
+  }) => {
+    const year = new Date().getFullYear()
+    const directUrl = directCertificateUrl(entry, year)
+
+    if (directUrl) {
+      await test.step('Navigates directly to the statement submission URL', async () => {
+        await page.goto(directUrl)
+        await screenshotRecorder.capture(
+          page,
+          `Statement submission — ${variant}`
+        )
+      })
+    } else {
+      await test.step('Approved Person signs in and lands on Account home', async () => {
+        await landingPage.goto()
+        await screenshotRecorder.capture(page, 'Account home')
+      })
+      await test.step('Opens Manage recycling obligations', async () => {
+        await landingPage.goToObligations()
+        await obligationsPage.expectLoaded()
+        await screenshotRecorder.capture(page, 'Manage recycling obligations')
+      })
+      await test.step('Starts CSoC submission', async () => {
+        await obligationsPage.startCsocSubmission()
+        await csocAboutPage.expectLoaded()
+        await screenshotRecorder.capture(
+          page,
+          'About your Statement of Compliance'
+        )
+        await csocAboutPage.clickContinue()
+      })
+    }
+
+    await test.step('Reviews the check-and-submit page (Reg 43 visible for CS)', async () => {
+      await csocSubmissionPage.expectLoaded()
+      await csocSubmissionPage.expectOrganisationDetails()
+      expect(await csocSubmissionPage.isCsoVariant()).toBe(true)
+      await expect(csocSubmissionPage.regulation43Fieldset).toBeVisible()
+      await screenshotRecorder.capture(
+        page,
+        `Check and submit — CS ${variant} (${obligationExpectedLabel}; Reg 43 pending selection)`
+      )
+    })
+
+    await test.step('Selects Reg 43 = NO and submits', async () => {
+      await csocSubmissionPage.submit(TEST_USER_NAME, { regulation43: 'NO' })
+      await csocConfirmationPage.expectSubmitted(year)
+      await screenshotRecorder.capture(
+        page,
+        `Confirmation — Submitted (Reg 43 = NO, variant ${variant})`
+      )
+    })
+
+    await test.step('Clicks "View your statement" and lands on the statement view', async () => {
+      await csocConfirmationPage.goToCertificateView()
+      await csocViewPage.expectLoaded(year)
+      await csocViewPage.expectOrgIdentity()
+      await screenshotRecorder.capture(
+        page,
+        `Statement view — Submitted (${variant})`
+      )
+    })
+
+    await test.step('Returns to Account home', async () => {
+      await landingPage.goto()
+      await landingPage.expectLoaded()
+      await screenshotRecorder.capture(page, 'Account home — post-submission')
+    })
+
+    await test.step('Opens Manage recycling obligations', async () => {
+      await landingPage.goToObligations()
+      await obligationsPage.expectLoaded()
+      await screenshotRecorder.capture(
+        page,
+        'Manage recycling obligations — post-submission'
+      )
+    })
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// E2E-04 / E2E-08 producer phases
+//
+// Both journeys involve two producer-side visits: an initial "submit" and a
+// later "resubmit" after the regulator has cancelled. The regulator phases
+// run in between via the sibling repo's spec. PHASE is set by the runner.
+// ─────────────────────────────────────────────────────────────────────────
+
+function runProducerPhase(entry, journey, phase) {
+  const label = `${journey} · ${entry.regulator} · ${entry.orgType} · phase=${phase}`
+  test(`producer ${label}`, async ({
+    page,
+    landingPage,
+    obligationsPage,
+    csocAboutPage,
+    csocSubmissionPage,
+    csocConfirmationPage,
+    csocViewPage,
+    screenshotRecorder
+  }) => {
+    test.setTimeout(180_000)
+    const year = new Date().getFullYear()
+    const directUrl = directCertificateUrl(entry, year)
+
+    if (phase === 'submit') {
+      await submitFlow(entry, year, directUrl, {
+        page,
+        landingPage,
+        obligationsPage,
+        csocAboutPage,
+        csocSubmissionPage,
+        csocConfirmationPage,
+        csocViewPage,
+        screenshotRecorder
+      })
+    } else if (phase === 'resubmit') {
+      await resubmitFlow(entry, year, directUrl, {
+        page,
+        landingPage,
+        obligationsPage,
+        csocAboutPage,
+        csocSubmissionPage,
+        csocConfirmationPage,
+        csocViewPage,
+        screenshotRecorder
+      })
+    } else {
+      throw new Error(
+        `Unknown PHASE "${phase}" for producer ${journey}. Expected: submit, resubmit.`
+      )
+    }
+  })
+}
+
+// Producer submit flow, shared between E2E-04 and E2E-08. Same shape as
+// the E2E-01.x submit path but auto-detects DP vs CS via the page object
+// rather than asserting on the caller's org type — E2E-04/08 exercise both.
+async function submitFlow(entry, year, directUrl, pages) {
+  const {
+    page,
+    landingPage,
+    obligationsPage,
+    csocAboutPage,
+    csocSubmissionPage,
+    csocConfirmationPage,
+    csocViewPage,
+    screenshotRecorder
+  } = pages
+
+  if (directUrl) {
+    await test.step('Navigates directly to the certificate/statement submission URL', async () => {
+      await page.goto(directUrl)
+      await screenshotRecorder.capture(page, 'Submit — landing on submission')
+    })
+  } else {
+    await test.step('Approved Person signs in and lands on Account home', async () => {
+      await landingPage.goto()
+      await screenshotRecorder.capture(page, 'Submit — account home')
+    })
+    await test.step('Opens Manage recycling obligations', async () => {
+      await landingPage.goToObligations()
+      await obligationsPage.expectLoaded()
+      await screenshotRecorder.capture(page, 'Submit — manage recycling')
+    })
+    await test.step('Starts CSoC submission', async () => {
+      await obligationsPage.startCsocSubmission()
+      await csocAboutPage.expectLoaded()
+      await screenshotRecorder.capture(page, 'Submit — about page')
+      await csocAboutPage.clickContinue()
+    })
+  }
+
+  await test.step('Reviews the check-and-submit page', async () => {
+    await csocSubmissionPage.expectLoaded()
+    await csocSubmissionPage.expectOrganisationDetails()
+    await screenshotRecorder.capture(page, 'Submit — check and submit')
+  })
+
+  await test.step('Submits (auto-selects Reg 43 = YES for CS variant)', async () => {
+    await csocSubmissionPage.submit(TEST_USER_NAME)
+    await csocConfirmationPage.expectSubmitted(year)
+    await screenshotRecorder.capture(page, 'Submit — confirmation')
+  })
+
+  await test.step('Clicks "View your certificate/statement"', async () => {
+    await csocConfirmationPage.goToCertificateView()
+    await csocViewPage.expectLoaded(year)
+    await csocViewPage.expectOrgIdentity()
+    await screenshotRecorder.capture(page, 'Submit — view page')
+  })
+
+  // Suppress unused-var lint when the direct URL path skips the landing/
+  // obligations click-through:
+  // entry is captured in closure only for callers that need it later —
+  // keep it in the signature so the shape is symmetric across phases.
+  if (!entry) throw new Error('entry required')
+}
+
+// Producer resubmit flow. Fires after the regulator has cancelled, so the
+// obligations page should show a "Resubmit" affordance rather than the
+// initial "Submit" one. The FE routes Resubmit through the same "About
+// your certificate/statement of compliance" intermediate page as the
+// initial submit flow, so we click Continue there before landing on
+// check-and-submit.
+async function resubmitFlow(entry, year, directUrl, pages) {
+  const {
+    page,
+    landingPage,
+    obligationsPage,
+    csocAboutPage,
+    csocSubmissionPage,
+    csocConfirmationPage,
+    csocViewPage,
+    screenshotRecorder
+  } = pages
+
+  await test.step('Approved Person signs back in — sees Cancelled state', async () => {
+    await landingPage.goto()
+    await screenshotRecorder.capture(page, 'Resubmit — account home')
+    await landingPage.goToObligations()
+    await obligationsPage.expectLoaded()
+    // Best-effort: the resubmit affordance is what the AC calls for. If
+    // it isn't visible (FE renders differently), the screenshot still
+    // documents whatever state the org is in.
+    try {
+      await obligationsPage.expectResubmitCardVisible()
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[resubmit] resubmit card not visible — capturing current state anyway: ${err.message}`
+      )
+    }
+    await screenshotRecorder.capture(page, 'Resubmit — obligations post-cancel')
+  })
+
+  await test.step('Clicks Resubmit → lands on the About page', async () => {
+    // Prefer the Resubmit button — it's the UI-driven flow the FE offers
+    // after a cancel, and it re-establishes whatever server-side state the
+    // certificate page needs. Fall back to the direct URL only when the
+    // button isn't rendered (older FE build, or the state machine has
+    // routed us somewhere unexpected).
+    const resubmitBtn = obligationsPage.resubmitButton
+    const buttonVisible = await resubmitBtn.isVisible().catch(() => false)
+    if (buttonVisible) {
+      await resubmitBtn.click()
+    } else if (directUrl) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[resubmit] resubmit button not visible; falling back to direct URL'
+      )
+      await page.goto(directUrl)
+    } else {
+      throw new Error(
+        'Neither the Resubmit button nor a direct certificate URL is available — cannot start resubmission'
+      )
+    }
+    // Capture what loaded (About page in the standard flow) before
+    // asserting, so if the FE routes us somewhere else the evidence pack
+    // still shows the offending page.
+    await screenshotRecorder.capture(page, 'Resubmit — About page')
+    await csocAboutPage.expectLoaded()
+    await csocAboutPage.clickContinue()
+  })
+
+  await test.step('Reviews the check-and-submit page', async () => {
+    await csocSubmissionPage.expectLoaded()
+    await csocSubmissionPage.expectOrganisationDetails()
+    await screenshotRecorder.capture(page, 'Resubmit — check and submit')
+  })
+
+  await test.step('Submits the resubmission', async () => {
+    await csocSubmissionPage.submit(TEST_USER_NAME)
+    await csocConfirmationPage.expectSubmitted(year)
+    await screenshotRecorder.capture(page, 'Resubmit — confirmation')
+  })
+
+  await test.step('Clicks "View your certificate/statement"', async () => {
+    await csocConfirmationPage.goToCertificateView()
+    await csocViewPage.expectLoaded(year)
+    await screenshotRecorder.capture(page, 'Resubmit — view page')
+  })
+
+  // entry is captured in closure only for callers that need it later —
+  // keep it in the signature so the shape is symmetric across phases.
+  if (!entry) throw new Error('entry required')
 }

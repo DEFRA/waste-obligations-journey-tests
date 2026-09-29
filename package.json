@@ -27,6 +27,7 @@
     "test:accessibility": "PROFILE=accessibility playwright test",
     "test:security": "PROFILE=security playwright test",
     "test:csoc-e2e": "node .claude/skills/csoc-e2e/runner.mjs",
+    "test:unsubmitted-orgs": "node .claude/skills/unsubmitted-orgs/runner.mjs",
     "test:local:e2e": "PROFILE=e2e playwright test --config=playwright.local.config.js --headed",
     "test:local:accessibility": "PROFILE=accessibility playwright test --config=playwright.local.config.js --headed",
     "test:local:security": "PROFILE=security playwright test --config=playwright.local.config.js --headed",
@@ -45,7 +46,7 @@
   },
   "dependencies": {
     "@axe-core/playwright": "4.12.1",
-    "@playwright/test": "1.59.1",
+    "@playwright/test": "1.63.0",
     "allure-commandline": "2.34.1",
     "allure-playwright": "3.3.2",
     "docx": "9.5.0",

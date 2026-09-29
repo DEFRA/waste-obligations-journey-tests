@@ -2,6 +2,7 @@ import { test as setup, expect } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { requireEnv } from '../utils/env.js'
+import { establishProxySession } from '../utils/proxy-session.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'cso.json')
@@ -29,6 +30,8 @@ setup('authenticate cso', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: 'Account home -' })
   ).toBeVisible({ timeout: 60_000 })
+
+  await establishProxySession(page)
 
   await page.context().storageState({ path: authFile })
 })

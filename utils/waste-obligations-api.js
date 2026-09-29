@@ -1,5 +1,12 @@
+import { randomUUID } from 'node:crypto'
 import { DECLARATION_STATUS } from '../data/csoc.data.js'
 import { requireEnv } from './env.js'
+
+// GUID matcher used by getSubmitterUser to guard against placeholder env
+// values ("replace-me") that would otherwise leak into request payloads
+// and trigger a backend 400 on User.Id validation.
+const GUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export function getBackendBaseUrl() {
   if (process.env.WASTE_OBLIGATIONS_BACKEND_URL) {
@@ -40,19 +47,35 @@ export function getJourneyAuthHeader() {
 }
 
 export function getSubmitterUser() {
+  const rawId = process.env.WASTE_OBLIGATION_SUBMITTER_ID
+  const rawEmail = process.env.WASTE_OBLIGATION_SUBMITTER_EMAIL
+  // Fall back to a fresh random GUID when the env value is missing or a
+  // placeholder — the backend rejects non-GUID user.id with a 400 on both
+  // create and patch. Same guard for email so a "replace-me" default
+  // doesn't break payload validation.
   return {
     name: 'Journey-test submitter',
-    id: requireEnv('WASTE_OBLIGATION_SUBMITTER_ID'),
-    email: requireEnv('WASTE_OBLIGATION_SUBMITTER_EMAIL')
+    id: rawId && GUID_RE.test(rawId) ? rawId : randomUUID(),
+    email:
+      rawEmail && rawEmail.includes('@') ? rawEmail : 'journey-test@example.com'
   }
 }
 
 function buildHeaders(authHeader) {
-  return {
+  const headers = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
     Authorization: authHeader
   }
+  // The CDP protected gateway (tst/dev) requires an x-api-key header
+  // alongside the Basic Auth. Local-to-service runs don't set it and the
+  // service ignores it. Adding it unconditionally when the env var is
+  // present keeps every declarations-API caller (list/patch/delete)
+  // gateway-compatible without a per-callsite change.
+  if (process.env.WASTE_OBLIGATIONS_API_KEY) {
+    headers['x-api-key'] = process.env.WASTE_OBLIGATIONS_API_KEY
+  }
+  return headers
 }
 
 export async function listDeclarations(request, orgId, obligationYear) {

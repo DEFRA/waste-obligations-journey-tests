@@ -27,11 +27,13 @@ const PROFILE_IGNORE = {
   accessibility: [
     '**/csoc-submission*.spec.js',
     '**/csoc-e2e-journey.spec.js',
+    '**/unsubmitted-organisations-*.spec.js',
     '**/security.spec.js'
   ],
   security: [
     '**/csoc-submission*.spec.js',
     '**/csoc-e2e-journey.spec.js',
+    '**/unsubmitted-organisations-*.spec.js',
     '**/accessibility.spec.js'
   ]
 }
