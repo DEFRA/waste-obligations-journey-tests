@@ -1,7 +1,7 @@
 export const TEST_GTM_KEY = 'GTM-TEST0001'
 export const TEST_MEASUREMENT_ID = 'G-TEST000001'
 export const TEST_GA4_COOKIE_NAME = `_ga_${TEST_MEASUREMENT_ID.slice(2)}`
-export const CONSENT_COOKIE_NAME = 'waste_obligations_cookie_policy'
+export const CONSENT_COOKIE_NAME = '.waste_obligations_cookie_policy'
 
 export function ga4CookieNameFromMeasurementId(measurementId) {
   const value = String(measurementId ?? '').trim()
