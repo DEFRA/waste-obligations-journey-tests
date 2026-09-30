@@ -12,17 +12,42 @@ export class PrnsListPage extends BasePage {
     this.clearAllLink = page.locator('#clearSortFilter')
   }
 
-  // Reads the material column for every currently rendered row. Used to
-  // assert a material filter actually narrows the list, without depending
-  // on which specific PRNs are seeded in a given environment.
-  async readRowMaterials() {
-    return this.page
+  // Reads the sortable values of every rendered row, excluding names and
+  // free-text notes. Dates are parsed from the rendered "dd MMM yyyy" text.
+  async readPrnRows() {
+    const rows = await this.page
       .locator('table.app-prns-table tbody tr')
       .evaluateAll((rows) =>
-        rows.map(
-          (row) => row.querySelectorAll('td')[1]?.textContent?.trim() || ''
-        )
+        rows.map((row) => {
+          const cells = row.querySelectorAll('td')
+          return {
+            number: cells[0]?.querySelector('a')?.textContent?.trim() || '',
+            material: cells[1]?.textContent?.trim() || '',
+            issuedAt: cells[2]?.textContent?.trim() || '',
+            tonnage: cells[5]?.textContent?.trim() || ''
+          }
+        })
       )
+    return rows.map((row) => ({
+      ...row,
+      issuedAtTime: Date.parse(`${row.issuedAt} UTC`),
+      tonnageValue: Number(row.tonnage.replaceAll(',', ''))
+    }))
+  }
+
+  // Returns { from, to, total } from "Showing 1 to 3 of 3", or null when the
+  // summary is absent because no PRNs are listed.
+  async readResultsSummary() {
+    const pattern = /Showing (\d[\d,]*) to (\d[\d,]*) of (\d[\d,]*)/
+    const summary = this.page.getByText(pattern)
+    if ((await summary.count()) === 0) {
+      return null
+    }
+    const [from, to, total] = (await summary.first().textContent())
+      .match(pattern)
+      .slice(1)
+      .map((value) => Number(value.replaceAll(',', '')))
+    return { from, to, total }
   }
 
   async selectSort(label) {
