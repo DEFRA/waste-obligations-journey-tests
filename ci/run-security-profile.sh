@@ -54,7 +54,7 @@ exclude_third_parties() {
     '.*b2clogin\.com.*' \
     '.*login\.microsoftonline\.com.*' \
     '.*microsoftonline\.com.*' \
-    '.*blob\.core\.windows\.net.*',
+    '.*\.blob\.core\.windows\.net/b2c-styling-files/.*'
   do
     response=$(curl --silent --fail --get \
       --data-urlencode "regex=${pattern}" \
