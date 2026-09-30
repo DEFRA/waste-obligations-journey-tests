@@ -53,7 +53,8 @@ exclude_third_parties() {
   for pattern in \
     '.*b2clogin\.com.*' \
     '.*login\.microsoftonline\.com.*' \
-    '.*microsoftonline\.com.*'
+    '.*microsoftonline\.com.*' \
+    '.*blob\.core\.windows\.net.*',
   do
     response=$(curl --silent --fail --get \
       --data-urlencode "regex=${pattern}" \
