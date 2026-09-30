@@ -32,7 +32,8 @@ test.describe('Producer PRNs list (DP)', () => {
     landingPage,
     chooseYearPage,
     obligationsPage,
-    prnsListPage
+    prnsListPage,
+    prnPage
   }) => {
     skipUnlessPrnsConfigured()
 
@@ -151,6 +152,16 @@ test.describe('Producer PRNs list (DP)', () => {
         ).toBeDefined()
         await prnsListPage.expectPrnSelectable(selectablePrn)
         await prnsListPage.expectAcceptSelectedButtonVisible()
+      })
+      await test.step('open the seeded PRN from its number link', async () => {
+        await prnsListPage.openPrn(expectedPrn)
+        await expect(page).toHaveURL(
+          (url) =>
+            url.pathname.endsWith(
+              `/producer/${getOrgId('dp')}/prns/${expectedPrn.id}`
+            ) && url.searchParams.get('year') === String(YEAR)
+        )
+        await prnPage.expectLoadedForAwaitingPrn(expectedPrn)
       })
     } else {
       await test.step('report deployed PRN data (diagnostic only)', async () => {
