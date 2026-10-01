@@ -49,6 +49,23 @@ test.describe('Cookie banner and cookies page', () => {
     await expect(
       page.locator('script[src*="googletagmanager.com"]')
     ).toHaveCount(0)
+    expect(await getDataLayerEntries(page)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'arguments',
+          values: [
+            'consent',
+            'default',
+            expect.objectContaining({
+              analytics_storage: 'denied',
+              ad_storage: 'denied',
+              ad_user_data: 'denied',
+              ad_personalization: 'denied'
+            })
+          ]
+        })
+      ])
+    )
 
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
 
@@ -60,14 +77,26 @@ test.describe('Cookie banner and cookies page', () => {
         page.locator(`script[src*="gtm.js?id=${gtmKey}"]`)
       ).toHaveCount(1)
     }
-    if (measurementId) {
-      await expect(
-        page.locator(`script[src*="gtag/js?id=${measurementId}"]`)
-      ).toHaveCount(1)
-    }
+    // GTM takes precedence: gtag.js is only loaded directly without a GTM key
+    await expect(page.locator('script[src*="gtag/js?id="]')).toHaveCount(
+      !gtmKey && measurementId ? 1 : 0
+    )
 
     const dataLayer = await getDataLayerEntries(page)
-    if (measurementId) {
+    expect(dataLayer).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'arguments',
+          values: ['consent', 'update', { analytics_storage: 'granted' }]
+        })
+      ])
+    )
+    if (gtmKey) {
+      expect(
+        dataLayer.filter((entry) => entry.values?.event === 'gtm.js')
+      ).toHaveLength(1)
+    }
+    if (!gtmKey && measurementId) {
       expect(dataLayer).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -154,7 +183,8 @@ test.describe('Cookie banner and cookies page', () => {
     page
   }) => {
     await openPublicFrontend(page, '/signed-out')
-    const { measurementId, ga4CookieName } = await readAnalyticsIds(page)
+    const { gtmKey, measurementId, ga4CookieName } =
+      await readAnalyticsIds(page)
     await page.getByRole('button', { name: 'Accept analytics cookies' }).click()
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
@@ -175,7 +205,11 @@ test.describe('Cookie banner and cookies page', () => {
     expect(await readConsentPolicyFromPage(page)).toEqual(
       expect.objectContaining({ confirmed: true, analytics: true })
     )
-    if (measurementId) {
+    if (gtmKey) {
+      await expect(
+        page.locator(`script[src*="gtm.js?id=${gtmKey}"]`)
+      ).toHaveCount(1)
+    } else if (measurementId) {
       await expect(
         page.locator(`script[src*="gtag/js?id=${measurementId}"]`)
       ).toHaveCount(1)
