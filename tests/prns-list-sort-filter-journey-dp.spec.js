@@ -140,4 +140,64 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
     expect(new URL(page.url()).searchParams.get('material')).toBe('Aluminium')
     await expect(prnsListPage.materialSelect).toBeFocused()
   })
+
+  // Changing a select disables the other one for the duration of the reload
+  // it triggers, so a user can't act on stale controls mid-navigation. Delay
+  // the resulting request so the mid-flight disabled state is reliably
+  // observable rather than racing a reload that might already have landed.
+  test('disables the material filter while a sort change reloads the page, then re-enables it', async ({
+    page,
+    prnsListPage
+  }) => {
+    skipUnlessPrnsConfigured()
+
+    await openProducerPrnsList({ page, prnsListPage }, YEAR)
+
+    await page.route(
+      (url) => url.searchParams.get('sort') === 'TonnageDescending',
+      async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        await route.continue()
+      }
+    )
+
+    await prnsListPage.sortSelect.selectOption({
+      label: 'Tonnage: (heaviest first)'
+    })
+
+    await expect(prnsListPage.materialSelect).toBeDisabled()
+
+    await page.waitForURL(
+      (url) => url.searchParams.get('sort') === 'TonnageDescending'
+    )
+    await prnsListPage.expectLoaded()
+    await expect(prnsListPage.materialSelect).toBeEnabled()
+  })
+
+  test('disables the sort control while a material filter change reloads the page, then re-enables it', async ({
+    page,
+    prnsListPage
+  }) => {
+    skipUnlessPrnsConfigured()
+
+    await openProducerPrnsList({ page, prnsListPage }, YEAR)
+
+    await page.route(
+      (url) => url.searchParams.get('material') === 'Aluminium',
+      async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        await route.continue()
+      }
+    )
+
+    await prnsListPage.materialSelect.selectOption({ label: 'Aluminium' })
+
+    await expect(prnsListPage.sortSelect).toBeDisabled()
+
+    await page.waitForURL(
+      (url) => url.searchParams.get('material') === 'Aluminium'
+    )
+    await prnsListPage.expectLoaded()
+    await expect(prnsListPage.sortSelect).toBeEnabled()
+  })
 })
