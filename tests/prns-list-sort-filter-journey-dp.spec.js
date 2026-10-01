@@ -103,4 +103,41 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
       expect(url.searchParams.get('material')).toBeNull()
     })
   })
+
+  // Changing either select auto-submits a full-page GET. A keyboard user
+  // must keep their place across that reload rather than having focus reset
+  // to the top of the new document.
+  test('keyboard users can select a sort option and retain focus', async ({
+    page,
+    prnsListPage
+  }) => {
+    skipUnlessPrnsConfigured()
+
+    await openProducerPrnsList({ page, prnsListPage }, YEAR)
+
+    await prnsListPage.sortSelect.focus()
+    await prnsListPage.selectSort('Tonnage: (heaviest first)')
+
+    await expect(prnsListPage.sortSelect).toHaveValue('TonnageDescending')
+    expect(new URL(page.url()).searchParams.get('sort')).toBe(
+      'TonnageDescending'
+    )
+    await expect(prnsListPage.sortSelect).toBeFocused()
+  })
+
+  test('keyboard users can select a material filter and retain focus', async ({
+    page,
+    prnsListPage
+  }) => {
+    skipUnlessPrnsConfigured()
+
+    await openProducerPrnsList({ page, prnsListPage }, YEAR)
+
+    await prnsListPage.materialSelect.focus()
+    await prnsListPage.selectMaterial('Aluminium')
+
+    await expect(prnsListPage.materialSelect).toHaveValue('Aluminium')
+    expect(new URL(page.url()).searchParams.get('material')).toBe('Aluminium')
+    await expect(prnsListPage.materialSelect).toBeFocused()
+  })
 })
