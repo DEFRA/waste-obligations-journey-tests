@@ -48,6 +48,7 @@ export class PrnsListPage extends BasePage {
     this.heading = page.getByRole('heading', {
       name: /^accept or reject prns and perns/i
     })
+
     this.sortSelect = page.locator('#sort')
     this.materialSelect = page.locator('#filter')
     this.clearAllLink = page.locator('#clearSortFilter')
@@ -140,6 +141,22 @@ export class PrnsListPage extends BasePage {
         row.getByRole('cell', { name: value, exact: true })
       ).toBeVisible()
     }
+  }
+
+  async expectPrnSelectable(prn) {
+    const numberLink = this.page.getByRole('link', {
+      name: prn.number,
+      exact: true
+    })
+    const row = this.page.getByRole('row').filter({ has: numberLink })
+    // The label is visually-hidden "Select <number>" plus the number link.
+    await expect(
+      row.getByRole('checkbox', { name: `Select ${prn.number}` })
+    ).toBeVisible()
+  }
+
+  async expectAcceptSelectedButtonVisible() {
+    await expect(this.acceptSelectedButton).toBeVisible()
   }
 
   async expectLoaded() {
