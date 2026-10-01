@@ -142,9 +142,20 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
   })
 
   // Changing a select disables the other one for the duration of the reload
-  // it triggers, so a user can't act on stale controls mid-navigation. Delay
-  // the resulting request so the mid-flight disabled state is reliably
-  // observable rather than racing a reload that might already have landed.
+  // it triggers, so a user can't act on stale controls mid-navigation.
+  //
+  // The disabled state only exists on the document that's about to be
+  // replaced, so it can't be checked after the fact: `expect(locator).
+  // toBeDisabled()` waits for any in-flight navigation to finish before
+  // checking (confirmed directly - it reports "enabled" once the reload has
+  // already landed), and even racing a deliberately delayed response against
+  // a plain `.isDisabled()` read is unreliable, because the browser can start
+  // discarding the old document before a delayed response arrives. Instead,
+  // capture the state synchronously inside the same change-event dispatch as
+  // the app's own handler (which runs first, since it was registered first,
+  // on page load) and persist it across the reload via sessionStorage - the
+  // same mechanism the app itself uses for focus restoration - then read it
+  // back once the new page has loaded.
   test('disables the material filter while a sort change reloads the page, then re-enables it', async ({
     page,
     prnsListPage
@@ -153,24 +164,28 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
 
     await openProducerPrnsList({ page, prnsListPage }, YEAR)
 
-    await page.route(
-      (url) => url.searchParams.get('sort') === 'TonnageDescending',
-      async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        await route.continue()
-      }
-    )
+    await page.evaluate(() => {
+      document.getElementById('sort').addEventListener('change', () => {
+        sessionStorage.setItem(
+          'test:materialDisabledOnSortChange',
+          String(document.getElementById('filter').disabled)
+        )
+      })
+    })
 
     await prnsListPage.sortSelect.selectOption({
       label: 'Tonnage: (heaviest first)'
     })
 
-    await expect(prnsListPage.materialSelect).toBeDisabled()
-
     await page.waitForURL(
       (url) => url.searchParams.get('sort') === 'TonnageDescending'
     )
     await prnsListPage.expectLoaded()
+
+    const capturedDisabled = await page.evaluate(() =>
+      sessionStorage.getItem('test:materialDisabledOnSortChange')
+    )
+    expect(capturedDisabled).toBe('true')
     await expect(prnsListPage.materialSelect).toBeEnabled()
   })
 
@@ -182,22 +197,26 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
 
     await openProducerPrnsList({ page, prnsListPage }, YEAR)
 
-    await page.route(
-      (url) => url.searchParams.get('material') === 'Aluminium',
-      async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        await route.continue()
-      }
-    )
+    await page.evaluate(() => {
+      document.getElementById('filter').addEventListener('change', () => {
+        sessionStorage.setItem(
+          'test:sortDisabledOnMaterialChange',
+          String(document.getElementById('sort').disabled)
+        )
+      })
+    })
 
     await prnsListPage.materialSelect.selectOption({ label: 'Aluminium' })
-
-    await expect(prnsListPage.sortSelect).toBeDisabled()
 
     await page.waitForURL(
       (url) => url.searchParams.get('material') === 'Aluminium'
     )
     await prnsListPage.expectLoaded()
+
+    const capturedDisabled = await page.evaluate(() =>
+      sessionStorage.getItem('test:sortDisabledOnMaterialChange')
+    )
+    expect(capturedDisabled).toBe('true')
     await expect(prnsListPage.sortSelect).toBeEnabled()
   })
 })
