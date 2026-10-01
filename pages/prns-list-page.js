@@ -1,6 +1,47 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
 
+export async function selectAndWaitForNavigation(
+  page,
+  select,
+  label,
+  paramName
+) {
+  const [targetValue, currentValue] = await Promise.all([
+    select.locator('option', { hasText: label }).getAttribute('value'),
+    select.inputValue()
+  ])
+
+  if (targetValue === currentValue) {
+    await select.selectOption({ label })
+    return
+  }
+
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get(paramName) === targetValue),
+    select.selectOption({ label })
+  ])
+  await page.waitForLoadState('networkidle')
+}
+
+export async function clickAndWaitForNavigation(page, link) {
+  const targetUrl = new URL(
+    await link.getAttribute('href'),
+    page.url()
+  ).toString()
+
+  if (targetUrl === new URL(page.url()).toString()) {
+    await link.click()
+    return
+  }
+
+  await Promise.all([
+    page.waitForURL((url) => url.toString() === targetUrl),
+    link.click()
+  ])
+  await page.waitForLoadState('networkidle')
+}
+
 export class PrnsListPage extends BasePage {
   constructor(page) {
     super(page)
@@ -12,8 +53,6 @@ export class PrnsListPage extends BasePage {
     this.clearAllLink = page.locator('#clearSortFilter')
   }
 
-  // Reads the sortable values of every rendered row, excluding names and
-  // free-text notes. Dates are parsed from the rendered "dd MMM yyyy" text.
   async readPrnRows() {
     const rows = await this.page
       .locator('table.app-prns-table tbody tr')
@@ -51,24 +90,20 @@ export class PrnsListPage extends BasePage {
   }
 
   async selectSort(label) {
-    await Promise.all([
-      this.page.waitForLoadState('networkidle'),
-      this.sortSelect.selectOption({ label })
-    ])
+    await selectAndWaitForNavigation(this.page, this.sortSelect, label, 'sort')
   }
 
   async selectMaterial(label) {
-    await Promise.all([
-      this.page.waitForLoadState('networkidle'),
-      this.materialSelect.selectOption({ label })
-    ])
+    await selectAndWaitForNavigation(
+      this.page,
+      this.materialSelect,
+      label,
+      'material'
+    )
   }
 
   async clickClearAll() {
-    await Promise.all([
-      this.page.waitForLoadState('networkidle'),
-      this.clearAllLink.click()
-    ])
+    await clickAndWaitForNavigation(this.page, this.clearAllLink)
   }
 
   // Read only the list's operational values, excluding names and free-text notes.
