@@ -163,6 +163,11 @@ not change a shared environment's flags just to make a test pass.
   tonnages diagnostically, warning if unavailable; they do not require seeded
   PRNs. Page loading remains mandatory. Do not log names or free-text notes.
   No acceptance or rejection is performed.
+- The same fixture seeds several PRNs with distinct materials, dates and
+  tonnages, and answers each `filterBy`/`sortBy` query as the common backend
+  would. The sort/filter journey asserts filtered membership, each sort order
+  and clear-all restoration. Locally, too few rows to verify a check is a
+  failure; deployed runs record a warning annotation for each unverified check.
 - CSOC declarations are not restored from a snapshot. `resetOrgDeclarations`
   deletes the organisation's declarations for a year through the admin DELETE
   API. Specs that need a submitted certificate recreate it through the UI after

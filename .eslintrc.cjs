@@ -15,7 +15,14 @@ module.exports = {
   ],
   overrides: [
     {
+      // `page.evaluate()` callbacks in specs run in the browser, not Node;
+      // `window`/`document` are already tolerated by eslint-config-standard,
+      // but storage globals aren't.
       files: ['tests/**/*.js'],
+      globals: {
+        sessionStorage: true,
+        localStorage: true
+      },
       rules: {
         'no-unused-vars': 'off'
       }
