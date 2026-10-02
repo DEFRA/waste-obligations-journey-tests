@@ -49,6 +49,11 @@ test.describe('Cookie banner and cookies page', () => {
     await expect(
       page.locator('script[src*="googletagmanager.com"]')
     ).toHaveCount(0)
+    expect(
+      (await getDataLayerEntries(page)).some(
+        (entry) => entry.values?.event === 'gtm.js'
+      )
+    ).toBe(false)
     expect(await getDataLayerEntries(page)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -77,10 +82,11 @@ test.describe('Cookie banner and cookies page', () => {
         page.locator(`script[src*="gtm.js?id=${gtmKey}"]`)
       ).toHaveCount(1)
     }
-    // GTM takes precedence: gtag.js is only loaded directly without a GTM key
-    await expect(page.locator('script[src*="gtag/js?id="]')).toHaveCount(
-      !gtmKey && measurementId ? 1 : 0
-    )
+    if (measurementId) {
+      await expect(
+        page.locator(`script[src*="gtag/js?id=${measurementId}"]`)
+      ).toHaveCount(1)
+    }
 
     const dataLayer = await getDataLayerEntries(page)
     expect(dataLayer).toEqual(
@@ -92,11 +98,26 @@ test.describe('Cookie banner and cookies page', () => {
       ])
     )
     if (gtmKey) {
+      const indexOfEntry = (predicate) => dataLayer.findIndex(predicate)
+      const defaultAt = indexOfEntry(
+        (entry) =>
+          entry.values?.[0] === 'consent' && entry.values?.[1] === 'default'
+      )
+      const updateAt = indexOfEntry(
+        (entry) =>
+          entry.values?.[0] === 'consent' && entry.values?.[1] === 'update'
+      )
+      const startAt = indexOfEntry((entry) => entry.values?.event === 'gtm.js')
+
       expect(
         dataLayer.filter((entry) => entry.values?.event === 'gtm.js')
       ).toHaveLength(1)
+      // the grant must be queued before GTM's start event
+      expect(defaultAt).toBeGreaterThanOrEqual(0)
+      expect(defaultAt).toBeLessThan(updateAt)
+      expect(updateAt).toBeLessThan(startAt)
     }
-    if (!gtmKey && measurementId) {
+    if (measurementId) {
       expect(dataLayer).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -127,6 +148,14 @@ test.describe('Cookie banner and cookies page', () => {
     await expect(
       page.locator('script[src*="googletagmanager.com"]')
     ).toHaveCount(0)
+    expect(await getDataLayerEntries(page)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'arguments',
+          values: ['consent', 'update', { analytics_storage: 'denied' }]
+        })
+      ])
+    )
   })
 
   test('failed accept and reject XHRs save the selected preference and return to the page', async ({
@@ -209,7 +238,8 @@ test.describe('Cookie banner and cookies page', () => {
       await expect(
         page.locator(`script[src*="gtm.js?id=${gtmKey}"]`)
       ).toHaveCount(1)
-    } else if (measurementId) {
+    }
+    if (measurementId) {
       await expect(
         page.locator(`script[src*="gtag/js?id=${measurementId}"]`)
       ).toHaveCount(1)
