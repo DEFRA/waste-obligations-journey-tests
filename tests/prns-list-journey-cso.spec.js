@@ -7,7 +7,7 @@ import {
 import {
   getJourneyStartPath,
   usesPackagingEntryPoint,
-  getProducerPrnsUrl
+  getCsoPrnsUrl
 } from '../utils/journey-entry-point.js'
 import { logJourney } from '../utils/journey-log.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
@@ -25,7 +25,7 @@ const YEAR = 2026
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
-test.describe('Producer PRNs list (DP)', () => {
+test.describe('Compliance scheme PRNs list (CSO)', () => {
   test('log in and view the PRNs list for the requested year', async ({
     page,
     request,
@@ -45,7 +45,7 @@ test.describe('Producer PRNs list (DP)', () => {
     if (requirePrnData) {
       expectedPrn =
         await test.step('read the seeded PRN awaiting acceptance', async () => {
-          const prns = await listAwaitingPrns(request, getOrgId('dp'))
+          const prns = await listAwaitingPrns(request, getOrgId('cso'))
           selectablePrn = findStandardSelectablePrn(prns)
           expect(
             prns.length,
@@ -66,10 +66,10 @@ test.describe('Producer PRNs list (DP)', () => {
     }
 
     const packaging = usesPackagingEntryPoint()
-    const prnsUrl = getProducerPrnsUrl(YEAR)
+    const prnsUrl = getCsoPrnsUrl(YEAR)
     await test.step('open the entry point', async () => {
       await page.goto(
-        packaging ? getJourneyStartPath('dp', YEAR) : prnsUrl.toString(),
+        packaging ? getJourneyStartPath('cso', YEAR) : prnsUrl.toString(),
         { timeout: 60_000 }
       )
     })
@@ -77,11 +77,11 @@ test.describe('Producer PRNs list (DP)', () => {
       await skipUnlessPrnsSignInOffered(page)
     }
 
-    await test.step('sign in as the producer', async () => {
+    await test.step('sign in as the compliance scheme', async () => {
       await submitB2CCredentials(
         page,
-        requireEnv('EPR_USER_EMAIL'),
-        requireEnv('EPR_USER_PASSWORD')
+        requireEnv('EPR_CSO_USER_EMAIL'),
+        requireEnv('EPR_CSO_USER_PASSWORD')
       )
     })
 
@@ -124,8 +124,8 @@ test.describe('Producer PRNs list (DP)', () => {
       await skipUnlessPrnsSignInOffered(page)
       await submitB2CCredentialsIfNeeded(
         page,
-        requireEnv('EPR_USER_EMAIL'),
-        requireEnv('EPR_USER_PASSWORD')
+        requireEnv('EPR_CSO_USER_EMAIL'),
+        requireEnv('EPR_CSO_USER_PASSWORD')
       )
     } else {
       await reportSkippedSteps(
@@ -158,7 +158,7 @@ test.describe('Producer PRNs list (DP)', () => {
         await expect(page).toHaveURL(
           (url) =>
             url.pathname.endsWith(
-              `/producer/${getOrgId('dp')}/prns/${expectedPrn.id}`
+              `/cso/${getOrgId('cso')}/prns/${expectedPrn.id}`
             ) && url.searchParams.get('year') === String(YEAR)
         )
         await prnPage.expectLoadedForAwaitingPrn(expectedPrn)

@@ -60,6 +60,10 @@ export class PrnsListPage extends BasePage {
     ).toBeVisible()
   }
 
+  async openPrn(prn) {
+    await this.page.getByRole('link', { name: prn.number, exact: true }).click()
+  }
+
   async expectAcceptSelectedButtonVisible() {
     await expect(this.acceptSelectedButton).toBeVisible()
   }
