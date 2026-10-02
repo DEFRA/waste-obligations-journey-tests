@@ -167,7 +167,7 @@ The certificate-for-year and PRNs-list journeys sign in independently with `EPR_
 
 Journeys follow the flags configured for the runner. CI Compose, the CI action and each deployed env can differ. Explicit `false` skips that journey. A missing CSOC card, year tile, PRNs list, cookie banner or certificate page is a failure when the flag is not false.
 
-Cookie banner and GA assertions read the GTM and measurement IDs from the rendered page. CI Compose sets `GOOGLE_TAG_MANAGER_KEY=GTM-TEST0001` and `GOOGLE_ANALYTICS_MEASUREMENT_ID=G-TEST000001`. Deployed Dev and Test receive keys through CI/CD. The runner records that as `FEATURE_ANALYTICS`.
+Cookie banner and GA assertions read the GTM and measurement IDs from the rendered page. CI Compose sets `GOOGLE_TAG_MANAGER_KEY=GTM-TEST0001` and `GOOGLE_ANALYTICS_MEASUREMENT_ID=G-TEST000001`. When both are set the frontend loads GTM and gtag.js independently, and every page sends a denied Consent Mode default before the user chooses. Deployed Dev and Test receive keys through CI/CD. The runner records that as `FEATURE_ANALYTICS`.
 
 Shared backend admin credentials (`WASTE_OBLIGATION_USERNAME` / `WASTE_OBLIGATION_PASSWORD` / `JOURNEY_USER` / `JOURNEY_PASSWORD`) are tenant-agnostic and used for both accounts.
 
