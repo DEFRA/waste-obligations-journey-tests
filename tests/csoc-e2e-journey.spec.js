@@ -607,9 +607,15 @@ async function resubmitFlow(entry, year, directUrl, pages) {
         'Neither the Resubmit button nor a direct certificate URL is available — cannot start resubmission'
       )
     }
-    // Capture what loaded (About page in the standard flow) before
-    // asserting, so if the FE routes us somewhere else the evidence pack
-    // still shows the offending page.
+    // The click returns before the navigation lands, so give the About
+    // page time to render — capturing straight away produced a blank
+    // mid-navigation screenshot. Don't fail here: capture what loaded
+    // (About page in the standard flow) before asserting, so if the FE
+    // routes us somewhere else the evidence pack still shows the
+    // offending page.
+    await csocAboutPage.heading
+      .waitFor({ state: 'visible', timeout: 30_000 })
+      .catch(() => page.waitForLoadState('load').catch(() => {}))
     await screenshotRecorder.capture(page, 'Resubmit — About page')
     await csocAboutPage.expectLoaded()
     await csocAboutPage.clickContinue()

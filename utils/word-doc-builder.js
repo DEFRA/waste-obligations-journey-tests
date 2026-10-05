@@ -326,6 +326,191 @@ async function loadImageParagraphs(screenshotsDir) {
   return paragraphs
 }
 
+async function readJson(file) {
+  try {
+    return JSON.parse(await readFile(file, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+function headerRow(labels) {
+  return new TableRow({
+    tableHeader: true,
+    children: labels.map((label) =>
+      cell(
+        [
+          new Paragraph({
+            children: [new TextRun({ text: label, bold: true, size: 18 })]
+          })
+        ],
+        { fill: 'CFD8DC' }
+      )
+    )
+  })
+}
+
+function textCell(text, opts = {}) {
+  return cell(
+    [
+      new Paragraph({
+        children: [
+          new TextRun({ text: sanitizeText(text, { fallback: '—' }), size: 16 })
+        ]
+      })
+    ],
+    opts
+  )
+}
+
+const EMAIL_STATUS = {
+  RECEIVED: { label: 'RECEIVED', fill: STATUS_COLOR.passed },
+  NOT_FOUND: { label: 'NOT RECEIVED', fill: STATUS_COLOR.failed },
+  PENDING: { label: 'PENDING CAPTURE', fill: STATUS_COLOR.interrupted }
+}
+
+// Notification-email evidence. emails/expected.json (written by the CSoC
+// runner) lists every email the journey should have triggered; each
+// recipient's <file>.json is written when the email is captured from the
+// mailbox, and <file>.png is its rendered screenshot. Anything expected but
+// not captured is still listed so a gap is visible rather than silently
+// missing from the pack.
+async function loadEmailParagraphs(emailsDir) {
+  if (!emailsDir) return []
+  const expected = await readJson(path.join(emailsDir, 'expected.json'))
+  if (!Array.isArray(expected) || expected.length === 0) return []
+
+  const items = []
+  for (const entry of expected) {
+    for (const recipient of entry.recipients ?? []) {
+      const meta = await readJson(
+        path.join(emailsDir, `${recipient.file}.json`)
+      )
+      let status = 'PENDING'
+      if (meta) status = meta.status === 'NOT_FOUND' ? 'NOT_FOUND' : 'RECEIVED'
+      let png = null
+      try {
+        png = await readFile(path.join(emailsDir, `${recipient.file}.png`))
+      } catch {
+        png = null
+      }
+      items.push({ entry, recipient, meta, status, png })
+    }
+  }
+
+  const received = items.filter((i) => i.status === 'RECEIVED').length
+  const rows = items.map(
+    ({ entry, recipient, meta, status }) =>
+      new TableRow({
+        children: [
+          textCell(entry.trigger),
+          textCell(`${recipient.role}: ${recipient.address}`),
+          textCell(meta?.subject),
+          textCell(meta?.date),
+          cell(
+            [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: EMAIL_STATUS[status].label,
+                    bold: true,
+                    size: 18
+                  })
+                ]
+              })
+            ],
+            { fill: EMAIL_STATUS[status].fill }
+          )
+        ]
+      })
+  )
+
+  const paragraphs = [
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      children: [new TextRun('Notification emails')]
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `Emails: ${received}/${items.length} received`,
+          size: 20
+        })
+      ]
+    }),
+    new Paragraph({ children: [new TextRun('')] }),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        headerRow(['Trigger', 'Recipient', 'Subject', 'Received', 'Status']),
+        ...rows
+      ]
+    })
+  ]
+
+  let n = 0
+  for (const { entry, recipient, meta, status, png } of items) {
+    n += 1
+    paragraphs.push(new Paragraph({ children: [new PageBreak()] }))
+    paragraphs.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        children: [
+          new TextRun(
+            sanitizeText(`Email ${n}: ${entry.trigger} → ${recipient.role}`)
+          )
+        ]
+      })
+    )
+    if (png) {
+      paragraphs.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new ImageRun({
+              data: png,
+              transformation: fittedDimensions(png),
+              type: 'png'
+            })
+          ]
+        })
+      )
+    } else {
+      const reason =
+        status === 'NOT_FOUND'
+          ? `No email to ${recipient.address} found in the mailbox between ${entry.after} and ${entry.before}.`
+          : 'Email not yet captured from the mailbox.'
+      paragraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: sanitizeText(reason),
+              bold: true,
+              color: status === 'NOT_FOUND' ? 'C62828' : 'E65100',
+              size: 20
+            })
+          ]
+        })
+      )
+    }
+    const footer = [
+      meta?.messageId && `Gmail message id: ${meta.messageId}`,
+      meta?.query && `Search: ${meta.query}`,
+      meta?.error && `Error: ${meta.error}`
+    ].filter(Boolean)
+    for (const line of footer) {
+      paragraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: sanitizeText(line), italics: true, size: 16 })
+          ]
+        })
+      )
+    }
+  }
+  return paragraphs
+}
+
 function coverParagraphs({
   title,
   journey,
@@ -372,6 +557,7 @@ function coverParagraphs({
 export async function buildEvidenceDoc({
   screenshotsDir,
   transcriptsDir,
+  emailsDir,
   outputPath,
   journey,
   regulator,
@@ -392,16 +578,17 @@ export async function buildEvidenceDoc({
   const summary = summaryTableParagraphs(testResults)
   const transcripts = await loadTranscriptParagraphs(transcriptsDir)
   const images = await loadImageParagraphs(screenshotsDir)
+  const emails = await loadEmailParagraphs(emailsDir)
   // Transcripts first so security evidence leads with the raw HTTP proof;
-  // screenshots follow to demonstrate UI behaviour.
-  const body =
-    transcripts.length && images.length
-      ? [
-          ...transcripts,
-          new Paragraph({ children: [new PageBreak()] }),
-          ...images
-        ]
-      : [...transcripts, ...images]
+  // screenshots follow to demonstrate UI behaviour, then any notification
+  // emails the journey triggered.
+  const body = [transcripts, images, emails]
+    .filter((group) => group.length)
+    .flatMap((group, i) =>
+      i === 0
+        ? group
+        : [new Paragraph({ children: [new PageBreak()] }), ...group]
+    )
   const doc = new Document({
     creator: 'waste-obligations-journey-tests',
     title: `${title} — ${journey} ${regulator} ${orgType}`,
