@@ -33,7 +33,9 @@ test('backend authentication over HTTP', async (t) => {
     recyclingObligationsMet: true
   }
   let unsubmittedStatus = 200
-  let unsubmittedPages = [{ unsubmittedOrganisations: [unsubmittedRow], total: 1 }]
+  let unsubmittedPages = [
+    { unsubmittedOrganisations: [unsubmittedRow], total: 1 }
+  ]
   let tokenStatus = 200
   let rawTokenBody
   let tokenBody = { access_token: 'test-token' }
@@ -56,7 +58,9 @@ test('backend authentication over HTTP', async (t) => {
       assert.equal(query.get('pageSize'), '100')
       const page = Number(query.get('page'))
       res.statusCode = unsubmittedStatus
-      res.end(JSON.stringify({ ...unsubmittedPages[page - 1], page, pageSize: 100 }))
+      res.end(
+        JSON.stringify({ ...unsubmittedPages[page - 1], page, pageSize: 100 })
+      )
     } else {
       res.end(JSON.stringify({ complianceDeclarations: [] }))
     }

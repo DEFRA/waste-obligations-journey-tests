@@ -122,7 +122,11 @@ export async function listAwaitingPrns(request, orgId) {
   return body.prns
 }
 
-export async function getUnsubmittedOrganisation(request, orgId, obligationYear) {
+export async function getUnsubmittedOrganisation(
+  request,
+  orgId,
+  obligationYear
+) {
   const pageSize = 100
   for (let page = 1; ; page++) {
     const response = await request.get(
