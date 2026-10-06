@@ -106,8 +106,17 @@ function buildHeaders(authHeader) {
 
 // Match the browser list's default first-page AwaitingAcceptance query.
 export async function listAwaitingPrns(request, orgId) {
+  return listPrns(request, orgId, 'AwaitingAcceptance')
+}
+
+// The browser lists only awaiting PRNs, so accepted ones are found here.
+export async function listAcceptedPrns(request, orgId) {
+  return listPrns(request, orgId, 'Accepted')
+}
+
+async function listPrns(request, orgId, status) {
   const response = await request.get(
-    `${getBackendBaseUrl()}/organisations/${orgId}/prns?status=AwaitingAcceptance`,
+    `${getBackendBaseUrl()}/organisations/${orgId}/prns?status=${status}`,
     { headers: buildHeaders(await getAuthHeader()) }
   )
   if (!response.ok()) {

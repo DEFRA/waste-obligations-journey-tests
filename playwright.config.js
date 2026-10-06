@@ -26,6 +26,7 @@ const PROFILE_IGNORE = {
     '**/csoc-submission*.spec.js',
     '**/obligations-choose-year-dp.spec.js',
     '**/prns-list-journey-dp.spec.js',
+    '**/prn-accepted-view.spec.js',
     '**/cookies-banner.spec.js',
     '**/security.spec.js'
   ],
@@ -33,6 +34,7 @@ const PROFILE_IGNORE = {
     '**/csoc-submission*.spec.js',
     '**/obligations-choose-year-dp.spec.js',
     '**/prns-list-journey-dp.spec.js',
+    '**/prn-accepted-view.spec.js',
     '**/cookies-banner.spec.js',
     '**/accessibility.spec.js'
   ]

@@ -158,6 +158,19 @@ export function getJourneyViewPath(account, declarationId) {
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
 }
 
+// A single PRN page, for the producer or the compliance scheme.
+export function getPrnUrl(account, prnId, year) {
+  const path =
+    account === 'cso'
+      ? `/cso/${requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')}/prns/${prnId}`
+      : `/producer/${requireEnv('WASTE_OBLIGATION_ORG_ID')}/prns/${prnId}`
+
+  return wasteObligationsFrontendUrl(
+    path,
+    new URLSearchParams({ year: String(year) }).toString()
+  )
+}
+
 // The CDP PRNs destination is independent of any certificate navigation.
 export function getProducerPrnsUrl(year) {
   const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')

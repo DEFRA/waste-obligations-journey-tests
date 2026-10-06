@@ -276,6 +276,7 @@ runs:
         FEATURE_CSOC_ENABLED: 'true'
         FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS: 'false'
         FEATURE_SHOW_PRNS_ON_CDP: 'true'
+        FEATURE_MANAGE_OBLIGATIONS: 'false'
         FEATURE_ANALYTICS: 'true'
       run: PROFILE=e2e npx playwright test --project=${{ inputs.project }} --output=test-results/e2e
 
@@ -298,6 +299,7 @@ runs:
         FEATURE_CSOC_ENABLED: 'true'
         FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS: 'false'
         FEATURE_SHOW_PRNS_ON_CDP: 'true'
+        FEATURE_MANAGE_OBLIGATIONS: 'false'
         FEATURE_ANALYTICS: 'true'
       run: PROFILE=accessibility npx playwright test --project=${{ inputs.project }} --output=test-results/accessibility
 
@@ -320,6 +322,7 @@ runs:
         FEATURE_CSOC_ENABLED: 'true'
         FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS: 'false'
         FEATURE_SHOW_PRNS_ON_CDP: 'true'
+        FEATURE_MANAGE_OBLIGATIONS: 'false'
         FEATURE_ANALYTICS: 'true'
       run: ./ci/run-security-profile.sh ${{ inputs.project }}
 
