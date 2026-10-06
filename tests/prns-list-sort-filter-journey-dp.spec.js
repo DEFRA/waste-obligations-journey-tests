@@ -139,17 +139,10 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
 
         const rowMaterials = await prnsListPage.readRowMaterials()
 
-        if (rowMaterials.length > 0) {
-          verifyOrWarn(`filtered membership for ${material}`, {
-            sufficient: rowMaterials.length > 0,
-            verify: () => {
-              const allowed = FILTER_ROW_MATERIALS[material] ?? [material]
-              expect(
-                rowMaterials.filter((value) => !allowed.includes(value))
-              ).toEqual([])
-            }
-          })
-        }
+        const allowed = FILTER_ROW_MATERIALS[material] ?? [material]
+        expect(
+          rowMaterials.filter((value) => !allowed.includes(value))
+        ).toEqual([])
       })
 
       await test.step(`setting material=${material} url value updates filter list value`, async () => {
