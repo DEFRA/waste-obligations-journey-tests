@@ -1,4 +1,4 @@
-import { test } from '../fixtures/pages.fixture.js'
+import { test, expect } from '../fixtures/pages.fixture.js'
 import { TEST_USER_NAME } from '../data/csoc.data.js'
 import { requireEnv } from '../utils/env.js'
 import { submitB2CCredentials } from '../utils/login.js'
@@ -6,7 +6,10 @@ import {
   getJourneyStartPath,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
-import { getOrgId } from '../utils/waste-obligations-api.js'
+import {
+  getOrgId,
+  getUnsubmittedOrganisation
+} from '../utils/waste-obligations-api.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
 import {
   skipUnlessCsocEnabled,
@@ -38,6 +41,35 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
   }) => {
     test.setTimeout(180_000)
     skipUnlessCsocEnabled()
+    if (process.env.ENVIRONMENT === 'local') {
+      await test.step('check the hydrated Met/NoDataYet unsubmitted recycling status', async () => {
+        // The backend-owned CI fixture and normal pollers provide this case.
+        // Read it before submitting, while the reset year has no declaration.
+        await expect
+          .poll(
+            async () => {
+              const organisation = await getUnsubmittedOrganisation(
+                request,
+                getOrgId(ACCOUNT),
+                YEAR
+              )
+              return organisation?.recyclingObligationsMet
+            },
+            {
+              timeout: 60_000,
+              intervals: [1000],
+              message:
+                'The local DP 2026 Met/NoDataYet fixture must hydrate an eligible unsubmitted organisation with recyclingObligationsMet true.'
+            }
+          )
+          .toBe(true)
+      })
+    } else {
+      await reportSkippedSteps(
+        'Controlled Met/NoDataYet unsubmitted API assertion',
+        'The backend-owned synthetic calculation fixture is required only for ENVIRONMENT=local; deployed data does not verify this result'
+      )
+    }
     const packaging = usesPackagingEntryPoint()
     await test.step('open the entry point and sign in as the producer', async () => {
       await page.goto(getJourneyStartPath(ACCOUNT, YEAR), { timeout: 60_000 })

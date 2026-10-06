@@ -122,6 +122,39 @@ export async function listAwaitingPrns(request, orgId) {
   return body.prns
 }
 
+export async function getUnsubmittedOrganisation(request, orgId, obligationYear) {
+  const pageSize = 100
+  for (let page = 1; ; page++) {
+    const response = await request.get(
+      `${getBackendBaseUrl()}/compliance-declarations/unsubmitted?obligationYear=${obligationYear}&page=${page}&pageSize=${pageSize}`,
+      { headers: buildHeaders(await getAuthHeader()) }
+    )
+    if (!response.ok()) {
+      throw new Error(
+        `GET unsubmitted compliance-declarations failed: ${response.status()}`
+      )
+    }
+    const body = await response.json()
+    if (
+      !Array.isArray(body?.unsubmittedOrganisations) ||
+      !Number.isInteger(body.total) ||
+      body.total < 0
+    ) {
+      throw new Error(
+        'GET unsubmitted compliance-declarations returned an unexpected response shape'
+      )
+    }
+    const organisation = body.unsubmittedOrganisations.find(
+      (row) =>
+        typeof row.organisationId === 'string' &&
+        row.organisationId.toLowerCase() === orgId.toLowerCase() &&
+        row.obligationYear === obligationYear
+    )
+    if (organisation) return organisation
+    if (page * pageSize >= body.total) return undefined
+  }
+}
+
 export async function listDeclarations(request, orgId, obligationYear) {
   const response = await request.get(
     `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations?obligationYear=${obligationYear}`,

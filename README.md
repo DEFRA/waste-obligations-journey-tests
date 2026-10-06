@@ -165,6 +165,18 @@ Both `*.setup.js` files run unconditionally, producing `dp.json` and `cso.json`.
 
 The certificate-for-year and PRNs-list journeys sign in independently with `EPR_USER_EMAIL` / `EPR_USER_PASSWORD` from empty browser contexts. With the Packaging entry point, each explicitly navigates account home and selects a year when that tile is present. There is no snapshot restore of CSOC data: `resetOrgDeclarations` deletes the org's declarations for the year through the admin API, and the certificate-for-year scenario then submits a new certificate and views it. The PRNs scenario follows `FEATURE_SHOW_PRNS_ON_CDP` in Packaging mode (Azure Packaging `FeatureManagement__ShowPrnsOnCdp`): when that flag is on it clicks through from obligations to the CDP list; when it is off it opens the CDP PRNs URL directly. `FEATURE_SHOW_PRNS` on Waste Obligations frontend enables those CDP pages. Enable both together to connect the apps and show PRNs. Currently both are false on every deployed environment while the feature is in development. Cookie banner and GA tests also use the CDP frontend; they are public pages and do not go through Azure. `WASTE_OBLIGATIONS_FRONTEND_BASE_URL` is required in Packaging mode (public frontend/proxy base URL including any routing prefix) for PRNs, cookies and GA. In the pipeline, each scenario enters its own CDP destination through `EPR_BASE_URL`, omitting only its Azure steps. PRNs never visits or checks a certificate. These scenarios run in the E2E profile only.
 
+For `ENVIRONMENT=local`, the certificate-for-year journey also checks
+`GET /compliance-declarations/unsubmitted` before submitting the certificate.
+The backend-owned `compose/journey-tests/generate-wiremock-mappings.mjs` and
+`compose/journey-tests.compose.yml` must provide a registered, reference-resolved
+DP organisation for 2026, a calculation response containing `Met` and
+`NoDataYet` with no `NotMet`, and enabled normal eligibility/hydration pollers
+configured to make the row available within 60 seconds. The assertion requires
+`recyclingObligationsMet: true`; missing setup fails the local journey. Deployed
+runs report this controlled-fixture check as omitted and retain the certificate
+journey assertions. Combined service PR verification requires both selected
+backend and journey revisions; companion unit checks do not establish it.
+
 Journeys follow the flags configured for the runner. CI Compose, the CI action and each deployed env can differ. Explicit `false` skips that journey. A missing CSOC card, year tile, PRNs list, cookie banner or certificate page is a failure when the flag is not false.
 
 Cookie banner and GA assertions read the GTM and measurement IDs from the rendered page. CI Compose sets `GOOGLE_TAG_MANAGER_KEY=GTM-TEST0001` and `GOOGLE_ANALYTICS_MEASUREMENT_ID=G-TEST000001`. When both are set the frontend loads GTM and gtag.js independently, and every page sends a denied Consent Mode default before the user chooses. Deployed Dev and Test receive keys through CI/CD. The runner records that as `FEATURE_ANALYTICS`.

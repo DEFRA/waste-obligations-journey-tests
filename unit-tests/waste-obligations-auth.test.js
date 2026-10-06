@@ -5,6 +5,7 @@ import { request } from '@playwright/test'
 import {
   listDeclarations,
   listAwaitingPrns,
+  getUnsubmittedOrganisation,
   setDeclarationStatus,
   deleteDeclaration
 } from '../utils/waste-obligations-api.js'
@@ -26,6 +27,13 @@ test('backend authentication over HTTP', async (t) => {
   const calls = []
   let prnStatus = 200
   let prnBody = { prns: [{ number: 'PRN123' }] }
+  const unsubmittedRow = {
+    organisationId: 'org',
+    obligationYear: 2026,
+    recyclingObligationsMet: true
+  }
+  let unsubmittedStatus = 200
+  let unsubmittedPages = [{ unsubmittedOrganisations: [unsubmittedRow], total: 1 }]
   let tokenStatus = 200
   let rawTokenBody
   let tokenBody = { access_token: 'test-token' }
@@ -42,6 +50,13 @@ test('backend authentication over HTTP', async (t) => {
     ) {
       res.statusCode = prnStatus
       res.end(JSON.stringify(prnBody))
+    } else if (req.url.startsWith('/compliance-declarations/unsubmitted?')) {
+      const query = new URL(req.url, 'http://localhost').searchParams
+      assert.equal(query.get('obligationYear'), '2026')
+      assert.equal(query.get('pageSize'), '100')
+      const page = Number(query.get('page'))
+      res.statusCode = unsubmittedStatus
+      res.end(JSON.stringify({ ...unsubmittedPages[page - 1], page, pageSize: 100 }))
     } else {
       res.end(JSON.stringify({ complianceDeclarations: [] }))
     }
@@ -71,6 +86,10 @@ test('backend authentication over HTTP', async (t) => {
   })
   const exercise = async () => {
     assert.deepEqual(await listAwaitingPrns(api, 'org'), [{ number: 'PRN123' }])
+    assert.deepEqual(
+      await getUnsubmittedOrganisation(api, 'org', 2026),
+      unsubmittedRow
+    )
     await listDeclarations(api, 'org', 2026)
     await setDeclarationStatus(api, 'org', 'declaration', 'Accepted')
     await deleteDeclaration(api, 'declaration')
@@ -83,6 +102,7 @@ test('backend authentication over HTTP', async (t) => {
       assert.deepEqual(
         calls.map((call) => call.headers.authorization),
         [
+          'reader:reader-password',
           'reader:reader-password',
           'reader:reader-password',
           'reader:reader-password',
@@ -115,6 +135,83 @@ test('backend authentication over HTTP', async (t) => {
   })
 
   await t.test(
+    'unsubmitted read selects the requested organisation and year across pages',
+    async () => {
+      const validPages = unsubmittedPages
+      try {
+        unsubmittedPages = [
+          {
+            unsubmittedOrganisations: [
+              { ...unsubmittedRow, obligationYear: 2025 },
+              ...Array.from({ length: 99 }, () => ({
+                ...unsubmittedRow,
+                organisationId: 'other-org'
+              }))
+            ],
+            total: 101
+          },
+          { unsubmittedOrganisations: [unsubmittedRow], total: 101 }
+        ]
+        assert.deepEqual(
+          await getUnsubmittedOrganisation(api, 'ORG', 2026),
+          unsubmittedRow
+        )
+        for (const value of [false, null]) {
+          unsubmittedPages = [
+            {
+              unsubmittedOrganisations: [
+                { ...unsubmittedRow, recyclingObligationsMet: value }
+              ],
+              total: 1
+            }
+          ]
+          assert.equal(
+            (await getUnsubmittedOrganisation(api, 'org', 2026))
+              .recyclingObligationsMet,
+            value
+          )
+        }
+        unsubmittedPages = [{ unsubmittedOrganisations: [], total: 0 }]
+        assert.equal(
+          await getUnsubmittedOrganisation(api, 'org', 2026),
+          undefined
+        )
+      } finally {
+        unsubmittedPages = validPages
+      }
+    }
+  )
+
+  await t.test(
+    'unsubmitted read rejects failed or malformed responses',
+    async () => {
+      const validPages = unsubmittedPages
+      try {
+        unsubmittedStatus = 503
+        await assert.rejects(
+          getUnsubmittedOrganisation(api, 'org', 2026),
+          /GET unsubmitted compliance-declarations failed: 503/
+        )
+        unsubmittedStatus = 200
+        for (const body of [
+          { items: [], total: 0 },
+          { unsubmittedOrganisations: [] },
+          { unsubmittedOrganisations: [], total: -1 }
+        ]) {
+          unsubmittedPages = [body]
+          await assert.rejects(
+            getUnsubmittedOrganisation(api, 'org', 2026),
+            /unexpected response shape/
+          )
+        }
+      } finally {
+        unsubmittedStatus = 200
+        unsubmittedPages = validPages
+      }
+    }
+  )
+
+  await t.test(
     'OAuth uses form encoding and Bearer for every API operation without Basic credentials',
     async () => {
       calls.length = 0
@@ -133,7 +230,7 @@ test('backend authentication over HTTP', async (t) => {
       }
       await exercise()
       const tokens = calls.filter((call) => call.url === '/token')
-      assert.equal(tokens.length, 4)
+      assert.equal(tokens.length, 5)
       for (const call of tokens) {
         assert.equal(call.method, 'POST')
         assert.equal(call.headers['x-test-context'], undefined)
@@ -150,7 +247,7 @@ test('backend authentication over HTTP', async (t) => {
       const operations = calls.filter((call) => call.url !== '/token')
       assert.deepEqual(
         operations.map((call) => call.method),
-        ['GET', 'GET', 'PATCH', 'DELETE']
+        ['GET', 'GET', 'GET', 'PATCH', 'DELETE']
       )
       for (const call of operations)
         assert.equal(call.headers.authorization, 'Bearer test-token')
