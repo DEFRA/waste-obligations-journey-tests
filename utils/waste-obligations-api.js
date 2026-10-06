@@ -8,7 +8,8 @@ export function getBackendBaseUrl() {
   if (process.env.ENVIRONMENT === 'local') {
     return 'http://localhost:8007'
   }
-  const env = process.env.ENVIRONMENT === 'dev' ? 'dev' : 'tst'
+  // CDP names its environment "test"; "tst" is the Azure name (rwd-tst1).
+  const env = process.env.ENVIRONMENT === 'dev' ? 'dev' : 'test'
   return `https://waste-obligations.${env}.cdp-int.defra.cloud`
 }
 
