@@ -1,7 +1,5 @@
 import { test } from '../fixtures/pages.fixture.js'
 import { TEST_USER_NAME } from '../data/csoc.data.js'
-import { requireEnv } from '../utils/env.js'
-import { submitB2CCredentials } from '../utils/login.js'
 import {
   getJourneyStartPath,
   usesPackagingEntryPoint
@@ -20,12 +18,15 @@ import {
 const ACCOUNT = 'dp'
 const YEAR = 2026
 
-test.use({ storageState: { cookies: [], origins: [] } })
+// Reuses the setup project's session (login plus CDP proxy cookie). Signing in
+// from scratch here sends WebKit through the cross-origin redirect chain that
+// crashes Playwright's WebKit backend; see utils/proxy-session.js.
+test.use({ storageState: 'playwright/.auth/dp.json' })
 
 test.describe('Manage recycling obligations - certificate for a year (DP)', () => {
   test.beforeAll(() => resetOrgDeclarations(ACCOUNT, YEAR))
 
-  test('log in, submit and view the certificate of compliance for the requested year', async ({
+  test('submit and view the certificate of compliance for the requested year', async ({
     page,
     request,
     landingPage,
@@ -39,13 +40,8 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
     test.setTimeout(180_000)
     skipUnlessCsocEnabled()
     const packaging = usesPackagingEntryPoint()
-    await test.step('open the entry point and sign in as the producer', async () => {
+    await test.step('open the entry point as the signed-in producer', async () => {
       await page.goto(getJourneyStartPath(ACCOUNT, YEAR), { timeout: 60_000 })
-      await submitB2CCredentials(
-        page,
-        requireEnv('EPR_USER_EMAIL'),
-        requireEnv('EPR_USER_PASSWORD')
-      )
     })
 
     if (packaging) {
