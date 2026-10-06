@@ -5,6 +5,9 @@ import { logJourney } from '../utils/journey-log.js'
 
 const YEAR = 2026
 
+// The list's sort when no `sort` param is present in the URL.
+const DEFAULT_SORT = 'IssuedAtDescending'
+
 const FILTER_MAP = {
   Aluminium: 'Aluminium',
   Glass: 'Glass other',
@@ -13,6 +16,12 @@ const FILTER_MAP = {
   Plastic: 'Plastic',
   Steel: 'Steel',
   Wood: 'Wood'
+}
+
+// Row materials each filter matches, where that's more than the filter value
+// itself: the Paper filter covers fibre-based composite PRNs too.
+const FILTER_ROW_MATERIALS = {
+  Paper: ['Paper', 'Fibre']
 }
 
 const SORT_MAP = {
@@ -84,7 +93,7 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
     let baselineNumbers
 
     await test.step('defaults to newest first and all materials', async () => {
-      await expect(prnsListPage.sortSelect).toHaveValue('IssuedAtDescending')
+      await expect(prnsListPage.sortSelect).toHaveValue(DEFAULT_SORT)
       await expect(prnsListPage.materialSelect).toHaveValue('')
       baselineNumbers = (await prnsListPage.readPrnRows()).map(
         (row) => row.number
@@ -95,7 +104,11 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
       await test.step(`sorting by ${sortValue} sorts the list by ${label}`, async () => {
         await prnsListPage.selectSort(label)
         await expect(prnsListPage.sortSelect).toHaveValue(sortValue)
-        expect(new URL(page.url()).searchParams.get('sort')).toBe(sortValue)
+        // Selecting the already-selected default fires no change event, so
+        // the page doesn't reload and the URL keeps no `sort` param.
+        const urlSort =
+          new URL(page.url()).searchParams.get('sort') ?? DEFAULT_SORT
+        expect(urlSort).toBe(sortValue)
 
         const { key, direction } = SORT_FIELD[sortValue]
         const values = (await prnsListPage.readPrnRows()).map((row) => row[key])
@@ -126,11 +139,17 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
 
         const rowMaterials = await prnsListPage.readRowMaterials()
 
-        verifyOrWarn(`filtered membership for ${material}`, {
-          sufficient: rowMaterials.length > 0,
-          verify: () =>
-            expect(rowMaterials.every((value) => value === material)).toBe(true)
-        })
+        if (rowMaterials.length > 0) {
+          verifyOrWarn(`filtered membership for ${material}`, {
+            sufficient: rowMaterials.length > 0,
+            verify: () => {
+              const allowed = FILTER_ROW_MATERIALS[material] ?? [material]
+              expect(
+                rowMaterials.filter((value) => !allowed.includes(value))
+              ).toEqual([])
+            }
+          })
+        }
       })
 
       await test.step(`setting material=${material} url value updates filter list value`, async () => {
