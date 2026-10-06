@@ -90,14 +90,22 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
 
     await openAuthenticatedProducerPrnsList({ page, prnsListPage }, YEAR)
 
+    let baselineRows
     let baselineNumbers
+    let baselineComplete
 
     await test.step('defaults to newest first and all materials', async () => {
       await expect(prnsListPage.sortSelect).toHaveValue(DEFAULT_SORT)
       await expect(prnsListPage.materialSelect).toHaveValue('')
-      baselineNumbers = (await prnsListPage.readPrnRows()).map(
-        (row) => row.number
-      )
+      baselineRows = await prnsListPage.readPrnRows()
+      baselineNumbers = baselineRows.map((row) => row.number)
+      // Filtered results can only be checked against the baseline when it
+      // holds every PRN, not just the first page.
+      const summary = await prnsListPage.readResultsSummary()
+      baselineComplete =
+        summary === null
+          ? baselineRows.length === 0
+          : summary.total === baselineRows.length
     })
 
     for (const [sortValue, label] of Object.entries(SORT_MAP)) {
@@ -137,12 +145,29 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
         await expect(prnsListPage.materialSelect).toHaveValue(material)
         expect(new URL(page.url()).searchParams.get('material')).toBe(material)
 
-        const rowMaterials = await prnsListPage.readRowMaterials()
-
+        const rows = await prnsListPage.readPrnRows()
         const allowed = FILTER_ROW_MATERIALS[material] ?? [material]
+
         expect(
-          rowMaterials.filter((value) => !allowed.includes(value))
+          rows
+            .map((row) => row.material)
+            .filter((value) => !allowed.includes(value))
         ).toEqual([])
+
+        // Rejecting wrong materials alone passes on an empty list, so also
+        // require exactly the baseline's matching PRNs. An expected empty
+        // result (e.g. Wood in the CI fixture) is checked the same way.
+        verifyOrWarn(`filtered membership for ${material}`, {
+          sufficient: baselineComplete,
+          verify: () => {
+            const expected = baselineRows
+              .filter((row) => allowed.includes(row.material))
+              .map((row) => row.number)
+            expect(rows.map((row) => row.number).sort()).toEqual(
+              expected.sort()
+            )
+          }
+        })
       })
 
       await test.step(`setting material=${material} url value updates filter list value`, async () => {
