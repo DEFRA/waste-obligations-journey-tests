@@ -5,6 +5,7 @@ import {
   getJourneyStartPath,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
+import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
 
 export class ObligationsPage extends BasePage {
   constructor(page) {
@@ -78,6 +79,7 @@ export class ObligationsPage extends BasePage {
     await expect(action).toBeVisible()
     const href = await this.hrefFromAction(action)
     this.expectCsocActionHref(href)
+    await ensureProxySessionForWebKit(this.page, href)
     await Promise.all([
       this.page.waitForURL(/\/compliance\/(certificate|statement)(\/|\?|$)/, {
         waitUntil: 'domcontentloaded'

@@ -9,7 +9,7 @@ const ENTRY_POINTS = {
   'waste-obligations': {
     local: 'https://localhost:8015',
     dev: 'https://waste-obligations.dev.cdp-int.defra.cloud',
-    tst: 'https://waste-obligations.tst.cdp-int.defra.cloud'
+    tst: 'https://waste-obligations.test.cdp-int.defra.cloud'
   }
 }
 

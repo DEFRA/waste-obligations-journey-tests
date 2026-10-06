@@ -24,6 +24,33 @@ function signInUrl(account) {
   )
 }
 
+// Specs that sign in inside the test (empty storageState) reach the handoff
+// without the proxy session from setup, so WebKit would hit the redirect chain
+// described below. Follow that chain with the context's request client, which
+// shares the browser's cookies, so the click that follows is a single hop.
+// Chromium projects still navigate the real chain; real Safari is unaffected.
+export async function ensureProxySessionForWebKit(page, href) {
+  if (page.context().browser()?.browserType().name() !== 'webkit') {
+    return
+  }
+
+  const { origin } = new URL(href)
+  const response = await page
+    .context()
+    .request.get(href, { maxRedirects: 10, timeout: 60_000 })
+  const landed = new URL(response.url())
+  if (
+    !response.ok() ||
+    landed.origin !== origin ||
+    landed.pathname.endsWith('/signin-oidc')
+  ) {
+    throw new Error(
+      `No proxy session before the CSoC handoff: ended on ${landed.origin}${landed.pathname} ` +
+        `(HTTP ${response.status()}). The WebKit click would go through the B2C redirect chain.`
+    )
+  }
+}
+
 // The CSoC handoff leaves the Azure frontend for the public CDP proxy, which
 // keeps its own session. Without a proxy session cookie the handoff bounces
 // proxy -> signin-oidc -> b2clogin -> proxy, and that chain of cross-site
