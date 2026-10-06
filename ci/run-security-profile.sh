@@ -21,7 +21,7 @@ elif [ "${ENVIRONMENT:-}" = "local" ]; then
 elif [ "${ENVIRONMENT:-}" = "dev" ]; then
   target_base_url=https://waste-obligations.dev.cdp-int.defra.cloud
 else
-  target_base_url=https://waste-obligations.tst.cdp-int.defra.cloud
+  target_base_url=https://waste-obligations.test.cdp-int.defra.cloud
 fi
 
 stop_zap() {
