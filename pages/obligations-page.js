@@ -5,6 +5,7 @@ import {
   getJourneyStartPath,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
+import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
 
 export class ObligationsPage extends BasePage {
   constructor(page) {
@@ -78,9 +79,13 @@ export class ObligationsPage extends BasePage {
     await expect(action).toBeVisible()
     const href = await this.hrefFromAction(action)
     this.expectCsocActionHref(href)
-    // Do not click: WebKit/Safari closes the page on Playwright clicks of the
-    // GOV.UK <a role="button"> handoff, so the fallback goto never runs.
-    await this.page.goto(href, { waitUntil: 'domcontentloaded' })
+    await ensureProxySessionForWebKit(this.page, href)
+    await Promise.all([
+      this.page.waitForURL(/\/compliance\/(certificate|statement)(\/|\?|$)/, {
+        waitUntil: 'domcontentloaded'
+      }),
+      action.click()
+    ])
     this.expectCsocActionHref(this.page.url())
   }
 
