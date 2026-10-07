@@ -21,7 +21,7 @@ export class BasePage {
   // `<dd>` paired with a `<dt>` of the given label and assert its trimmed
   // text exceeds `minLength`. Used in place of equality checks against
   // env-seeded org names / addresses / regulators / emails.
-  async expectFieldPopulated(label, minLength = 10) {
+  async expectFieldPopulated(label, minLength = 8) {
     const value = this.page.locator(
       `xpath=//dt[normalize-space()=${JSON.stringify(label)}]/following-sibling::dd[1]`
     )

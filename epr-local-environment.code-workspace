@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../epr-local-environment"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {}
+}
