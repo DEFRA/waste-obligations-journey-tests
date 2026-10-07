@@ -24,11 +24,11 @@ export class PrnPage extends BasePage {
         exact: true
       })
     ).toBeVisible()
-    await expect(
-      this.page.getByRole('button', {
-        name: `Reject this ${type}`,
-        exact: true
-      })
-    ).toBeVisible()
+    const rejectButton = this.page.getByRole('button', {
+      name: `Reject this ${type}`,
+      exact: true
+    })
+    await expect(rejectButton).toBeVisible()
+    await expect(rejectButton).toBeDisabled()
   }
 }
