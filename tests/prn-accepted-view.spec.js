@@ -64,7 +64,10 @@ for (const { account, label, storageState } of ACCOUNTS) {
       }
 
       await test.step('check the accepted confirmation view', async () => {
-        await prnPage.expectLoadedForAcceptedPrn(prn, { obligationsButton })
+        await prnPage.expectLoadedForAcceptedPrn(prn, {
+          account,
+          obligationsButton
+        })
       })
     })
   })

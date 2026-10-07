@@ -158,27 +158,46 @@ export function getJourneyViewPath(account, declarationId) {
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
 }
 
-// A single PRN page, for the producer or the compliance scheme.
-export function getPrnUrl(account, prnId, year) {
-  const path =
-    account === 'cso'
-      ? `/cso/${requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')}/prns/${prnId}`
-      : `/producer/${requireEnv('WASTE_OBLIGATION_ORG_ID')}/prns/${prnId}`
+// The CDP frontend's per-account root: /producer/{organisationId} for a direct
+// producer, /cso/{schemeId} for a compliance scheme.
+function accountBasePath(account) {
+  if (account === 'cso') {
+    return `/cso/${requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')}`
+  }
 
+  if (account === 'dp') {
+    return `/producer/${requireEnv('WASTE_OBLIGATION_ORG_ID')}`
+  }
+
+  throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
+}
+
+function accountUrl(account, path, year) {
   return wasteObligationsFrontendUrl(
-    path,
+    `${accountBasePath(account)}${path}`,
     new URLSearchParams({ year: String(year) }).toString()
   )
 }
 
+// A single PRN page, for the producer or the compliance scheme.
+export function getPrnUrl(account, prnId, year) {
+  return accountUrl(account, `/prns/${prnId}`, year)
+}
+
+// The PRNs list for a year, for the producer or the compliance scheme.
+export function getPrnsListUrl(account, year) {
+  return accountUrl(account, '/prns', year)
+}
+
+// The obligations progress page for a year, for the producer or the
+// compliance scheme.
+export function getObligationsUrl(account, year) {
+  return accountUrl(account, '/obligations', year)
+}
+
 // The CDP PRNs destination is independent of any certificate navigation.
 export function getProducerPrnsUrl(year) {
-  const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
-
-  return wasteObligationsFrontendUrl(
-    `/producer/${organisationId}/prns`,
-    new URLSearchParams({ year: String(year) }).toString()
-  )
+  return getPrnsListUrl('dp', year)
 }
 
 export function getCsoPrnsUrl(year) {

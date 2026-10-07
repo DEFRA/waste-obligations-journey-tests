@@ -1,5 +1,9 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import {
+  getObligationsUrl,
+  getPrnsListUrl
+} from '../utils/journey-entry-point.js'
 
 export class PrnPage extends BasePage {
   constructor(page) {
@@ -36,7 +40,7 @@ export class PrnPage extends BasePage {
   // towards, a green Accepted tag and the follow-on buttons. The obligations
   // button depends on the frontend's FEATURE_MANAGE_OBLIGATIONS, so the caller
   // passes true/false to assert it, or undefined to leave it unchecked.
-  async expectLoadedForAcceptedPrn(prn, { obligationsButton } = {}) {
+  async expectLoadedForAcceptedPrn(prn, { account, obligationsButton } = {}) {
     const type = prn.type === 'PERN' ? 'PERN' : 'PRN'
     const year = prn.obligationYear
     const tonnes = prn.tonnage === 1 ? '1 tonne' : `${prn.tonnage} tonnes`
@@ -68,9 +72,9 @@ export class PrnPage extends BasePage {
       exact: true
     })
     await expect(acceptMore).toBeVisible()
-    await expect(acceptMore).toHaveAttribute(
-      'href',
-      new RegExp(`/prns\\?year=${year}$`)
+    const acceptMoreHref = await acceptMore.getAttribute('href')
+    expect(new URL(acceptMoreHref, this.page.url()).href).toBe(
+      getPrnsListUrl(account, year).href
     )
 
     if (obligationsButton === undefined) return
@@ -80,9 +84,9 @@ export class PrnPage extends BasePage {
     })
     if (obligationsButton) {
       await expect(obligations).toBeVisible()
-      await expect(obligations).toHaveAttribute(
-        'href',
-        new RegExp(`/obligations\\?year=${year}$`)
+      const obligationsHref = await obligations.getAttribute('href')
+      expect(new URL(obligationsHref, this.page.url()).href).toBe(
+        getObligationsUrl(account, year).href
       )
     } else {
       await expect(obligations).toHaveCount(0)
