@@ -1,0 +1,14 @@
+# Compose overlay for MYDW-09 (flag-off regression). compose.yml hard-codes both flags to "true", so they can only be
+# switched off with an extra -f file. Edit the two values below for the variant you need, then recreate the frontend:
+#
+#   cd <epr-local-environment repo root>
+#   docker compose -f compose.yml -f compose.b2cmock.yml -f compose.timeshift.yml \
+#     -f ../waste-obligations-journey-tests/.claude/skills/mydw-manual-test/reference/flags-off.compose.yml \
+#     --profile packaging --profile timeshift-packaging up -d --no-deps epr-packaging-frontend
+#
+# Drop this -f file and run the same command again to switch the flags back on.
+services:
+  epr-packaging-frontend:
+    environment:
+      FeatureManagement__ShowMultiYearObligations: "false"
+      FeatureManagement__ShowDecemberWaste: "false"
