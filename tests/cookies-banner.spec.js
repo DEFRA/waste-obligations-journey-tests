@@ -20,6 +20,10 @@ import {
   setTestGaCookies
 } from '../utils/analytics.js'
 
+// Chrome caps cookie lifetime at 400 days; the frontend defaults to that
+const EXPECTED_GA_COOKIE_EXPIRES_SECONDS = 400 * 24 * 60 * 60
+const GA_COOKIE_EXPIRES_TEXT = '400 days'
+
 // Cookie consent is a public, pre-auth journey. Do not reuse the DP session
 // from auth.setup.js: visiting cookies?lang=cy persists locale on that session
 // and the later CSOC specs then fail looking for English headings.
@@ -296,8 +300,12 @@ test.describe('Cookie banner and cookies page', () => {
       'data-analytics-cookie-path',
       expectedPath
     )
+    await expect(page.locator('.js-cookie-consent-config')).toHaveAttribute(
+      'data-analytics-cookie-expires',
+      String(EXPECTED_GA_COOKIE_EXPIRES_SECONDS)
+    )
     expect(await page.content()).toContain(
-      `gtag('set',{'cookie_path':'${expectedPath}'})`
+      `gtag('set',{'cookie_path':'${expectedPath}','cookie_expires':${EXPECTED_GA_COOKIE_EXPIRES_SECONDS}})`
     )
 
     const gaCookie = (await getGaCookies(page)).find(
@@ -325,6 +333,9 @@ test.describe('Cookie banner and cookies page', () => {
     }
     await expect(main.getByText('4 hours', { exact: true })).toBeVisible()
     await expect(
+      main.getByText(GA_COOKIE_EXPIRES_TEXT, { exact: true }).first()
+    ).toBeVisible()
+    await expect(
       main.getByRole('heading', {
         name: 'Change your cookie settings',
         level: 2
@@ -342,6 +353,9 @@ test.describe('Cookie banner and cookies page', () => {
     const main = page.locator('#main-content')
 
     await expect(main.getByText('4 awr', { exact: true })).toBeVisible()
+    await expect(
+      main.getByText('400 diwrnod', { exact: true }).first()
+    ).toBeVisible()
     await expect(main.getByText('4 hours')).toHaveCount(0)
   })
 })
