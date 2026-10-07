@@ -167,3 +167,12 @@ export function getProducerPrnsUrl(year) {
     new URLSearchParams({ year: String(year) }).toString()
   )
 }
+
+export function getCsoPrnsUrl(year) {
+  const schemeId = requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')
+
+  return wasteObligationsFrontendUrl(
+    `/cso/${schemeId}/prns`,
+    new URLSearchParams({ year: String(year) }).toString()
+  )
+}
