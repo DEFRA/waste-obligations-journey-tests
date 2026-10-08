@@ -13,6 +13,7 @@ End-to-end Playwright tests for the EPR waste obligations CSOC submission journe
 - [Production (CDP Portal)](#production-cdp-portal)
 - [Running on GitHub](#running-on-github)
 - [Reporting](#reporting)
+- [Claude Code skills and QA workflow](#claude-code-skills-and-qa-workflow)
 - [Licence](#licence)
 
 ## Local development
@@ -28,6 +29,16 @@ nvm use
 Docker is required for the containerised flows (`docker:test:local`, building the CDP image).
 
 ### Setup
+
+Clone with submodules, so the regulator tests used by the `csoc-e2e` skill come too:
+
+```bash
+git clone --recurse-submodules https://github.com/DEFRA/waste-obligations-journey-tests.git
+```
+
+In an existing clone, run `.claude/skills/csoc-e2e/setup-regulator.sh` instead. It initialises the
+`vendor/waste-packaging-regulator-tests` submodule and installs its dependencies. The journey tests themselves don't
+need the submodule.
 
 Install dependencies and download the Chromium binary used by Playwright:
 
@@ -308,6 +319,55 @@ Sources:
 - **ZAP HTML** — `entrypoint.sh:stop_zap` pulls `/OTHER/core/other/htmlreport/` from the ZAP API at end of run.
 
 If the `security` ZAP report is missing (a `REPORT_MISSING` marker is left when the fetch fails), `bin/publish-tests.sh` logs a warning and skips the S3 upload — Allure is still published so the run's pass/fail story is intact.
+
+## Claude Code skills and QA workflow
+
+The repo carries a [Claude Code](https://claude.com/claude-code) setup for day-to-day QA on Meet Obligations: testing
+tickets, release test plans, and evidence for sign-off.
+
+| Path                                     | What it is                                                                                                                                                                                  |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE.md`                              | Claude's project instructions: working principles and ground rules. It imports `AGENTS.md`                                                                                                  |
+| `.claude/rules/`                         | Domain knowledge loaded into every session: PRNs, PERNs and obligations, the Manage Obligations requirements, CSoC, environments and test data, the Definition of Done, and testing lessons |
+| `.claude/skills/`                        | The skills below                                                                                                                                                                            |
+| `.claude/settings.json`                  | Shared permissions (no reading `.env` files; Jira writes always ask) and the QA-session hook                                                                                                |
+| `docs/handoff.md`, `docs/lessons.md`     | The living QA handoff and the lessons ledger, kept by `/handoff`                                                                                                                            |
+| `vendor/waste-packaging-regulator-tests` | Submodule with the regulator tests, pinned to a commit of their `main`                                                                                                                      |
+| `evidence/`                              | Plans, runs and evidence packs. Gitignored: evidence is attached to the Jira ticket                                                                                                         |
+
+### Skills
+
+Run them in Claude Code as `/<name>`, or just describe the task.
+
+| Skill                        | What it does                                                                                                                                                                                                                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `brief`                      | Daily homepage: your tickets, what's waiting in IN QA, any open session, handoff follow-ups, branch and stack state                                                                                                                                                           |
+| `qa-ticket`                  | Takes a ticket from IN QA: agrees the AC scope, checks the PRs, picks LOCAL / dev9 / tst (CDP dev / test), verifies the deployed build, gets the test plan approved, runs it, builds the evidence, then attaches it and sets the Test Exit Summary (each Jira write approved) |
+| `e2e-test-plan`              | Builds a release E2E test plan from epic ids (TST, LOCAL and manual parts, coverage, open questions), as Markdown and Confluence-ready HTML                                                                                                                                   |
+| `evidence-report`            | Shared recorder and report builder: Word report, `test-cases.txt`, `evidence.txt`, `exit-summary.txt`, checked against a quality bar                                                                                                                                          |
+| `handoff`                    | End of session: records lessons and rewrites `docs/handoff.md`                                                                                                                                                                                                                |
+| `security-impact-assessment` | Checks a Fix Version's tickets against the Definition of Done (CDP) Security Impact Check                                                                                                                                                                                     |
+| `jira-read` / `jira-write`   | Read tickets and epics. Comment, attach, assign to yourself or set the Test Exit Summary, each shown as a dry run first                                                                                                                                                       |
+| `confluence-read`            | Reads Confluence pages by id, URL or exact title                                                                                                                                                                                                                              |
+| `wiki-lookup`                | Answers programme questions from the Confluence extract in the sibling `epr-qa-control-plane` repo                                                                                                                                                                            |
+| `mydw-manual-test`           | Guided Multi-Year and December Waste testing on the local, time-shifted stack                                                                                                                                                                                                 |
+| `mydw-e2e`                   | Automated MY&DW release run on LOCAL (scenarios S1–S4, flags off) and tst                                                                                                                                                                                                     |
+| `csoc-e2e`                   | CSoC E2E across every regulator × DRP/CS: producer service, then Approve & Monitor (from the submodule), with emails and evidence packs                                                                                                                                       |
+| `unsubmitted-orgs`           | Checks the unsubmitted organisations API endpoint, with an API evidence pack                                                                                                                                                                                                  |
+
+### Credentials for the skills
+
+Add these to `.env`, which is gitignored. Never commit them or paste them into tickets.
+
+| Variables                                                                                               | Used by                                                                                                |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`                                                         | `jira-read`, `jira-write`. Writes need a token with `write:jira-work` (and `read:jira-user` to assign) |
+| `CONFLUENCE_BASE_URL`, `CONFLUENCE_API_TOKEN` (optional `CONFLUENCE_EMAIL`, defaulting to `JIRA_EMAIL`) | `confluence-read`                                                                                      |
+| `REGULATOR_*`                                                                                           | `csoc-e2e` (see `.env.example`). `REGULATOR_TESTS_PATH` is now optional                                |
+| `MYDW_TST_DB_*` (optional)                                                                              | `mydw-e2e` database checks on tst; it otherwise reads `../epr-playwright-bdd/features/ENV/.env.tst`    |
+
+The pre-commit hook also scans staged changes for secrets with [gitleaks](https://github.com/gitleaks/gitleaks) when
+it's installed (`brew install gitleaks`).
 
 ## Licence
 
