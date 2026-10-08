@@ -22,9 +22,16 @@
   December Waste and PERN notes (issue dates follow the frontend clock). Restore after every accept or reject.
 - Anything needing December/January, 1 February or a flag switched off can only be tested here.
 
+## dev9
+
+- `https://rwd-dev9.azure.defra.cloud` (Packaging) and `waste-obligations.dev.cdp-int.defra.cloud` (CDP), real B2C,
+  real clock, shared data. Accounts come from `.env` (no matrix yet).
+- Merged Azure changes usually reach dev9 before tst; check where a change is deployed before testing it.
+
 ## tst
 
-- `https://rwd-tst1.azure.defra.cloud/report-data`, real B2C, real clock.
+- `https://rwd-tst1.azure.defra.cloud/report-data` (Packaging) and `waste-obligations.test.cdp-int.defra.cloud` (CDP),
+  real B2C, real clock.
 - Accounts: the 8 `csoc-e2e` matrix accounts (EA/NRW/SEPA/NIEA × DRP/CS) from `.env`.
 - Accepting or rejecting changes shared data, and the automated run resets the accounts' notes to awaiting
   acceptance in `tst1_prn`. Tell the user before either.
@@ -36,7 +43,9 @@
 - `mydw-e2e`: the automated MY&DW release run (`tests/mydw-e2e.spec.js`, cases TST-xx / LOC-xx) on LOCAL and tst.
 - `csoc-e2e`: the CSoC E2E matrix run (producer and regulator sides, every regulator × DRP/CS).
 - `unsubmitted-orgs`: the unsubmitted organisations search (API and lifecycle specs).
-- `jira-read` / `jira-write`: read tickets and epics; comment on or attach evidence to an issue.
+- `jira-read` / `jira-write`: read tickets and epics; comment on, attach evidence to or self-assign an issue.
+- `evidence-report`: the shared run recorder and Word evidence report.
+- `qa-ticket`: test an IN QA ticket end to end (PRs, environment, plan, run, evidence, Jira comment).
 - `e2e-test-plan`: build a release E2E test plan from epic ids.
 
 ## Known issues
