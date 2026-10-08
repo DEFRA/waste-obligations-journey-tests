@@ -5,7 +5,6 @@ import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
 import {
   FEATURE_MANAGE_OBLIGATIONS,
-  pageNotFoundHeading,
   readBooleanEnv,
   skipUnlessPrnsConfigured
 } from '../utils/environment-features.js'
@@ -84,12 +83,15 @@ for (const { account, label, storageState, prnType } of ACCOUNTS) {
       ]
       for (const { label: queryLabel, year } of queryYears) {
         await test.step(`open accepted ${prn.type} ${prn.number} with ${queryLabel}`, async () => {
-          const prnUrl = getPrnUrl(account, prn.id, year).toString()
+          const prnUrl = getPrnUrl(account, prn.id, year)
           // Deployed targets: without a proxy session the goto bounces through
           // B2C sign-in, which crashes Playwright's WebKit backend.
-          await ensureProxySessionForWebKit(page, prnUrl)
-          await page.goto(prnUrl, { timeout: 60_000 })
-          await expect(pageNotFoundHeading(page)).toHaveCount(0)
+          await ensureProxySessionForWebKit(page, prnUrl.href)
+          await page.goto(prnUrl.href, { timeout: 60_000 })
+          // Still on the PRN page: not bounced to sign-in or an error route.
+          await expect(page).toHaveURL(
+            (url) => url.pathname === prnUrl.pathname
+          )
         })
 
         await test.step(`check the accepted confirmation view (${queryLabel})`, async () => {
