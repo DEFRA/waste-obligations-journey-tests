@@ -1,5 +1,17 @@
 # Environments and test data
 
+## Platforms and route to live
+
+- **CDP** (this team's new services): `waste-obligations`, `waste-obligations-frontend`, `packaging-waste-proxy` and
+  `waste-obligations-notifications`. They are released through CDP Portal (`https://portal.cdp-int.defra.cloud`) into
+  CDP environments such as dev, test and prod; check the Portal for the full list and for what each one runs. Each
+  merge to `main` is a version tag (for example `0.157.0`), and the Portal shows the version deployed per environment.
+- **Azure** (the existing estate the journeys still pass through): `epr-packaging-frontend` (sign-in, account home,
+  the RPD PRN pages), the PRN backend and its functions. The route to live is DEV (dev7, dev9, dev11 …) → TST → PRE1 /
+  PRE2 → PRD.
+- **Environment names collide** across teams ("dev" can mean an Azure DEV instance or CDP dev), so say which one.
+  Verify the build an environment is running before testing on it.
+
 ## Feature flags (Packaging frontend)
 
 - `FeatureManagement__ShowMultiYearObligations`: the year tile, "Choose a year" and the per-year pages. Off, the
@@ -47,6 +59,14 @@
 - `evidence-report`: the shared run recorder and Word evidence report.
 - `qa-ticket`: test an IN QA ticket end to end (PRs, environment, plan, run, evidence, Jira comment).
 - `e2e-test-plan`: build a release E2E test plan from epic ids.
+
+## Known gotchas
+
+- **`ELOGIN` / "Client with IP address … is not allowed"** from the tst PRN database (`tst1_prn`) usually means the
+  VPN reconnected with a new IP that isn't on the SQL firewall allowlist yet. Suggest reconnecting or waiting a few
+  minutes before treating it as a failure. If it persists, someone with Azure access must add the IP.
+- **CDP service hosts don't answer from a laptop** (`*.cdp-int.defra.cloud` health checks fail with HTTP 000). Read the
+  deployed version in CDP Portal instead.
 
 ## Known issues
 

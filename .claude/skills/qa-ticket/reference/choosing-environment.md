@@ -5,6 +5,18 @@ with the reason, and let the user decide.
 
 ## Environments
 
+This team's services are on **CDP**. The three names pair Azure (sign-in and the Packaging pages) with a CDP
+environment (`utils/journey-entry-point.js`):
+
+| Name  | Azure Packaging | CDP environment |
+| ----- | --------------- | --------------- |
+| LOCAL | docker stack    | docker stack    |
+| dev9  | dev9            | **dev**         |
+| tst   | tst1            | **test**        |
+
+A CDP-only change (API, notifications, the Waste Obligations frontend) is therefore tested on "dev9" when it's on CDP
+dev, and on "tst" when it's on CDP test. Read the deployed version per environment in CDP Portal.
+
 | Env   | Packaging (sign-in, RPD pages)       | CDP (Waste Obligations)                                | Accounts                                      | Clock and data                                                           |
 | ----- | ------------------------------------ | ------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------ |
 | LOCAL | `https://localhost:7084`             | `https://localhost:8015/manage-recycling-obligations/` | mock B2C: `local:DRP\|CS:AP\|DP\|BU`          | Time shift, flags, seed/snapshot/restore (`mydw-manual-test`)            |

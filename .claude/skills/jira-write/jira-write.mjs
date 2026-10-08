@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-// Jira Cloud writes for the skills in this repo: add a comment, attach files, assign an issue to yourself.
-// Nothing else.
+// Jira Cloud writes for the skills in this repo: add a comment, attach files, assign an issue to yourself, set the
+// Test Exit Summary field. Nothing else.
 //
 //   node .claude/skills/jira-write/jira-write.mjs comment MO-449 --file comment.md [--yes]
 //   node .claude/skills/jira-write/jira-write.mjs comment MO-449 --text "Retested on tst: PASS" [--yes]
 //   node .claude/skills/jira-write/jira-write.mjs attach MO-449 evidence.docx [more files…] [--yes]
 //   node .claude/skills/jira-write/jira-write.mjs assign MO-449 --me [--yes]
+//   node .claude/skills/jira-write/jira-write.mjs exit-summary MO-449 --file exit-summary.txt [--yes]
 //
 // Without --yes it only prints what it would send (a dry run). Claude runs it with --yes only after the user
 // has approved that exact change. Credentials and the gateway-then-site lookup are the same as jira-read
@@ -71,7 +72,7 @@ async function roots(base) {
   return list
 }
 
-async function send(apiPath, init) {
+async function send(apiPath, init, { soft = false } = {}) {
   const creds = credentials()
   const errors = []
   for (const root of await roots(creds.base)) {
@@ -94,7 +95,30 @@ async function send(apiPath, init) {
     // Only an auth failure is worth retrying on the other root; anything else would repeat the write.
     if (res.status !== 401 && res.status !== 403) break
   }
-  fail(`${init().method || 'GET'} ${apiPath} failed: ${errors.join(' | ')}`)
+  const message = `${init().method || 'GET'} ${apiPath} failed: ${errors.join(' | ')}`
+  if (soft) return null
+  fail(message)
+}
+
+// The token owner's account. /myself needs read:jira-user on a scoped token; without it, the account is taken from
+// an issue the user is assigned to or reported (JQL currentUser() only needs read access).
+async function whoAmI() {
+  const me = await send('/myself', () => ({ method: 'GET' }), { soft: true })
+  if (me && me.accountId) return me
+  const fields = ['assignee', 'reporter', 'creator']
+  for (const field of fields) {
+    const page = await send(
+      `/search/jql?jql=${encodeURIComponent(`${field} = currentUser() ORDER BY updated DESC`)}&maxResults=1&fields=${field}`,
+      () => ({ method: 'GET' }),
+      { soft: true }
+    )
+    const user =
+      page && page.issues && page.issues[0] && page.issues[0].fields[field]
+    if (user && user.accountId) return user
+  }
+  fail(
+    'could not find your Jira account: the token needs read:jira-user, or you need at least one issue you created, reported or are assigned to'
+  )
 }
 
 // Plain text / light Markdown -> Atlassian Document Format: paragraphs, "- " bullets, "1. " numbered items,
@@ -225,7 +249,7 @@ async function assignToMe(key, yes) {
   if (!process.argv.includes('--me')) {
     fail('assign only supports --me (assign the issue to yourself)')
   }
-  const me = await send('/myself', () => ({ method: 'GET' }))
+  const me = await whoAmI()
   out(`Assign ${key} to ${me.displayName}.`)
   if (!yes)
     return out(
@@ -239,6 +263,42 @@ async function assignToMe(key, yes) {
   out(`${key} assigned to ${me.displayName}.`)
 }
 
+// Sets the issue's "Test Exit Summary" field (found by name on the issue's edit screen, so no field id is hard-coded).
+async function exitSummary(key, yes) {
+  const file = option('--file')
+  const value = (
+    file ? readFileSync(path.resolve(file), 'utf8') : option('--text') || ''
+  ).trim()
+  if (!value) fail('exit-summary needs --file <path> or --text "<text>"')
+  const meta = await send(`/issue/${key}/editmeta`, () => ({ method: 'GET' }))
+  const entry = Object.entries(meta.fields || {}).find(([, f]) =>
+    /^test exit summary$/i.test(f.name)
+  )
+  if (!entry) fail(`${key} has no editable "Test Exit Summary" field`)
+  const [id, field] = entry
+  const issue = await send(`/issue/${key}?fields=${id}`, () => ({
+    method: 'GET'
+  }))
+  const current = issue.fields[id]
+  out(`Test Exit Summary (${id}) for ${key}:`)
+  out(
+    `current: ${current ? (typeof current === 'string' ? current : '(rich text)') : '(empty)'}`
+  )
+  out(`new:     ${value}`)
+  if (!yes)
+    return out(
+      'Dry run: nothing sent. Re-run with --yes once the user has approved this.'
+    )
+  // A paragraph (textarea) field takes Atlassian Document Format; a single-line one takes a string.
+  const rich = /textarea/.test(field.schema.custom || '')
+  await send(`/issue/${key}`, () => ({
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: { [id]: rich ? toAdf(value) : value } })
+  }))
+  out(`Test Exit Summary set on ${key}.`)
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const yes = args.includes('--yes')
@@ -247,15 +307,20 @@ async function main() {
   )
   const [command, rawKey, ...rest] = positional
   const key = (rawKey || '').toUpperCase()
-  if (!['comment', 'attach', 'assign'].includes(command) || !KEY.test(key)) {
+  if (
+    !['comment', 'attach', 'assign', 'exit-summary'].includes(command) ||
+    !KEY.test(key)
+  ) {
     fail(
       'usage: jira-write.mjs comment <KEY> --file <path> | --text "<text>" [--yes]\n' +
         '       jira-write.mjs attach <KEY> <file> [file…] [--yes]\n' +
-        '       jira-write.mjs assign <KEY> --me [--yes]'
+        '       jira-write.mjs assign <KEY> --me [--yes]\n' +
+        '       jira-write.mjs exit-summary <KEY> --file <path> | --text "<text>" [--yes]'
     )
   }
   if (command === 'comment') await comment(key, yes)
   else if (command === 'assign') await assignToMe(key, yes)
+  else if (command === 'exit-summary') await exitSummary(key, yes)
   else await attach(key, rest, yes)
 }
 
