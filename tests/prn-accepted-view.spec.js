@@ -44,18 +44,19 @@ for (const { account, label, storageState, prnType } of ACCOUNTS) {
     }) => {
       skipUnlessPrnsConfigured()
 
-      // ENVIRONMENT identifies the target. Local and the shared Docker action
-      // seed accepted PRNs; deployed targets are not guaranteed to have one.
-      const requirePrnData = process.env.ENVIRONMENT === 'local'
       const prn = await test.step(`read an accepted ${prnType}`, async () => {
         const prns = await listAcceptedPrns(request, getOrgId(account))
         return prns.find((p) => typeOf(p) === prnType)
       })
-      if (!prn) {
+      // ENVIRONMENT identifies the target. Local and the shared Docker action
+      // seed accepted PRNs; deployed targets are not guaranteed to have one.
+      if (process.env.ENVIRONMENT === 'local') {
         expect(
-          requirePrnData,
+          prn,
           `The local journey fixture must contain an accepted ${prnType}.`
-        ).toBe(false)
+        ).toBeDefined()
+      }
+      if (!prn) {
         const warning = `No accepted ${prnType} on this deployed environment; the accepted view was not checked.`
         logJourney(test.info(), `WARNING: ${warning}`)
         test.info().annotations.push({ type: 'warning', description: warning })
