@@ -23,6 +23,9 @@ Their last full run was on 8 Oct 2026, and every failure was a known issue.
    choose the environment (`/qa-ticket MO-548`).
 2. Push `feat/claude-knowledge` and raise a PR once the user asks.
 3. Move `mydw-manual-test`, `mydw-e2e` and `csoc-e2e` onto `evidence-report`, one at a time.
+4. Bump the `vendor/waste-packaging-regulator-tests` pin from `336571d` to the latest `main` (`ffd5765` on 8 Oct
+   2026, with reverse-proxy URL and tab-locator changes), then rerun a csoc-e2e journey to confirm the regulator spec
+   still passes.
 
 ## Recent evidence
 
