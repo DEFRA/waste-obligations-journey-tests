@@ -71,12 +71,22 @@ export class PrnPage extends BasePage {
       `Accepted towards ${year} recycling obligations`
     )
 
-    await expect(
-      this.page.locator('.govuk-tag--green', { hasText: /^\s*Accepted\s*$/ })
-    ).toBeVisible()
-    await expect(
-      this.page.getByRole('button', { name: `Accept this ${type}` })
-    ).toHaveCount(0)
+    // The Status row's value is <div id="status"> (recyclingNoteRow derives the
+    // id from the label), so the tag is checked in that row only.
+    await expect(this.page.locator('#status .govuk-tag--green')).toHaveText(
+      'Accepted'
+    )
+
+    // None of the awaiting-acceptance controls may remain.
+    for (const name of [
+      `Accept this ${type}`,
+      `Reject this ${type}`,
+      `Download this awaiting acceptance ${type} as a PDF`
+    ]) {
+      await expect(
+        this.page.getByRole('button', { name, exact: true })
+      ).toHaveCount(0)
+    }
 
     const acceptMore = this.page.getByRole('button', {
       name: `Accept or reject more PRNs and PERNs for ${year}`,
