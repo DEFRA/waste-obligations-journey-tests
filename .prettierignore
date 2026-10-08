@@ -1,3 +1,5 @@
 package-lock.json
 node_modules
 docker
+.claude/skills/*/.state
+evidence

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": ["Bash(node .claude/skills/jira-read/jira.mjs *)"],
+    "ask": ["Bash(node .claude/skills/jira-write/jira-write.mjs *)"],
+    "deny": ["Read(./.env)", "Read(./.env.*)"]
+  }
+}
