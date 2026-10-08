@@ -7,10 +7,13 @@ _Last touched: 8 Oct 2026_
 `feat/claude-knowledge` (not pushed) holds the Claude setup for this repo:
 
 - `CLAUDE.md` and the domain rules in `.claude/rules/`;
-- the shared skills: `jira-read`, `jira-write`, `evidence-report`;
+- the shared skills: `jira-read`, `jira-write`, `confluence-read`, `evidence-report`;
 - the testing skills: `qa-ticket`, `e2e-test-plan`, `brief`, `handoff`, `security-impact-assessment` and
   `wiki-lookup`;
 - the suites copied from `feat/manual-test-skills` (`mydw-manual-test`, `mydw-e2e`, `csoc-e2e`, `unsubmitted-orgs`).
+  `csoc-e2e` now takes its regulator side from the `vendor/waste-packaging-regulator-tests` submodule (pinned at
+  `336571d`), and owns the regulator spec;
+- the README, which documents the skills, the submodule and the credentials.
 
 MO-548 (the analytics-event consumer in `waste-obligations-notifications`, PR #1 merged 29 Sep 2026, first in 0.1.0)
 is assigned to Francis and IN QA. Its testing hasn't started: the environment hasn't been chosen and CDP log and
