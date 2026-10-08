@@ -49,7 +49,9 @@
 
 - `mydw-manual-test`: tester-confirmed MY&DW journeys on LOCAL (clock, seed, snapshot/restore, Word evidence).
 - `mydw-e2e`: the automated MY&DW release run (`tests/mydw-e2e.spec.js`, cases TST-xx / LOC-xx) on LOCAL and tst.
-- `csoc-e2e`: the CSoC E2E matrix run (producer and regulator sides, every regulator × DRP/CS).
+- `csoc-e2e`: the CSoC E2E matrix run (producer and regulator sides, every regulator × DRP/CS). The regulator side
+  comes from the `vendor/waste-packaging-regulator-tests` submodule: clone with `--recurse-submodules`, or run
+  `.claude/skills/csoc-e2e/setup-regulator.sh`.
 - `unsubmitted-orgs`: the unsubmitted organisations search (API and lifecycle specs).
 - `jira-read` / `jira-write`: read tickets and epics; comment on, attach evidence to or self-assign an issue.
 - `evidence-report`: the shared run recorder and Word evidence report.

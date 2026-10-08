@@ -15,13 +15,20 @@
 //     --journey E2E-01.1 --regulator EA --org-type DRP
 //   node .claude/skills/csoc-e2e/runner.mjs --matrix all --journey E2E-01.1
 //
-// Environment: reads .env in this repo. Requires REGULATOR_TESTS_PATH,
-// REGULATOR_EMAIL_*, REGULATOR_PASSWORD, and the existing EPR / waste-
+// Environment: reads .env in this repo. Requires the vendor/waste-packaging-regulator-tests submodule
+// (.claude/skills/csoc-e2e/setup-regulator.sh; REGULATOR_TESTS_PATH overrides its location), REGULATOR_EMAIL_*, REGULATOR_PASSWORD, and the existing EPR / waste-
 // obligations creds. Overrides EPR_USER_EMAIL and WASTE_OBLIGATION_ORG_ID per
 // run so the producer auth setup logs in as the matrix-selected account.
 
 import { execFile } from 'node:child_process'
-import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
+import {
+  access,
+  copyFile,
+  mkdir,
+  readdir,
+  rm,
+  writeFile
+} from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import 'dotenv/config'
@@ -192,9 +199,44 @@ async function runProducer(matrixEntry, evidenceDir, startAt, headed, phase) {
   })
 }
 
-async function runRegulator(matrixEntry, evidenceDir, startAt, headed, phase, phaseOpts = {}) {
+// The regulator repo is the vendor/waste-packaging-regulator-tests submodule (REGULATOR_TESTS_PATH overrides it).
+// The CSoC regulator spec lives in this skill (regulator/) and is copied into the regulator repo's test/specs/ for
+// each run, so it uses that repo's page objects, Playwright config and Playwright version.
+const REGULATOR_SPEC = 'csoc-e2e-external.spec.js'
+const REGULATOR_SETUP = '.claude/skills/csoc-e2e/setup-regulator.sh'
+
+async function regulatorRepo() {
+  const dir =
+    process.env.REGULATOR_TESTS_PATH ||
+    path.join(REPO_ROOT, 'vendor', 'waste-packaging-regulator-tests')
+  const missing = async (rel) =>
+    access(path.join(dir, rel)).then(
+      () => false,
+      () => true
+    )
+  if (await missing('package.json')) {
+    throw new Error(
+      `regulator tests not found at ${dir}: run ${REGULATOR_SETUP} (or clone with --recurse-submodules)`
+    )
+  }
+  if (await missing('node_modules/@playwright/test')) {
+    throw new Error(
+      `regulator tests at ${dir} have no node_modules: run ${REGULATOR_SETUP}`
+    )
+  }
+  return dir
+}
+
+async function runRegulator(
+  matrixEntry,
+  evidenceDir,
+  startAt,
+  headed,
+  phase,
+  phaseOpts = {}
+) {
   const nationId = REGULATOR_TO_NATION_ID[matrixEntry.regulator]
-  const regulatorTestsPath = requireEnv('REGULATOR_TESTS_PATH')
+  const regulatorTestsPath = await regulatorRepo()
   const emailKey = `REGULATOR_EMAIL_${matrixEntry.regulator}`
   const passwordKey = `REGULATOR_PASSWORD_${matrixEntry.regulator}`
   const env = {
@@ -221,18 +263,36 @@ async function runRegulator(matrixEntry, evidenceDir, startAt, headed, phase, ph
   if (phaseOpts.expectedActions) {
     env.EXPECTED_HISTORY_ACTIONS = phaseOpts.expectedActions
   }
-  const args = ['playwright', 'test', 'test/specs/csoc-e2e-external.spec.js']
+  const args = ['playwright', 'test', `test/specs/${REGULATOR_SPEC}`]
   if (headed) args.push('--headed')
   // Wipe cached auth so a different nation triggers a fresh login.
   await rm(path.join(regulatorTestsPath, 'playwright', '.auth'), {
     recursive: true,
     force: true
   })
-  return spawnPlaywright('npx', args, {
-    cwd: regulatorTestsPath,
-    env,
-    label: `regulator:${phase}`
-  })
+  const specCopy = path.join(
+    regulatorTestsPath,
+    'test',
+    'specs',
+    REGULATOR_SPEC
+  )
+  await copyFile(
+    path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      'regulator',
+      REGULATOR_SPEC
+    ),
+    specCopy
+  )
+  try {
+    return await spawnPlaywright('npx', args, {
+      cwd: regulatorTestsPath,
+      env,
+      label: `regulator:${phase}`
+    })
+  } finally {
+    await rm(specCopy, { force: true })
+  }
 }
 
 function spawnPlaywright(cmd, args, { cwd, env, label }) {
@@ -282,12 +342,15 @@ function buildEmailExpectations(matrixEntry, phaseResults) {
     const before = next
       ? next.startedAt
       : new Date(Date.parse(r.finishedAt) + EMAIL_GRACE_MS).toISOString()
-    const stem = (role) =>
-      `${String(seq).padStart(3, '0')}_${trigger}_${role}`
+    const stem = (role) => `${String(seq).padStart(3, '0')}_${trigger}_${role}`
     // Notify only emails the producer organisation (DRP or CS) — the
     // regulator is never a recipient for these triggers.
     const recipients = [
-      { role: 'producer', address: matrixEntry.username, file: stem('producer') }
+      {
+        role: 'producer',
+        address: matrixEntry.username,
+        file: stem('producer')
+      }
     ]
     return {
       seq,
@@ -364,8 +427,13 @@ async function runOne({ journey, regulator, orgType, headed, noEmails }) {
     // Producer specs start at 1 by default; regulator specs start at 100
     // so a mixed phase run still keeps the producer/regulator groupings
     // visually separated by number band on the first sequence.
-    const startAt = Math.max(currentCount, side === 'regulator' && phaseResults.length === 0 ? 100 : 0)
-    console.log(`\n--- phase ${side}/${phase} (screenshots from ${startAt + 1}) ---`)
+    const startAt = Math.max(
+      currentCount,
+      side === 'regulator' && phaseResults.length === 0 ? 100 : 0
+    )
+    console.log(
+      `\n--- phase ${side}/${phase} (screenshots from ${startAt + 1}) ---`
+    )
     const startedAt = new Date().toISOString()
     // eslint-disable-next-line no-await-in-loop
     const result =
@@ -407,7 +475,9 @@ async function runOne({ journey, regulator, orgType, headed, noEmails }) {
   })
   let emails = null
   if (expectations.length && !noEmails) {
-    console.log(`\n--- notification emails (${expectations.length} trigger(s)) ---`)
+    console.log(
+      `\n--- notification emails (${expectations.length} trigger(s)) ---`
+    )
     emails = await captureEmails(evidenceDir, {
       log: (line) => console.log(line)
     })
@@ -444,7 +514,11 @@ async function planRuns(args) {
   if (!sweep) {
     if (!args.regulator || !args.orgType) return null
     return [
-      { journey: args.journey, regulator: args.regulator, orgType: args.orgType }
+      {
+        journey: args.journey,
+        regulator: args.regulator,
+        orgType: args.orgType
+      }
     ]
   }
   const journeys =
@@ -491,7 +565,9 @@ async function main() {
     process.exit(1)
   }
   if (!runs.length) {
-    console.error('Nothing to run: that journey does not apply to the requested org type.')
+    console.error(
+      'Nothing to run: that journey does not apply to the requested org type.'
+    )
     process.exit(1)
   }
   if (runs.length > 1 || args.dryRun) {

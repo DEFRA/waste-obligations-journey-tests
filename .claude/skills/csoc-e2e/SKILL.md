@@ -3,8 +3,8 @@ name: csoc-e2e
 description: |
   Automates the full CSoC (Certificate/Statement of Compliance) E2E journey
   across the (regulator × org-type) matrix. Runs the producer service in
-  waste-obligations-journey-tests, then the Approve & Monitor flow in the
-  sibling waste-packaging-regulator-tests repo, captures a full-page
+  waste-obligations-journey-tests, then the Approve & Monitor flow from the
+  waste-packaging-regulator-tests submodule (vendor/), captures a full-page
   screenshot of every visited page, captures the GOV.UK Notify emails sent on
   submission, resubmission and cancellation (via the Gmail connector), and
   produces one Word evidence pack per journey run for regulator/PO sign-off.
@@ -86,12 +86,21 @@ Or equivalently: `npm run test:csoc-e2e -- --journey ... --regulator ... --org-t
      `REGULATOR_EMAIL_NIEA`
    - `REGULATOR_PASSWORD_EA`, `REGULATOR_PASSWORD_NRW`,
      `REGULATOR_PASSWORD_SEPA`, `REGULATOR_PASSWORD_NIEA`
-   - `REGULATOR_TESTS_PATH` (path to the sibling regulator repo)
    - `WASTE_OBLIGATION_USERNAME` / `PASSWORD` / `JOURNEY_USER` / `PASSWORD`
      for the declarations-API basic auth
      If any are missing, tell the user which vars need filling in — don't guess.
-3. Sibling `REGULATOR_TESTS_PATH` exists and is on branch `feature/csoc-e2e-skill`
-   with `csoc-e2e-external.spec.js` present under `test/specs/`.
+3. The regulator tests are set up. They are the `vendor/waste-packaging-regulator-tests` submodule, pinned to a
+   commit of its `main`.
+   - **Setup:** clone this repo with `git clone --recurse-submodules`, or run
+     `.claude/skills/csoc-e2e/setup-regulator.sh`, which initialises the submodule and runs `npm ci` in it. The runner
+     stops with that instruction if either step is missing.
+   - **Where the spec lives:** the regulator spec is owned here, at `regulator/csoc-e2e-external.spec.js`. The runner
+     copies it into the submodule's `test/specs/` for each run and removes it afterwards, so it uses that repo's page
+     objects, config and Playwright.
+   - **Bumping the pin:** run `git submodule update --remote vendor/waste-packaging-regulator-tests`, run a journey
+     to check the spec still passes against their page objects, then commit the pointer on its own.
+   - **Override:** `REGULATOR_TESTS_PATH` in `.env` replaces the submodule location, for example with a working
+     copy of the regulator repo.
 4. `docx` is installed (`npm ls docx` — should show `docx@9.x`).
 5. For email capture, the `claude` CLI is on PATH and logged in, and
    `claude mcp list` shows **claude.ai Gmail ✔ Connected**, signed in as

@@ -3,3 +3,4 @@ node_modules
 docker
 .claude/skills/*/.state
 evidence
+vendor
