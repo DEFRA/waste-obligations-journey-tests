@@ -35,7 +35,7 @@
 - `mydw-manual-test`: tester-confirmed MY&DW journeys on LOCAL (clock, seed, snapshot/restore, Word evidence).
 - `mydw-e2e`: the automated MY&DW release run (`tests/mydw-e2e.spec.js`, cases TST-xx / LOC-xx) on LOCAL and tst.
 - `csoc-e2e`: the CSoC E2E matrix run (producer and regulator sides, every regulator × DRP/CS).
-- `unsubmitted-orgs`: the unsubmitted organisations search (still only on `feat/manual-test-skills`).
+- `unsubmitted-orgs`: the unsubmitted organisations search (API and lifecycle specs).
 - `jira-read` / `jira-write`: read tickets and epics; comment on or attach evidence to an issue.
 - `e2e-test-plan`: build a release E2E test plan from epic ids.
 
