@@ -37,4 +37,6 @@ $W/summaries/{EAD,EDIA,MWR}/<page_id>.txt                          # one distill
 7. **Missing repo:** if the repo isn't there, say so and give its clone URL,
    `https://github.com/DEFRA/epr-qa-control-plane`.
 
-Summaries can be months old. The live Confluence page and the code win over them.
+Summaries can be months old. When an answer depends on the exact or current wording, read the live page with
+`node .claude/skills/confluence-read/confluence.mjs page <pid>` and cite its version. The live page and the code win
+over the summary.

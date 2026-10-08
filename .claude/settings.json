@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(node .claude/skills/jira-read/jira.mjs *)",
+      "Bash(node .claude/skills/confluence-read/confluence.mjs *)",
       "Bash(node .claude/skills/qa-ticket/pr-status.mjs *)",
       "Bash(node .claude/skills/evidence-report/build-report.mjs *)",
       "Bash(ls *)",
