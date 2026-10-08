@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures/pages.fixture.js'
 import { getPrnUrl } from '../utils/journey-entry-point.js'
 import { logJourney } from '../utils/journey-log.js'
+import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
 import {
   FEATURE_MANAGE_OBLIGATIONS,
@@ -68,9 +69,11 @@ for (const { account, label, storageState } of ACCOUNTS) {
       ]
       for (const { label: queryLabel, year } of queryYears) {
         await test.step(`open accepted ${prn.type} ${prn.number} with ${queryLabel}`, async () => {
-          await page.goto(getPrnUrl(account, prn.id, year).toString(), {
-            timeout: 60_000
-          })
+          const prnUrl = getPrnUrl(account, prn.id, year).toString()
+          // Deployed targets: without a proxy session the goto bounces through
+          // B2C sign-in, which crashes Playwright's WebKit backend.
+          await ensureProxySessionForWebKit(page, prnUrl)
+          await page.goto(prnUrl, { timeout: 60_000 })
           await expect(pageNotFoundHeading(page)).toHaveCount(0)
         })
 
