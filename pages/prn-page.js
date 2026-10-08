@@ -51,12 +51,18 @@ export class PrnPage extends BasePage {
     const tonnes = formatTonnes(prn.tonnage)
     await expect(this.heading).toBeVisible()
 
+    // Exact match on each sentence. The banner also holds the "Success" title
+    // and the download button (itself wrapped in a p.govuk-body), so take the
+    // heading and the paragraph directly after it.
     const banner = this.page.locator('.govuk-notification-banner--success')
-    await expect(banner).toContainText(
+    const bannerHeading = banner.locator('.govuk-notification-banner__heading')
+    await expect(bannerHeading).toHaveText(
       `You accepted this ${type} towards your ${year} recycling obligations`
     )
-    await expect(banner).toContainText(
-      `You have accepted ${tonnes} towards your ${year} recycling obligation`
+    await expect(
+      banner.locator('.govuk-notification-banner__heading + p')
+    ).toHaveText(
+      `You have accepted ${tonnes} towards your ${year} recycling obligation for ${prn.material} material.`
     )
 
     const inset = this.page.locator('.app-inset-text')
