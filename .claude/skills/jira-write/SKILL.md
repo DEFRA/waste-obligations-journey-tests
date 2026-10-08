@@ -1,9 +1,9 @@
 ---
 name: jira-write
-description: Add a comment to, attach files (evidence packs, PDFs, screenshots) to, or assign to yourself, a Jira issue on eaflood.atlassian.net, using the JIRA_* credentials in this repo's .env. Every write is shown to the user as a dry run and sent only after they approve it. Use when the user asks to post test results, a retest note or a link to evidence on a ticket, to upload evidence files to it, or to assign a ticket to themselves. Comments, attachments and self-assignment only; no issue creation, edits or transitions.
+description: Add a comment to, attach files (evidence packs, PDFs, screenshots) to, assign to yourself, or set the Test Exit Summary field of, a Jira issue on eaflood.atlassian.net, using the JIRA_* credentials in this repo's .env. Every write is shown to the user as a dry run and sent only after they approve it. Use when the user asks to post test results, a retest note or a link to evidence on a ticket, to upload evidence files to it, to assign a ticket to themselves, or to record a Test Exit Summary. Comments, attachments, self-assignment and the Test Exit Summary field only; no issue creation, other edits or transitions.
 user-invocable: true
 allowed-tools: Bash, Read
-argument-hint: comment <KEY> --file <path> | --text "<text>" | attach <KEY> <file> [file…] | assign <KEY> --me
+argument-hint: comment <KEY> --file <path> | --text "<text>" | attach <KEY> <file> [file…] | assign <KEY> --me | exit-summary <KEY> --file <path>
 ---
 
 # Jira write
@@ -17,6 +17,7 @@ node .claude/skills/jira-write/jira-write.mjs comment MO-449 --file <scratchpad>
 node .claude/skills/jira-write/jira-write.mjs comment MO-449 --text "Retested on tst: PASS"    # dry run
 node .claude/skills/jira-write/jira-write.mjs attach MO-449 evidence/…/EA-DRP.docx            # dry run
 node .claude/skills/jira-write/jira-write.mjs assign MO-449 --me                             # dry run: names who
+node .claude/skills/jira-write/jira-write.mjs exit-summary MO-449 --file <run>/exit-summary.txt # dry run: current vs new
 # …the same command with --yes sends it
 ```
 
@@ -34,8 +35,11 @@ node .claude/skills/jira-write/jira-write.mjs assign MO-449 --me                
 
 ## Rules
 
-- **Only comments, attachments and assigning to yourself.** Only when the user asks. Don't create, edit or
-  transition issues, assign them to anyone else, or delete anything.
+- **Only comments, attachments, assigning to yourself and the Test Exit Summary field** (`customfield_20837` in MO,
+  found by name). Only when the user asks. Don't create or transition issues, change other fields, assign to anyone
+  else, or delete anything.
+- **Test Exit Summary:** it goes in the field, not in a comment. It's one sentence on how the ticket was tested; the
+  result goes in the comment.
 - **No secrets or personal data:** no tokens, passwords, `.env` values, database connection details or test account
   credentials in comments or files. Check each file before attaching it; evidence packs can contain screenshots of
   account details.
