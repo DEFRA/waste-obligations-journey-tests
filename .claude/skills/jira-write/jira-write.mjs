@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// Jira Cloud writes for the skills in this repo: add a comment, attach files. Nothing else.
+// Jira Cloud writes for the skills in this repo: add a comment, attach files, assign an issue to yourself.
+// Nothing else.
 //
 //   node .claude/skills/jira-write/jira-write.mjs comment MO-449 --file comment.md [--yes]
 //   node .claude/skills/jira-write/jira-write.mjs comment MO-449 --text "Retested on tst: PASS" [--yes]
 //   node .claude/skills/jira-write/jira-write.mjs attach MO-449 evidence.docx [more files…] [--yes]
+//   node .claude/skills/jira-write/jira-write.mjs assign MO-449 --me [--yes]
 //
 // Without --yes it only prints what it would send (a dry run). Claude runs it with --yes only after the user
 // has approved that exact change. Credentials and the gateway-then-site lookup are the same as jira-read
@@ -81,14 +83,18 @@ async function send(apiPath, init) {
         ...init().headers
       }
     })
-    if (res.ok) return res.json()
+    if (res.ok) {
+      // Assigning answers 204 with no body.
+      const body = await res.text()
+      return body ? JSON.parse(body) : {}
+    }
     errors.push(
       `${new URL(root).host} ${res.status} ${(await res.text()).slice(0, 160)}`
     )
     // Only an auth failure is worth retrying on the other root; anything else would repeat the write.
     if (res.status !== 401 && res.status !== 403) break
   }
-  fail(`POST ${apiPath} failed: ${errors.join(' | ')}`)
+  fail(`${init().method || 'GET'} ${apiPath} failed: ${errors.join(' | ')}`)
 }
 
 // Plain text / light Markdown -> Atlassian Document Format: paragraphs, "- " bullets, "1. " numbered items,
@@ -214,6 +220,25 @@ async function attach(key, files, yes) {
   )
 }
 
+// Assigns the issue to the account that owns the token (the user running the skill).
+async function assignToMe(key, yes) {
+  if (!process.argv.includes('--me')) {
+    fail('assign only supports --me (assign the issue to yourself)')
+  }
+  const me = await send('/myself', () => ({ method: 'GET' }))
+  out(`Assign ${key} to ${me.displayName}.`)
+  if (!yes)
+    return out(
+      'Dry run: nothing sent. Re-run with --yes once the user has approved this.'
+    )
+  await send(`/issue/${key}/assignee`, () => ({
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accountId: me.accountId })
+  }))
+  out(`${key} assigned to ${me.displayName}.`)
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const yes = args.includes('--yes')
@@ -222,13 +247,15 @@ async function main() {
   )
   const [command, rawKey, ...rest] = positional
   const key = (rawKey || '').toUpperCase()
-  if (!['comment', 'attach'].includes(command) || !KEY.test(key)) {
+  if (!['comment', 'attach', 'assign'].includes(command) || !KEY.test(key)) {
     fail(
       'usage: jira-write.mjs comment <KEY> --file <path> | --text "<text>" [--yes]\n' +
-        '       jira-write.mjs attach <KEY> <file> [file…] [--yes]'
+        '       jira-write.mjs attach <KEY> <file> [file…] [--yes]\n' +
+        '       jira-write.mjs assign <KEY> --me [--yes]'
     )
   }
   if (command === 'comment') await comment(key, yes)
+  else if (command === 'assign') await assignToMe(key, yes)
   else await attach(key, rest, yes)
 }
 

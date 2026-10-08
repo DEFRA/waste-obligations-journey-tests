@@ -21,9 +21,19 @@ Update the relevant rules file when you learn something durable about the servic
 
 ## Skills
 
-Project skills are in `.claude/skills/<name>/SKILL.md`. `jira-read` reads tickets and epics, `jira-write` comments on
-or attaches files to an issue (after the user approves each write), and `e2e-test-plan` builds a release E2E test
-plan from epic ids.
+Project skills are in `.claude/skills/<name>/SKILL.md`:
+
+- **Shared building blocks:**
+  - `jira-read`: reads tickets and epics.
+  - `jira-write`: comments, attaches files and assigns an issue to the user, after the user approves each write.
+  - `evidence-report`: records a run's steps and screenshots and builds the Word evidence report.
+- **Testing a ticket or release:**
+  - `qa-ticket`: takes a ticket from IN QA through PR check, environment choice, approved plan, run, evidence and
+    Jira comment.
+  - `e2e-test-plan`: builds a release E2E test plan from epic ids.
+- **Specific suites:** `mydw-manual-test`, `mydw-e2e`, `csoc-e2e` and `unsubmitted-orgs`.
+
+New skills reuse the shared building blocks instead of copying them.
 
 ## Ground rules
 
