@@ -6,11 +6,8 @@
   `waste-obligations-notifications`. They are released through CDP Portal (`https://portal.cdp-int.defra.cloud`) into
   CDP environments such as dev, test and prod; check the Portal for the full list and for what each one runs. Each
   merge to `main` is a version tag (for example `0.157.0`), and the Portal shows the version deployed per environment.
-- **Azure** (the existing estate the journeys still pass through): `epr-packaging-frontend` (sign-in, account home,
-  the RPD PRN pages), the PRN backend and its functions. The route to live is DEV (dev7, dev9, dev11 …) → TST → PRE1 /
-  PRE2 → PRD.
-- **Environment names collide** across teams ("dev" can mean an Azure DEV instance or CDP dev), so say which one.
-  Verify the build an environment is running before testing on it.
+- **Environment names collide** across teams, so say which one you mean. Verify the build an environment is running
+  before testing on it.
 
 ## Feature flags (Packaging frontend)
 
@@ -38,7 +35,6 @@
 
 - `https://rwd-dev9.azure.defra.cloud` (Packaging) and `waste-obligations.dev.cdp-int.defra.cloud` (CDP), real B2C,
   real clock, shared data. Accounts come from `.env` (no matrix yet).
-- Merged Azure changes usually reach dev9 before tst; check where a change is deployed before testing it.
 
 ## tst
 
@@ -64,7 +60,8 @@
 
 - **`ELOGIN` / "Client with IP address … is not allowed"** from the tst PRN database (`tst1_prn`) usually means the
   VPN reconnected with a new IP that isn't on the SQL firewall allowlist yet. Suggest reconnecting or waiting a few
-  minutes before treating it as a failure. If it persists, someone with Azure access must add the IP.
+  minutes before treating it as a failure. If it persists, someone with access to the database firewall must add the
+  IP.
 - **CDP service hosts don't answer from a laptop** (`*.cdp-int.defra.cloud` health checks fail with HTTP 000). Read the
   deployed version in CDP Portal instead.
 

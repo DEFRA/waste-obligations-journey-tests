@@ -55,7 +55,7 @@ These E2E ids are separate from the MY&DW release's E2E-01 to E2E-06.
 - **Declaration text** is held in the frontend code, translated to the user's language when the CSoC is viewed. A
   historical CSoC must keep the text it was submitted against if the wording changes later.
 - **No data:** the CDP CSoC tables show dashes in columns 2 and 5 with "No data yet"; under 1 tonne shows 0 with
-  "Met". The Azure obligations page is not changing, so until alignment the two differ (0s rather than dashes) but
+  "Met". The current Packaging obligations page is not changing, so until alignment the two differ (0s rather than dashes) but
   keep the same statuses.
 - **Reporting:** for MVP, Grafana tracks CSoCs Submitted (pending), Accepted and Cancelled. Trend analysis moves to the
   A&I tools later. Public Register data is pushed from Synapse after MVP (RT team).

@@ -1,7 +1,7 @@
 # Manage Obligations requirements (CDP rebuild)
 
 The high-level requirements for rebuilding Manage Obligations on the EPR Next Generation platform (CDP:
-`waste-obligations-frontend` and `waste-obligations`). The Azure Packaging frontend has most of this today, so use
+`waste-obligations-frontend` and `waste-obligations`). The Packaging frontend (`epr-packaging-frontend`) has most of this today, so use
 these as the expected behaviour for both.
 
 - **Select a year:** the account home asks which year to manage. The current year opens the Manage obligations page

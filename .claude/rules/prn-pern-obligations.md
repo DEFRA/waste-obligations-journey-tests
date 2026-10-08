@@ -1,7 +1,7 @@
 # PRNs, PERNs and recycling obligations
 
 What earlier sessions learnt while testing the Multi-Year Obligations and December Waste (MY&DW) release (epics
-MO-31, MO-65, MO-106) in the Azure Packaging frontend (`epr-packaging-frontend`, "RPD", under `/report-data`).
+MO-31, MO-65, MO-106) in the Packaging frontend (`epr-packaging-frontend`, "RPD", under `/report-data`).
 Confirm against the code before relying on a detail; the app is still changing.
 
 ## Vocabulary

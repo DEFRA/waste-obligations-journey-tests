@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Pull requests for a Jira ticket across the DEFRA GitHub organisation, with what QA needs to pick an environment:
 // state, review, checks, merge time and, for a merged PR, the first version tag that contains it (compare that with
-// the version deployed to each environment in CDP Portal or the Azure release).
+// the version deployed to each environment in CDP Portal).
 //
 //   node .claude/skills/qa-ticket/pr-status.mjs MO-428 [--json]
 //
