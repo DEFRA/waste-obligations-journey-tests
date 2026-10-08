@@ -18,9 +18,10 @@ const YEAR = 2026
 // runner is given the same value so both agree on the date. Without it (e.g.
 // deployed runs) the journey uses today's date.
 //
-// This only asserts the flash's presence, in December/January, on the PRNs
-// the business rules select (worked out from the backend PRN data, which
-// only local runs read, as in the main PRNs journey).
+// Outside December/January it asserts no flash on the list or a PRN page. In
+// December/January, locally, it asserts the flash on exactly the PRNs the
+// business rules select (worked out from the backend PRN data, which only
+// local runs read, as in the main PRNs journey), and fails if none qualify.
 const requirePrnData = process.env.ENVIRONMENT === 'local'
 
 function flashDate() {
@@ -80,25 +81,31 @@ test.describe('December waste flash on PRN pages (DP)', () => {
     const renderedNumbers = (await prnsListPage.readPrnRows()).map(
       (row) => row.number
     )
+    const flashNumbers = renderedNumbers.filter((number) =>
+      expectedFlash.has(number)
+    )
 
-    if (inWindow && requirePrnData) {
-      await test.step('the December waste flash shows on the expected PRNs', async () => {
-        const flashing = renderedNumbers.filter((number) =>
-          expectedFlash.has(number)
-        )
-        for (const number of flashing) {
+    if (!inWindow) {
+      await test.step('no December waste flash shows outside December/January', async () => {
+        await prnsListPage.expectDecemberWasteFlashCount(0)
+      })
+    } else if (requirePrnData) {
+      await test.step('the December waste flash shows on exactly the expected PRNs', async () => {
+        // Locally the fixture must supply a qualifying PRN; a run that sees
+        // none has not tested the flash, so it fails rather than warns.
+        expect(
+          flashNumbers,
+          'No rendered PRN qualifies for the December waste flash: check the backend fixture and DECEMBER_WASTE_FLASH_DATE.'
+        ).not.toHaveLength(0)
+        for (const number of flashNumbers) {
           await prnsListPage.expectDecemberWasteFlash(
             number,
             expectedFlash.get(number)
           )
         }
-        if (flashing.length === 0) {
-          warn(
-            'No rendered PRN qualifies for the December waste flash today, so the flash itself was not seen.'
-          )
-        }
+        await prnsListPage.expectDecemberWasteFlashCount(flashNumbers.length)
       })
-    } else if (inWindow) {
+    } else {
       warn(
         'Inside the December/January window on a deployed run: which PRNs should flash depends on backend data this run does not read, so the list flash was not verified.'
       )
@@ -112,13 +119,14 @@ test.describe('December waste flash on PRN pages (DP)', () => {
         return
       }
 
-      const flashNumbers = renderedNumbers.filter((number) =>
-        expectedFlash.has(number)
-      )
-      if (flashNumbers.length === 0) {
-        warn(
-          'No December waste flash PRN is listed, so no individual PRN page flash was checked.'
-        )
+      if (!inWindow) {
+        if (renderedNumbers.length === 0) {
+          warn('No PRN is listed, so no individual PRN page was checked.')
+          return
+        }
+        await prnsListPage.openPrn({ number: renderedNumbers[0] })
+        await expect(prnPage.heading).toBeVisible()
+        await prnPage.expectNoDecemberWasteFlash()
         return
       }
 
