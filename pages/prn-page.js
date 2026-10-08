@@ -5,6 +5,11 @@ import {
   getPrnsListUrl
 } from '../utils/journey-entry-point.js'
 
+// The accepted banner's tonnage: "1 tonne", otherwise "N tonnes".
+export function formatTonnes(tonnage) {
+  return tonnage === 1 ? '1 tonne' : `${tonnage} tonnes`
+}
+
 export class PrnPage extends BasePage {
   constructor(page) {
     super(page)
@@ -43,7 +48,7 @@ export class PrnPage extends BasePage {
   async expectLoadedForAcceptedPrn(prn, { account, obligationsButton } = {}) {
     const type = prn.type === 'PERN' ? 'PERN' : 'PRN'
     const year = prn.obligationYear
-    const tonnes = prn.tonnage === 1 ? '1 tonne' : `${prn.tonnage} tonnes`
+    const tonnes = formatTonnes(prn.tonnage)
     await expect(this.heading).toBeVisible()
 
     const banner = this.page.locator('.govuk-notification-banner--success')

@@ -13,13 +13,29 @@ import { getOrgId, listAcceptedPrns } from '../utils/waste-obligations-api.js'
 
 // Opens a PRN that is already accepted and checks the accepted confirmation
 // view. Nothing is accepted here: the journey never changes PRN state.
+// Each account opens a different type, so every run covers both the PRN and
+// the PERN wording. Selecting by type rather than by number works with the CI
+// WireMock data and with a full local stack, which seed different PRNs.
 const ACCOUNTS = [
-  { account: 'dp', label: 'DP', storageState: 'playwright/.auth/dp.json' },
-  { account: 'cso', label: 'CSO', storageState: 'playwright/.auth/cso.json' }
+  {
+    account: 'dp',
+    label: 'DP',
+    storageState: 'playwright/.auth/dp.json',
+    prnType: 'PRN'
+  },
+  {
+    account: 'cso',
+    label: 'CSO',
+    storageState: 'playwright/.auth/cso.json',
+    prnType: 'PERN'
+  }
 ]
 
-for (const { account, label, storageState } of ACCOUNTS) {
-  test.describe(`Accepted PRN view (${label})`, () => {
+// The backend marks PERNs with type 'PERN'; everything else is a PRN.
+const typeOf = (prn) => (prn.type === 'PERN' ? 'PERN' : 'PRN')
+
+for (const { account, label, storageState, prnType } of ACCOUNTS) {
+  test.describe(`Accepted ${prnType} view (${label})`, () => {
     test.use({ storageState })
 
     test('shows the accepted confirmation view', async ({
@@ -32,17 +48,16 @@ for (const { account, label, storageState } of ACCOUNTS) {
       // ENVIRONMENT identifies the target. Local and the shared Docker action
       // seed accepted PRNs; deployed targets are not guaranteed to have one.
       const requirePrnData = process.env.ENVIRONMENT === 'local'
-      const prn = await test.step('read an accepted PRN', async () => {
-        const [first] = await listAcceptedPrns(request, getOrgId(account))
-        return first
+      const prn = await test.step(`read an accepted ${prnType}`, async () => {
+        const prns = await listAcceptedPrns(request, getOrgId(account))
+        return prns.find((p) => typeOf(p) === prnType)
       })
       if (!prn) {
         expect(
           requirePrnData,
-          'The local journey fixture must contain an accepted PRN.'
+          `The local journey fixture must contain an accepted ${prnType}.`
         ).toBe(false)
-        const warning =
-          'No accepted PRN on this deployed environment; the accepted view was not checked.'
+        const warning = `No accepted ${prnType} on this deployed environment; the accepted view was not checked.`
         logJourney(test.info(), `WARNING: ${warning}`)
         test.info().annotations.push({ type: 'warning', description: warning })
         test.skip(true, warning)
