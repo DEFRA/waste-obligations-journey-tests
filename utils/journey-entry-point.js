@@ -172,14 +172,18 @@ function accountBasePath(account) {
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
 }
 
+// Omits ?year when year is undefined; the frontend then uses its default year.
 function accountUrl(account, path, year) {
   return wasteObligationsFrontendUrl(
     `${accountBasePath(account)}${path}`,
-    new URLSearchParams({ year: String(year) }).toString()
+    year === undefined
+      ? ''
+      : new URLSearchParams({ year: String(year) }).toString()
   )
 }
 
-// A single PRN page, for the producer or the compliance scheme.
+// A single PRN page, for the producer or the compliance scheme. year is
+// optional: the page shows the PRN's own year whatever ?year says.
 export function getPrnUrl(account, prnId, year) {
   return accountUrl(account, `/prns/${prnId}`, year)
 }

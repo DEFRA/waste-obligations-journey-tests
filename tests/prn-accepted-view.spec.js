@@ -47,14 +47,6 @@ for (const { account, label, storageState } of ACCOUNTS) {
         test.skip(true, warning)
       }
 
-      await test.step(`open accepted ${prn.type} ${prn.number}`, async () => {
-        await page.goto(
-          getPrnUrl(account, prn.id, prn.obligationYear).toString(),
-          { timeout: 60_000 }
-        )
-        await expect(pageNotFoundHeading(page)).toHaveCount(0)
-      })
-
       const obligationsButton = readBooleanEnv(FEATURE_MANAGE_OBLIGATIONS)
       if (obligationsButton === undefined) {
         await reportSkippedSteps(
@@ -63,12 +55,32 @@ for (const { account, label, storageState } of ACCOUNTS) {
         )
       }
 
-      await test.step('check the accepted confirmation view', async () => {
-        await prnPage.expectLoadedForAcceptedPrn(prn, {
-          account,
-          obligationsButton
+      // The view must show the PRN's own obligation year, not ?year: with no
+      // ?year the frontend uses its default year, and a wrong ?year must not
+      // leak into the banner, inset or follow-on buttons.
+      const queryYears = [
+        { label: `?year=${prn.obligationYear}`, year: prn.obligationYear },
+        { label: 'no ?year', year: undefined },
+        {
+          label: `?year=${prn.obligationYear - 1}`,
+          year: prn.obligationYear - 1
+        }
+      ]
+      for (const { label: queryLabel, year } of queryYears) {
+        await test.step(`open accepted ${prn.type} ${prn.number} with ${queryLabel}`, async () => {
+          await page.goto(getPrnUrl(account, prn.id, year).toString(), {
+            timeout: 60_000
+          })
+          await expect(pageNotFoundHeading(page)).toHaveCount(0)
         })
-      })
+
+        await test.step(`check the accepted confirmation view (${queryLabel})`, async () => {
+          await prnPage.expectLoadedForAcceptedPrn(prn, {
+            account,
+            obligationsButton
+          })
+        })
+      }
     })
   })
 }

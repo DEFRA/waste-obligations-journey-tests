@@ -80,6 +80,10 @@ test('a single PRN URL is scoped to the account and keeps the proxy prefix', () 
       'https://proxy.example/manage-recycling-obligations/cso/scheme-id/prns/prn-id?year=2025'
     )
     assert.equal(
+      getPrnUrl('dp', 'prn-id').href,
+      'https://proxy.example/manage-recycling-obligations/producer/producer-id/prns/prn-id'
+    )
+    assert.equal(
       getPrnsListUrl('dp', 2026).href,
       'https://proxy.example/manage-recycling-obligations/producer/producer-id/prns?year=2026'
     )
