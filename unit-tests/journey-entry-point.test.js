@@ -2,7 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   describeCsocActionHref,
+  getObligationsUrl,
   getPrnUrl,
+  getPrnsListUrl,
   getProducerPrnsUrl,
   getPublicFrontendUrl,
   getPublicServicePath,
@@ -76,6 +78,76 @@ test('a single PRN URL is scoped to the account and keeps the proxy prefix', () 
     assert.equal(
       getPrnUrl('cso', 'prn-id', 2025).href,
       'https://proxy.example/manage-recycling-obligations/cso/scheme-id/prns/prn-id?year=2025'
+    )
+    assert.equal(
+      getPrnsListUrl('dp', 2026).href,
+      'https://proxy.example/manage-recycling-obligations/producer/producer-id/prns?year=2026'
+    )
+    assert.equal(
+      getPrnsListUrl('cso', 2025).href,
+      'https://proxy.example/manage-recycling-obligations/cso/scheme-id/prns?year=2025'
+    )
+    assert.equal(
+      getObligationsUrl('dp', 2026).href,
+      'https://proxy.example/manage-recycling-obligations/producer/producer-id/obligations?year=2026'
+    )
+    assert.equal(
+      getObligationsUrl('cso', 2025).href,
+      'https://proxy.example/manage-recycling-obligations/cso/scheme-id/obligations?year=2025'
+    )
+    assert.throws(
+      () => getPrnUrl('producer', 'prn-id', 2026),
+      /Unknown journey account "producer"/
+    )
+    assert.throws(
+      () => getPrnsListUrl(undefined, 2026),
+      /Unknown journey account "undefined"/
+    )
+    assert.throws(
+      () => getObligationsUrl('scheme', 2026),
+      /Unknown journey account "scheme"/
+    )
+  } finally {
+    for (const key of keys) {
+      if (original[key] === undefined) delete process.env[key]
+      else process.env[key] = original[key]
+    }
+  }
+})
+
+test('account URLs use the public CDP frontend for packaging entry', () => {
+  const keys = [
+    'JOURNEY_ENTRY_POINT',
+    'EPR_BASE_URL',
+    'WASTE_OBLIGATIONS_FRONTEND_BASE_URL',
+    'WASTE_OBLIGATION_ORG_ID',
+    'WASTE_OBLIGATION_CSO_ORG_ID'
+  ]
+  const original = Object.fromEntries(
+    keys.map((key) => [key, process.env[key]])
+  )
+  process.env.JOURNEY_ENTRY_POINT = 'packaging'
+  process.env.EPR_BASE_URL = 'https://azure.example/report-data'
+  process.env.WASTE_OBLIGATIONS_FRONTEND_BASE_URL =
+    'https://deployed-proxy.example/manage-recycling-obligations/'
+  process.env.WASTE_OBLIGATION_ORG_ID = 'producer-id'
+  process.env.WASTE_OBLIGATION_CSO_ORG_ID = 'scheme-id'
+  try {
+    assert.equal(
+      getPrnUrl('dp', 'prn-id', 2026).href,
+      'https://deployed-proxy.example/manage-recycling-obligations/producer/producer-id/prns/prn-id?year=2026'
+    )
+    assert.equal(
+      getPrnUrl('cso', 'prn-id', 2025).href,
+      'https://deployed-proxy.example/manage-recycling-obligations/cso/scheme-id/prns/prn-id?year=2025'
+    )
+    assert.equal(
+      getPrnsListUrl('cso', 2025).href,
+      'https://deployed-proxy.example/manage-recycling-obligations/cso/scheme-id/prns?year=2025'
+    )
+    assert.equal(
+      getObligationsUrl('dp', 2026).href,
+      'https://deployed-proxy.example/manage-recycling-obligations/producer/producer-id/obligations?year=2026'
     )
   } finally {
     for (const key of keys) {
