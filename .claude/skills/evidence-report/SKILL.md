@@ -75,7 +75,7 @@ await run.finish()
 ```
 
 - **Build first:** record the build under test before the first test case, read from the environment.
-  - **CDP:** the deployed version in CDP Portal.
+  - **CDP:** `node .claude/skills/cdp-portal/cdp.mjs build <service> --env <env>` prints the build and its source.
   - **LOCAL:** `docker ps --format '{{.Names}} {{.Image}}'`.
   - **Mismatch:** if it isn't the build the ticket names, stop and tell the user.
 - **Test cases:** ids are `AC<n>-TC<m>`, so results group by AC. Each AC's result is its worst test case. A

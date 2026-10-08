@@ -74,10 +74,10 @@ node .claude/skills/qa-ticket/pr-status.mjs <KEY>
 Follow `reference/choosing-environment.md`. Recommend one environment, with the reason, the URL and the account. Then
 find out what the environment is **actually running**, before any test case:
 
-| Where          | How to read the build under test                                                                                       |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| CDP dev / test | The service's deployed version in CDP Portal (ask the user if you can't reach it); compare with `pr-status` "first in" |
-| LOCAL          | `docker ps --format '{{.Names}} {{.Image}}'` and, for a PR, the branch and commit built                                |
+| Where          | How to read the build under test                                                                                                                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CDP dev / test | `node .claude/skills/cdp-portal/cdp.mjs ticket <KEY> --env <dev\|test>`: every linked PR must be `CONTAINS` (deployed version ≥ the PR's first release tag). Then `cdp.mjs build <svc> --env <env>` for `run.build()` |
+| LOCAL          | `docker ps --format '{{.Names}} {{.Image}}'` and, for a PR, the branch and commit built                                                                                                                               |
 
 - **Record it:** the build and where it came from go into the evidence (`run.build()`).
 - **Doesn't contain the change:** stop and tell the user. Deploying is a separate step that needs their decision.
