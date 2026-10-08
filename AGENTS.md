@@ -163,8 +163,10 @@ not change a shared environment's flags just to make a test pass.
   tonnages diagnostically, warning if unavailable; they do not require seeded
   PRNs. Page loading remains mandatory. Do not log names or free-text notes.
   No acceptance or rejection is performed. The accepted-view journey opens a
-  PRN that is already accepted (the first from the backend's `Accepted` list)
-  and checks the confirmation view; CI gets it from accepted DP and CSO
+  note that is already accepted, selected by type from the backend's
+  `Accepted` list: DP the first PRN, CSO the first PERN, so every run covers
+  both wordings. Selecting by type rather than number works with the CI
+  WireMock data and a full local stack. CI gets them from accepted DP and CSO
   mappings in the same initialiser. Local runs require one; deployed runs
   warn and skip when none exists.
 - The same fixture seeds several PRNs with distinct materials, dates and
