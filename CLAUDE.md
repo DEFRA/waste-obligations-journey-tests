@@ -26,6 +26,7 @@ Project skills are in `.claude/skills/<name>/SKILL.md`:
 
 - **Shared building blocks:**
   - `jira-read`: reads tickets and epics. `confluence-read` reads Confluence pages (by id, URL or exact title).
+  - `cdp-portal`: what each CDP environment runs, whether a ticket's merged PRs are in it, suite runs and API specs.
   - `jira-write`: comments, attaches files, assigns an issue to the user and sets the Test Exit Summary, after the
     user approves each write.
   - `evidence-report`: records a run as it happens and builds the Word report, `test-cases.txt`, `evidence.txt` and

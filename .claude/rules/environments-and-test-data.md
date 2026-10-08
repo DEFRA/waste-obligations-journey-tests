@@ -63,7 +63,10 @@ The full list is in `CLAUDE.md`. Notes for the suites:
   minutes before treating it as a failure. If it persists, someone with access to the database firewall must add the
   IP.
 - **CDP service hosts don't answer from a laptop** (`*.cdp-int.defra.cloud` health checks fail with HTTP 000). Read the
-  deployed version in CDP Portal instead.
+  deployed version with the `cdp-portal` skill instead (the Portal and API Hub pages answer on the VPN).
+- **The build must contain the change:** on CDP, a ticket is testable in an environment only when the deployed version
+  of each service is at least the first release tag of the ticket's merged PR (`cdp.mjs ticket <KEY>`). A merge is
+  not a deployment.
 
 ## Known issues
 

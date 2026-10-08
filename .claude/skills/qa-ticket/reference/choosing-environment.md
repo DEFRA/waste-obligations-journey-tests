@@ -14,7 +14,7 @@ This team's services are on **CDP**. The three names pair the Packaging sign-in 
 | tst   | tst1              | **test**        |
 
 A CDP-only change (API, notifications, the Waste Obligations frontend) is therefore tested on "dev9" when it's on CDP
-dev, and on "tst" when it's on CDP test. Read the deployed version per environment in CDP Portal.
+dev, and on "tst" when it's on CDP test. Check it with `node .claude/skills/cdp-portal/cdp.mjs ticket <KEY>`.
 
 | Env   | Packaging (sign-in, RPD pages)       | CDP (Waste Obligations)                                | Accounts                                      | Clock and data                                                           |
 | ----- | ------------------------------------ | ------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------ |
@@ -38,8 +38,9 @@ dev, and on "tst" when it's on CDP test. Read the deployed version per environme
    - a database change beyond reading.
 4. **Merged:**
 
-   - **Where it's deployed:** the script prints the first version tag that contains the merge. Ask the user to
-     compare it with the version deployed to CDP dev and test in CDP Portal (`https://portal.cdp-int.defra.cloud`).
+   - **Where it's deployed:** the script prints the first version tag that contains the merge. For CDP services,
+     `node .claude/skills/cdp-portal/cdp.mjs ticket <KEY>` compares it with the version deployed to each CDP
+     environment: an environment is usable only when every linked PR is `CONTAINS`.
 
    - **Deployed to tst:** test on **tst**. It's the QA environment, it has the test accounts and their PRN data, and
      it's where sign-off is expected.
