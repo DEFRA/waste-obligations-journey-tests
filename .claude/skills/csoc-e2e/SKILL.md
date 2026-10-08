@@ -24,8 +24,21 @@ Invoke this skill when the user says any of:
 - references any journey code E2E-00 through E2E-09
 - asks for CSoC screenshots / a Word doc of a journey
 
-Out of scope: public register, PRNs. Do not attempt to verify these — the
-plan intentionally excludes them.
+Out of scope: the public register (its updates are post-MVP, fed from Synapse) and PRNs. Don't verify them, and
+report the public register steps of the Oct Release scenarios as manual or pending, never as passed.
+
+## Feature knowledge
+
+Read `reference/feature.md` before planning or reporting. It's built from the Confluence CSoC initiative and holds:
+
+- each journey's expected results on the producer side, the regulator side and the public register;
+- the status rules, cancellation reasons, email rules, content rules, pages and APIs;
+- the MVP scope;
+- the open questions.
+
+`.claude/rules/csoc.md` is the always-loaded summary. Re-read a page with
+`node .claude/skills/confluence-read/confluence.mjs page <id>` (the ids are in the reference) when the wording
+matters. The scenarios say "Approved" for the system status `Accepted`.
 
 ## Ticket context
 
@@ -62,6 +75,9 @@ in `runner.mjs`):
   check.
 - **E2E-08** — submit → approve → cancel → resubmit → approve → history
   check.
+
+Not in the runner: **E2E-01.3b** (CS NOT MET with Reg 43 = YES), which needs a NOT MET seed. **E2E-09** (deadline)
+can only run on LOCAL with the time shift.
 
 Every other journey is scaffolded but marked as `test.fixme` on both sides.
 The harness still runs against those, producing an evidence pack with the
