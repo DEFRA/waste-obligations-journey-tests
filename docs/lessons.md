@@ -19,8 +19,8 @@ Rules:
 - **When:** a `jira-write` call that needs your own account (assign) fails on `GET /myself` with "scope does not
   match".
 - **Do:** a scoped token needs `read:jira-user` for `/myself`. `jira-write` falls back to a `currentUser()` JQL
-  search, which only needs `read:jira-work`. Writes also need `write:jira-work`. Confluence isn't readable with the
-  Jira-scoped token.
+  search, which only needs `read:jira-work`. Writes also need `write:jira-work`. Confluence has its own token
+  (`CONFLUENCE_API_TOKEN`), which works only through the gateway with the v2 API, so there is no CQL search.
 - **Source:** assigning MO-548, 8 Oct 2026.
 - **Recurrences:** —
 
