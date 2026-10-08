@@ -7,6 +7,16 @@ export class PrnPage extends BasePage {
     this.heading = page.getByRole('heading', {
       name: /^packaging recycling note$/i
     })
+    // December waste flash (MO-479), shown under the page heading.
+    this.decemberWasteFlash = page.locator('.flash-container')
+  }
+
+  async expectDecemberWasteFlash(text) {
+    await expect(this.decemberWasteFlash).toHaveText(text)
+  }
+
+  async expectNoDecemberWasteFlash() {
+    await expect(this.decemberWasteFlash).toHaveCount(0)
   }
 
   // An awaiting-acceptance PRN or PERN offers Accept (a link styled as a

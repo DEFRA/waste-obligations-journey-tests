@@ -168,6 +168,18 @@ not change a shared environment's flags just to make a test pass.
   would. The sort/filter journey asserts filtered membership, each sort order
   and clear-all restoration. Locally, too few rows to verify a check is a
   failure; deployed runs record a warning annotation for each unverified check.
+- The December waste flash journey (MO-479): the frontend renders the flash
+  server-side, so browser clock mocking does not affect it. The frontend has a
+  test-only `DECEMBER_WASTE_FLASH_DATE` that only the flash uses (sign-in keeps
+  the real clock). `ci/compose.yml` sets it to 15 Dec 2026 and
+  `run-journey-tests/action.yml` gives the runner the same value; the backend
+  fixture (`generate-wiremock-mappings.mjs`) supplies PRN131 (flashes) and
+  PRN132 (stale). The spec asserts what that date implies, using
+  [utils/december-waste-flash.js](utils/december-waste-flash.js) (unit-tested):
+  February to November, no flash; December/January, locally, the flash on
+  exactly the qualifying PRNs. Deployed runs leave it unset, use today's date,
+  and record a warning in the window instead of asserting. The frontend
+  setting must never be set in a deployed environment.
 - CSOC declarations are not restored from a snapshot. `resetOrgDeclarations`
   deletes the organisation's declarations for a year through the admin DELETE
   API. Specs that need a submitted certificate recreate it through the UI after

@@ -174,6 +174,33 @@ export class PrnsListPage extends BasePage {
     ).toBeVisible()
   }
 
+  // December waste flash (MO-479): the blue "Can be accepted towards ..."
+  // label rendered in a PRN row's number cell.
+  decemberWasteFlashForRow(number) {
+    const numberLink = this.page.getByRole('link', {
+      name: number,
+      exact: true
+    })
+    return this.page
+      .getByRole('row')
+      .filter({ has: numberLink })
+      .locator('.flash-container.flash-container--blue')
+  }
+
+  async expectDecemberWasteFlash(number, text) {
+    await expect(this.decemberWasteFlashForRow(number)).toHaveText(text)
+  }
+
+  async expectNoDecemberWasteFlash(number) {
+    await expect(this.decemberWasteFlashForRow(number)).toHaveCount(0)
+  }
+
+  async expectDecemberWasteFlashCount(count) {
+    await expect(
+      this.page.locator('.flash-container.flash-container--blue')
+    ).toHaveCount(count)
+  }
+
   async openPrn(prn) {
     await this.page.getByRole('link', { name: prn.number, exact: true }).click()
   }
