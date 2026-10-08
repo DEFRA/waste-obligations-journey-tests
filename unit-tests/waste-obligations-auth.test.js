@@ -98,13 +98,13 @@ test('backend authentication over HTTP', async (t) => {
       prnStatus = 500
       await assert.rejects(
         listAwaitingPrns(api, 'org'),
-        /GET organisation PRNs failed: 500/
+        /GET organisation PRNs \(status=AwaitingAcceptance\) failed: 500 \{"prns"/
       )
       prnStatus = 200
       prnBody = { items: [] }
       await assert.rejects(
         listAwaitingPrns(api, 'org'),
-        /unexpected response shape/
+        /\(status=AwaitingAcceptance\) returned unexpected shape: \{"items":\[\]\}/
       )
       prnBody = { prns: [] }
       assert.deepEqual(await listAwaitingPrns(api, 'org'), [])

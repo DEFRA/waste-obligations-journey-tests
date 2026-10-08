@@ -120,12 +120,14 @@ async function listPrns(request, orgId, status) {
     { headers: buildHeaders(await getAuthHeader()) }
   )
   if (!response.ok()) {
-    throw new Error(`GET organisation PRNs failed: ${response.status()}`)
+    throw new Error(
+      `GET organisation PRNs (status=${status}) failed: ${response.status()} ${await response.text()}`
+    )
   }
   const body = await response.json()
   if (!Array.isArray(body.prns)) {
     throw new Error(
-      'GET organisation PRNs returned an unexpected response shape'
+      `GET organisation PRNs (status=${status}) returned unexpected shape: ${JSON.stringify(body).slice(0, 500)}`
     )
   }
   return body.prns
