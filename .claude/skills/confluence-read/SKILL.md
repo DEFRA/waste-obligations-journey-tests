@@ -13,7 +13,7 @@ The one place the skills in this repo read Confluence. Other skills call the scr
 ```
 node .claude/skills/confluence-read/confluence.mjs page 6612943097               # title, version, URL, body as text
 node .claude/skills/confluence-read/confluence.mjs page https://eaflood.atlassian.net/wiki/spaces/CEDGH/pages/6612943097/…
-node .claude/skills/confluence-read/confluence.mjs title "Definition of Done (Azure)"   # exact title only
+node .claude/skills/confluence-read/confluence.mjs title "Definition of Done (CDP) - WIP"   # exact title only
 node .claude/skills/confluence-read/confluence.mjs children 6297124865          # a page's child pages
 ```
 

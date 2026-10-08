@@ -26,7 +26,7 @@ const REPO_ROOT = path.resolve(
 dotenv.config({ path: path.join(REPO_ROOT, '.env'), quiet: true })
 const require = createRequire(import.meta.url)
 
-// packaging: the Azure Packaging frontend (sign-in, account home, RPD PRN pages under /report-data).
+// packaging: the Packaging frontend (sign-in, account home, RPD PRN pages under /report-data).
 // cdp: the Waste Obligations frontend; in a browser it is reached through Packaging's links (packaging-waste-proxy).
 // api: the waste-obligations backend (use utils/waste-obligations-api.js for authenticated calls).
 export const ENVIRONMENTS = {

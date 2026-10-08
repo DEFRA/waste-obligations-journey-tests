@@ -31,7 +31,10 @@ const run = await createRun(runDir, {
     summary: '…',
     url: 'https://eaflood.atlassian.net/browse/MO-449'
   },
-  environment: { name: 'tst', url: 'https://rwd-tst1.azure.defra.cloud' },
+  environment: {
+    name: 'test',
+    url: 'https://waste-obligations.test.cdp-int.defra.cloud'
+  },
   prs: [
     {
       repo: 'DEFRA/waste-obligations-frontend',

@@ -1,6 +1,6 @@
 ---
 name: security-impact-assessment
-description: Check every Jira ticket in a Fix Version (release) against the Security Impact Check in the programme's Definition of Done (CDP or Azure, read live from Confluence), and report per ticket and overall whether a formal Security Review is required before Done. Use when the user asks for a security impact assessment of a release or Fix Version, or whether a release needs security sign-off. Not for a single ticket.
+description: Check every Jira ticket in a Fix Version (release) against the Security Impact Check in the programme's Definition of Done (CDP, read live from Confluence), and report per ticket and overall whether a formal Security Review is required before Done. Use when the user asks for a security impact assessment of a release or Fix Version, or whether a release needs security sign-off. Not for a single ticket.
 user-invocable: true
 allowed-tools: Bash, Read, Write, Agent
 argument-hint: '<Fix Version>'
@@ -13,12 +13,7 @@ unless the user asks for it to be posted.
 
 ## 1. The checklist
 
-Read it live every run; it can change. Pick the Definition of Done that matches the release:
-
-| Release                                                              | Page                                                  |
-| -------------------------------------------------------------------- | ----------------------------------------------------- |
-| CDP services (`waste-obligations*`, `packaging-waste-proxy`)         | **Definition of Done (CDP) - WIP**, page `6612943097` |
-| Azure services (`epr-packaging-frontend`, PRN backend and functions) | **Definition of Done (Azure)**, page `6466995716`     |
+Read it live every run; it can change. The source is **Definition of Done (CDP) - WIP**, page `6612943097`:
 
 ```
 node .claude/skills/confluence-read/confluence.mjs page 6612943097
@@ -27,9 +22,8 @@ node .claude/skills/confluence-read/confluence.mjs page 6612943097
 - **Find the checklist:** use **Security Assessment > Lightweight Security Validation > Security Impact Check**, the
   list under "Confirm NO to all below otherwise include evidence of Security Team review in test exit report".
 - **Record the version:** note the page version and its updated date in the report.
-- **Mixed releases:** when a release has both kinds of service, use both pages.
 - **Page unreadable:** if the script fails (exit 1 or 2), show the user the list below. Ask them to confirm it still
-  matches the page, and use what they confirm. As read on 8 Oct 2026, both pages list:
+  matches the page, and use what they confirm. As read on 8 Oct 2026, the page lists:
 
 1. Changes to authentication.
 2. Changes to authorisation / access control.

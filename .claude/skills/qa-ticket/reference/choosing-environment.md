@@ -5,14 +5,13 @@ with the reason, and let the user decide.
 
 ## Environments
 
-This team's services are on **CDP**. The three names pair Azure (sign-in and the Packaging pages) with a CDP
-environment (`utils/journey-entry-point.js`):
+This team's services are on **CDP**. The three names pair the Packaging sign-in with a CDP environment (`utils/journey-entry-point.js`):
 
-| Name  | Azure Packaging | CDP environment |
-| ----- | --------------- | --------------- |
-| LOCAL | docker stack    | docker stack    |
-| dev9  | dev9            | **dev**         |
-| tst   | tst1            | **test**        |
+| Name  | Packaging sign-in | CDP environment |
+| ----- | ----------------- | --------------- |
+| LOCAL | docker stack      | docker stack    |
+| dev9  | dev9              | **dev**         |
+| tst   | tst1              | **test**        |
 
 A CDP-only change (API, notifications, the Waste Obligations frontend) is therefore tested on "dev9" when it's on CDP
 dev, and on "tst" when it's on CDP test. Read the deployed version per environment in CDP Portal.
@@ -38,16 +37,15 @@ dev, and on "tst" when it's on CDP test. Read the deployed version per environme
    - data that can't be arranged on a shared environment;
    - a database change beyond reading.
 4. **Merged:**
-   - **Where it's deployed:** find out which environment has it.
-     - **CDP repos** (`waste-obligations`, `waste-obligations-frontend`, `packaging-waste-proxy`, notification
-       services): the script prints the first version tag that contains the merge. Ask the user to compare it with
-       the version deployed to dev and test in CDP Portal (`https://portal.cdp-int.defra.cloud`).
-     - **Azure repos** (`epr-packaging-frontend`, `epr-prn-common-backend`, `epr-prn-integration-function`, …): ask
-       the user whether the release containing the merge is on dev9 and on tst.
+
+   - **Where it's deployed:** the script prints the first version tag that contains the merge. Ask the user to
+     compare it with the version deployed to CDP dev and test in CDP Portal (`https://portal.cdp-int.defra.cloud`).
+
    - **Deployed to tst:** test on **tst**. It's the QA environment, it has the test accounts and their PRN data, and
      it's where sign-off is expected.
    - **Deployed to dev9 only:** test on **dev9**. Tell the user tst still needs a check once it's released.
    - **Not deployed anywhere yet:** LOCAL with `main` built, or wait.
+
 5. **The ticket spans several repos:** use the environment where **every** linked PR is deployed.
 
 ## Tell the user before

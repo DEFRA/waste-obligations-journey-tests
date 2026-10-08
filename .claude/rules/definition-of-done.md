@@ -1,7 +1,6 @@
 # Definition of Done (what QA sign-off has to show)
 
-Source: **Definition of Done (CDP) - WIP**, Confluence page `6612943097`, v1 of 2 Oct 2026. The Azure version is page
-`6466995716`. Read the live page with `confluence-read` when the wording matters; this is a distilled copy.
+Source: **Definition of Done (CDP) - WIP**, Confluence page `6612943097`, v1 of 2 Oct 2026. Read the live page with `confluence-read` when the wording matters; this is a distilled copy.
 
 "Done" means deployed to production. Items marked ‡ apply where relevant; items marked † can be ruled out of scope.
 
