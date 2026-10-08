@@ -10,6 +10,7 @@ import { CsocSubmissionPage } from '../pages/csoc-submission-page.js'
 import { CsocCertificateHubPage } from '../pages/csoc-certificate-hub-page.js'
 import { CsocConfirmationPage } from '../pages/csoc-confirmation-page.js'
 import { CsocViewPage } from '../pages/csoc-view-page.js'
+import { recorderFromEnv } from '../utils/screenshot-recorder.js'
 
 export const test = base.extend({
   page: async ({ page, baseURL }, use, testInfo) => {
@@ -63,6 +64,12 @@ export const test = base.extend({
   },
   csocViewPage: async ({ page }, use) => {
     await use(new CsocViewPage(page))
+  },
+  // eslint-disable-next-line no-empty-pattern
+  screenshotRecorder: async ({}, use) => {
+    // No-op when EVIDENCE_DIR is not set — regular test runs are unaffected.
+    const recorder = await recorderFromEnv('producer')
+    await use(recorder)
   }
 })
 
