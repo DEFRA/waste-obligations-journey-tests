@@ -8,8 +8,7 @@ _Last touched: 8 Oct 2026_
 
 - `CLAUDE.md` and the domain rules in `.claude/rules/`;
 - the shared skills: `jira-read`, `jira-write`, `confluence-read`, `evidence-report`;
-- the testing skills: `qa-ticket`, `e2e-test-plan`, `brief`, `handoff`, `security-impact-assessment` and
-  `wiki-lookup`;
+- the testing skills: `qa-ticket`, `e2e-test-plan`, `brief`, `handoff` and `wiki-lookup`;
 - the suites copied from `feat/manual-test-skills` (`mydw-e2e`, `csoc-e2e`, `unsubmitted-orgs`; `mydw-manual-test` was dropped on 9 Oct 2026, its LOCAL stack tools now in `mydw-e2e/local/`).
   `csoc-e2e` now takes its regulator side from the `vendor/waste-packaging-regulator-tests` submodule (pinned at
   `336571d`), and owns the regulator spec;

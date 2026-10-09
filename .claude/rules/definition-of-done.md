@@ -45,7 +45,7 @@ Source: **Definition of Done (CDP) - WIP**, Confluence page `6612943097`, v1 of 
   - sensitive data (validation, forwarding, storing, logging);
   - new outbound integrations (APIs, database instances, blob storage, topics or queues).
 
-  `/security-impact-assessment` runs this check for a whole release. Static analysis: no critical or high SAST or
+  Static analysis: no critical or high SAST or
   dependency findings.
 
 For QA, this means the evidence goes on the Jira ticket, the build under test is verified on the environment, and a
