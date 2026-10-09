@@ -273,8 +273,6 @@ runs:
         JOURNEY_USER: Developer
         JOURNEY_PASSWORD: developer-pwd
         FEATURE_SHOW_PRNS: 'true'
-        # Matches the frontend's DECEMBER_WASTE_FLASH_DATE in ci/compose.yml.
-        DECEMBER_WASTE_FLASH_DATE: '2026-12-15T12:00:00Z'
         FEATURE_CSOC_ENABLED: 'true'
         FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS: 'false'
         FEATURE_SHOW_PRNS_ON_CDP: 'true'
@@ -297,8 +295,6 @@ runs:
         JOURNEY_USER: Developer
         JOURNEY_PASSWORD: developer-pwd
         FEATURE_SHOW_PRNS: 'true'
-        # Matches the frontend's DECEMBER_WASTE_FLASH_DATE in ci/compose.yml.
-        DECEMBER_WASTE_FLASH_DATE: '2026-12-15T12:00:00Z'
         FEATURE_CSOC_ENABLED: 'true'
         FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS: 'false'
         FEATURE_SHOW_PRNS_ON_CDP: 'true'
@@ -321,8 +317,6 @@ runs:
         JOURNEY_USER: Developer
         JOURNEY_PASSWORD: developer-pwd
         FEATURE_SHOW_PRNS: 'true'
-        # Matches the frontend's DECEMBER_WASTE_FLASH_DATE in ci/compose.yml.
-        DECEMBER_WASTE_FLASH_DATE: '2026-12-15T12:00:00Z'
         FEATURE_CSOC_ENABLED: 'true'
         FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS: 'false'
         FEATURE_SHOW_PRNS_ON_CDP: 'true'

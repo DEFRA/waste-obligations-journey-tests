@@ -169,20 +169,14 @@ not change a shared environment's flags just to make a test pass.
   and clear-all restoration. Locally, too few rows to verify a check is a
   failure; deployed runs record a warning annotation for each unverified check.
 - The December waste flash journey (MO-479): the frontend renders the flash
-  server-side, so browser clock mocking does not affect it. It relies on a
-  frontend test-only `DECEMBER_WASTE_FLASH_DATE` that only the flash uses
-  (sign-in keeps the real clock), and on December waste PRNs in the backend
-  fixture (`generate-wiremock-mappings.mjs`): one that flashes, one stale.
-  Neither exists yet; until both land the local run fails, by design.
-  `ci/compose.yml` sets the date to 15 Dec 2026 and
-  `run-journey-tests/action.yml` gives the runner the same value. The spec
-  asserts what that date implies, using
+  server-side from its own clock, so browser clock mocking does not affect it.
+  It relies on December waste PRNs in the backend fixture
+  (`generate-wiremock-mappings.mjs`): one that flashes, one stale. The spec
+  asserts what today's date implies, using
   [utils/december-waste-flash.js](utils/december-waste-flash.js) (unit-tested):
   February to November, no flash on the list or a PRN page; December/January,
-  locally, the flash on exactly the qualifying PRNs, failing if none qualify.
-  Deployed runs leave it unset, use today's date, and record a warning in the
-  window instead of asserting. The frontend setting must never be set in a
-  deployed environment.
+  locally, the flash on exactly the qualifying PRNs. Deployed runs record a
+  warning in the window instead of asserting.
 - CSOC declarations are not restored from a snapshot. `resetOrgDeclarations`
   deletes the organisation's declarations for a year through the admin DELETE
   API. Specs that need a submitted certificate recreate it through the UI after

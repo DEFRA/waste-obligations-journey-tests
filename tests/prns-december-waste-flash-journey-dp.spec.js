@@ -12,30 +12,14 @@ const YEAR = 2026
 
 // MO-479: a blue "Can be accepted towards {yearOne} or {yearTwo}" flash shows
 // on awaiting-acceptance December waste PRNs with a choice of two obligation
-// years, only in December and January. The frontend renders it server-side,
-// so the browser clock can't move it. Instead the Docker stacks set the
-// frontend's test-only FAKE_NOW (CI: 15 Dec 2026), and this runner is given
-// the same value so both agree on the date. Without it (e.g. deployed runs)
-// the journey uses today's date.
+// years, only in December and January. The frontend renders it server-side
+// from its own clock, so the browser clock can't move it: the journey asserts
+// whatever today's date implies.
 //
 // This only asserts the flash's presence, in December/January, on the PRNs
 // the business rules select (worked out from the backend PRN data, which
 // only local runs read, as in the main PRNs journey).
 const requirePrnData = process.env.ENVIRONMENT === 'local'
-
-function flashDate() {
-  const configured = process.env.FAKE_NOW
-  if (!configured) {
-    return new Date()
-  }
-  const date = new Date(configured)
-  if (Number.isNaN(date.getTime())) {
-    throw new Error(
-      `FAKE_NOW must be an ISO date, got ${JSON.stringify(configured)}`
-    )
-  }
-  return date
-}
 
 function warn(message) {
   logJourney(test.info(), `WARNING: ${message}`)
@@ -51,7 +35,7 @@ test.describe('December waste flash on PRN pages (DP)', () => {
   }) => {
     skipUnlessPrnsConfigured()
 
-    const now = flashDate()
+    const now = new Date()
     const inWindow = isInDecemberJanuaryFlashWindow(now)
     logJourney(
       test.info(),

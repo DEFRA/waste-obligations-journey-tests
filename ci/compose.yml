@@ -202,10 +202,6 @@ services:
       PORT: 3000
       NODE_ENV: production
       FEATURE_SHOW_PRNS: "true"
-      # Test-only: the December waste flash uses this date instead of today, so
-      # the MO-479 journey sees the flash outside December/January. Keep it in
-      # step with DECEMBER_WASTE_FLASH_DATE in run-journey-tests/action.yml.
-      DECEMBER_WASTE_FLASH_DATE: "2026-12-15T12:00:00Z"
       REDIS_HOST: redis
       REDIS_TLS: "false"
       USE_SINGLE_INSTANCE_CACHE: "true"
