@@ -58,6 +58,7 @@ export class PrnsListPage extends BasePage {
     this.sortSelect = page.locator('#sort')
     this.materialSelect = page.locator('#filter')
     this.clearAllLink = page.locator('#clearSortFilter')
+    this.decemberWasteFlashLabel = this.page.getByTestId('december-waste-label')
   }
 
   async readPrnRows() {
@@ -174,31 +175,38 @@ export class PrnsListPage extends BasePage {
     ).toBeVisible()
   }
 
-  // December waste flash (MO-479): the blue "Can be accepted towards ..."
-  // label rendered in a PRN row's number cell.
-  decemberWasteFlashForRow(number) {
+  // The flash is appended to the number cell, so its parent is that cell. For
+  // a multi-selectable PRN the number link is nested in the checkbox label
+  // rather than being a direct sibling, so search the whole parent for it.
+  decemberWasteFlashForNumber(number) {
     const numberLink = this.page.getByRole('link', {
       name: number,
       exact: true
     })
-    return this.page
-      .getByRole('row')
+    return this.decemberWateFlashLabel()
+      .locator('..')
       .filter({ has: numberLink })
-      .locator(':has-text("Can be accepted towards")')
+      .getByTestId('december-waste-label')
   }
 
-  async expectDecemberWasteFlash(number, text) {
-    await expect(this.decemberWasteFlashForRow(number)).toHaveText(text)
+  async expectDecemberWasteFlash(text) {
+    await expect(this.decemberWasteFlashLabel).toHaveText(text)
+  }
+
+  async expectDecemberWasteFlashBesideNumberLink(number) {
+    await expect(
+      this.decemberWasteFlashLabel
+        .locator('..')
+        .getByRole('link', { name: number, exact: true })
+    ).toBeVisible()
   }
 
   async expectNoDecemberWasteFlash(number) {
-    await expect(this.decemberWasteFlashForRow(number)).toHaveCount(0)
+    await expect(this.decemberWasteFlashForNumber(number)).toHaveCount(0)
   }
 
   async expectDecemberWasteFlashCount(count) {
-    await expect(
-      this.page.locator(':has-text("Can be accepted towards")')
-    ).toHaveCount(count)
+    await expect(this.decemberWasteFlashLabel).toHaveCount(count)
   }
 
   async openPrn(prn) {

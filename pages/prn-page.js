@@ -8,7 +8,7 @@ export class PrnPage extends BasePage {
       name: /^packaging recycling note$/i
     })
     // December waste flash (MO-479), shown under the page heading.
-    this.decemberWasteFlash = page.locator('.flash-container')
+    this.decemberWasteFlash = page.getByTestId('december-waste-label')
   }
 
   async expectDecemberWasteFlash(text) {
