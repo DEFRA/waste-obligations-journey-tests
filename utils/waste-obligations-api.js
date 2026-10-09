@@ -106,17 +106,28 @@ function buildHeaders(authHeader) {
 
 // Match the browser list's default first-page AwaitingAcceptance query.
 export async function listAwaitingPrns(request, orgId) {
+  return listPrns(request, orgId, 'AwaitingAcceptance')
+}
+
+// The browser lists only awaiting PRNs, so accepted ones are found here.
+export async function listAcceptedPrns(request, orgId) {
+  return listPrns(request, orgId, 'Accepted')
+}
+
+async function listPrns(request, orgId, status) {
   const response = await request.get(
-    `${getBackendBaseUrl()}/organisations/${orgId}/prns?status=AwaitingAcceptance`,
+    `${getBackendBaseUrl()}/organisations/${orgId}/prns?status=${status}`,
     { headers: buildHeaders(await getAuthHeader()) }
   )
   if (!response.ok()) {
-    throw new Error(`GET organisation PRNs failed: ${response.status()}`)
+    throw new Error(
+      `GET organisation PRNs (status=${status}) failed: ${response.status()} ${await response.text()}`
+    )
   }
   const body = await response.json()
   if (!Array.isArray(body.prns)) {
     throw new Error(
-      'GET organisation PRNs returned an unexpected response shape'
+      `GET organisation PRNs (status=${status}) returned unexpected shape: ${JSON.stringify(body).slice(0, 500)}`
     )
   }
   return body.prns

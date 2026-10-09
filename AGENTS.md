@@ -137,7 +137,7 @@ service owns each flag and where it must be configured:
 | ------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FEATURE_SHOW_PRNS`                   | Waste Obligations frontend | Enables the CDP PRNs routes. Explicit `false` skips PRNs; otherwise a missing PRNs page fails. Currently `false` on every deployed environment while the feature is in development. Enabled in CI Compose and the CI runner so PR checks still exercise the PRNs routes.                                                                     |
 | `FEATURE_SHOW_PRNS_ON_CDP`            | Azure Packaging frontend   | Maps to `FeatureManagement__ShowPrnsOnCdp`. Connects Packaging to the Waste Obligations PRNs pages. Enable together with `FEATURE_SHOW_PRNS` to show PRNs across both apps. Explicit `false` omits that Azure link and opens CDP PRNs directly; otherwise a Packaging-only PRNs href fails. Currently `false` on every deployed environment. |
-| `FEATURE_MANAGE_OBLIGATIONS`          | Waste Obligations frontend | Recorded on the Portal runner to match frontend config. Does not skip CSOC or certificate journeys.                                                                                                                                                                                                                                          |
+| `FEATURE_MANAGE_OBLIGATIONS`          | Waste Obligations frontend | Recorded on the Portal runner to match frontend config. Does not skip CSOC or certificate journeys. The accepted PRN view asserts its obligations-progress button is present when `true` and absent when `false`; unset leaves that button unchecked. Enabled in CI Compose and the CI runner so PR checks cover the button.                 |
 | `FEATURE_CSOC_ENABLED`                | Azure Packaging frontend   | Maps to `FeatureManagement__CsocEnabled`. Portal runner config records the expected value. Explicit `false` skips CSOC and certificate journeys; otherwise a missing card or about page fails.                                                                                                                                               |
 | `FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS` | Azure Packaging frontend   | Maps to `FeatureManagement__ShowMultiYearObligations`. Chooses the Azure year-selection path vs the single-year obligations link. A missing tile for the configured path fails.                                                                                                                                                              |
 | `FEATURE_ANALYTICS`                   | Waste Obligations frontend | True when `GOOGLE_TAG_MANAGER_KEY` or `GOOGLE_ANALYTICS_MEASUREMENT_ID` is set on the frontend. Enabled in CI Compose, the CI runner, and Dev/Test Portal config. Explicit `false` skips cookie/GA journeys; otherwise a missing banner fails.                                                                                               |
@@ -162,7 +162,13 @@ not change a shared environment's flags just to make a test pass.
   issuer and tonnage). Deployed runs report rendered PRN numbers, materials and
   tonnages diagnostically, warning if unavailable; they do not require seeded
   PRNs. Page loading remains mandatory. Do not log names or free-text notes.
-  No acceptance or rejection is performed.
+  No acceptance or rejection is performed. The accepted-view journey opens a
+  note that is already accepted, selected by type from the backend's
+  `Accepted` list: DP the first PRN, CSO the first PERN, so every run covers
+  both wordings. Selecting by type rather than number works with the CI
+  WireMock data and a full local stack. CI gets them from accepted DP and CSO
+  mappings in the same initialiser. Local runs require one; deployed runs
+  warn and skip when none exists.
 - The same fixture seeds several PRNs with distinct materials, dates and
   tonnages, and answers each `filterBy`/`sortBy` query as the common backend
   would. The sort/filter journey asserts filtered membership, each sort order
