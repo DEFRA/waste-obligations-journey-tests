@@ -29,14 +29,33 @@ Docker is required for the containerised flows (`docker:test:local`, building th
 
 ### Secret scanning
 
-[gitleaks](https://github.com/gitleaks/gitleaks) checks for secrets with `.gitleaks.toml`: gitleaks' default rules,
-GOV.UK Notify keys, and passwords written into code or data (`password: '…'`).
+This repository is public: a secret is exposed as soon as it is **pushed**, so checks have to stop it before the push.
+A check after the push (for example in CI) is too late.
 
-- **Before each commit:** the pre-commit hook scans the staged changes. Install it once with `brew install gitleaks`;
-  without it the hook warns and skips the scan.
-- **On every pull request:** `check-pull-request.yml` scans the PR's commits and fails on any finding.
-- **Credentials** belong in `.env` or other gitignored files, never in code, test data or docs. If one is committed,
-  treat it as exposed and rotate it; rewriting history doesn't make it private again.
+- **Before each commit:** the pre-commit hook scans the staged changes with
+  [gitleaks](https://github.com/gitleaks/gitleaks) and `.gitleaks.toml`: gitleaks' default rules, GOV.UK Notify keys,
+  and passwords written into code or data (`password: '…'`). Install it once with `brew install gitleaks`. Without it
+  the commit fails; `SKIP_GITLEAKS=1 git commit …` skips the scan for one commit, deliberately.
+- **On every push:** GitHub secret scanning with push protection is enabled for this repository and rejects pushes
+  that contain known token formats. A custom pattern for password values extends it to readable passwords
+  (repository admins: see below).
+- **Credentials** belong in `.env` or other gitignored files, never in code, test data or docs. If one is committed
+  or pushed, treat it as exposed and rotate it: rewriting history doesn't make it private again.
+
+#### Custom push-protection pattern (repository admins)
+
+Settings → Advanced Security → Secret Protection → Custom patterns → **New pattern**:
+
+| Field          | Value                                                                           |
+| -------------- | ------------------------------------------------------------------------------- |
+| Pattern name   | `Hardcoded password value`                                                      |
+| Secret format  | `[^"'\s$<{]{6,}`                                                                |
+| Before secret  | `([Pp]assword\|PASSWORD\|[Pp]asswd\|PASSWD\|[Pp]wd\|PWD)["']?\s*[:=]\s*["']`    |
+| After secret   | `["']`                                                                          |
+| Must not match | `^(REDACTED\|[Cc]hangeme\|[Ee]xample\|[Pp]laceholder\|x{3,})$` and `-password$` |
+
+Test it against `password: 'example123'` (should match) and `password: 'REDACTED'` (should not), save it, then turn on
+**push protection** for the pattern.
 
 ### Setup
 
