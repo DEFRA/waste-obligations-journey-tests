@@ -1,0 +1,12 @@
+title = "waste-obligations-journey-tests gitleaks config"
+
+# Adapted from epr-qa-control-plane.
+[extend]
+useDefault = true
+
+# GOV.UK Notify API keys: <key-name>-<service id uuid>-<api key uuid>. Not in gitleaks' default rules.
+[[rules]]
+id = "govuk-notify-api-key"
+description = "GOV.UK Notify API key"
+regex = '''[A-Za-z0-9_-]*-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'''
+tags = ["key", "govuk-notify"]

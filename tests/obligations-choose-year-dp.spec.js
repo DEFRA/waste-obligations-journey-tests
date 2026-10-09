@@ -39,6 +39,7 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
     test.setTimeout(180_000)
     skipUnlessCsocEnabled()
     const packaging = usesPackagingEntryPoint()
+
     await test.step('open the entry point and sign in as the producer', async () => {
       await page.goto(getJourneyStartPath(ACCOUNT, YEAR), { timeout: 60_000 })
       await submitB2CCredentials(
@@ -48,13 +49,16 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
       )
     })
 
+    // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
     if (packaging) {
       await landingPage.expectLoaded()
+      // eslint-disable-next-line playwright/no-conditional-in-test -- year selection exists only with the multi-year flag on
       if (usesMultiYearObligations()) {
         await test.step('open year selection from Azure account home', async () => {
           await landingPage.goToChooseYear()
           await chooseYearPage.expectLoaded()
         })
+
         await test.step(`select ${YEAR} and check the obligations page`, async () => {
           await chooseYearPage.selectYear(YEAR)
           await chooseYearPage.clickContinue()
@@ -65,11 +69,13 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
           'Azure choose a year',
           'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS is false for this environment'
         )
+
         await test.step('open obligations from Azure account home', async () => {
           await landingPage.goToObligations()
           await obligationsPage.expectLoaded()
         })
       }
+
       await test.step('submit the certificate from the empty-year card', async () => {
         await obligationsPage.expectSubmitCardVisible()
         await obligationsPage.startCsocSubmission()
@@ -91,6 +97,7 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
     })
 
     await test.step('view the submitted certificate for the requested year', async () => {
+      // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (packaging) {
         await landingPage.goto(ACCOUNT)
         await landingPage.expectLoaded()
