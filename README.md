@@ -113,11 +113,11 @@ npm run report
 
 The suite runs one profile at a time, selected by the `PROFILE` env var. The CDP Portal injects this from the **Profile** field on the test-suite run page; locally you set it yourself.
 
-| `PROFILE`       | Specs run                                                                                                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `e2e` (default) | `tests/cookies-banner.spec.js`, `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js`, `tests/obligations-choose-year-dp.spec.js`, `tests/prns-list-journey-dp.spec.js` |
-| `accessibility` | `tests/accessibility.spec.js`                                                                                                                                                             |
-| `security`      | `tests/security.spec.js`                                                                                                                                                                  |
+| `PROFILE`       | Specs run                                                                                                                                                                                                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e` (default) | `tests/cookies-banner.spec.js`, `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js`, `tests/obligations-choose-year-dp.spec.js`, `tests/prns-list-journey-dp.spec.js`, `tests/prns-list-journey-cso.spec.js`, `tests/prns-list-sort-filter-journey-dp.spec.js` |
+| `accessibility` | `tests/accessibility.spec.js`                                                                                                                                                                                                                                                      |
+| `security`      | `tests/security.spec.js`                                                                                                                                                                                                                                                           |
 
 Unset → `e2e` (so `npm test` and `npm run test:local` keep working as before). Any other value throws at config load and names the valid options.
 

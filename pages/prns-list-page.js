@@ -21,10 +21,12 @@ export async function selectAndWaitForNavigation(
   }
 
   await Promise.all([
-    page.waitForURL((url) => url.searchParams.get(paramName) === targetValue),
+    // Server-rendered: the new page is ready at its load event.
+    page.waitForURL((url) => url.searchParams.get(paramName) === targetValue, {
+      waitUntil: 'load'
+    }),
     select.selectOption({ label })
   ])
-  await page.waitForLoadState('networkidle')
 }
 
 export async function clickAndWaitForNavigation(page, link) {
@@ -39,10 +41,11 @@ export async function clickAndWaitForNavigation(page, link) {
   }
 
   await Promise.all([
-    page.waitForURL((url) => url.toString() === targetUrl),
+    page.waitForURL((url) => url.toString() === targetUrl, {
+      waitUntil: 'load'
+    }),
     link.click()
   ])
-  await page.waitForLoadState('networkidle')
 }
 
 export class PrnsListPage extends BasePage {
