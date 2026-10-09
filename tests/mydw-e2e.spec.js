@@ -24,10 +24,10 @@ import {
 //   MYDW_TST_DB_*      tst PRN database (read-only) for the audit/CSV checks; see .claude/skills/mydw-e2e/prn-db.mjs
 //
 // Expectations come from the frontend flag state (detected from the home tile), the clock and the shared
-// copy/rules modules of the mydw-manual-test skill, so the same cases run before and after launch.
+// copy/rules modules in .claude/skills/mydw-e2e/local, so the same cases run before and after launch.
 
 const require = createRequire(import.meta.url)
-const SKILL = '../.claude/skills/mydw-manual-test/scripts'
+const SKILL = '../.claude/skills/mydw-e2e/local'
 const copy = require(`${SKILL}/lib/copy.js`)
 const rules = require(`${SKILL}/lib/rules.js`)
 const pages = require(`${SKILL}/lib/pages.js`)
@@ -1154,7 +1154,7 @@ const CASE_DEFS = [
     scope: { local: ['S1'] },
     async run({ page, snap, evidence }) {
       const p = noteById(`MYDW-${TAG}-PRN-DW-DEC`)
-      test.skip(!p, 'seeded December PRN missing: run gather.js --seed')
+      test.skip(!p, 'seeded December PRN missing: run stack.js --seed')
       const e = rules.expectedFor(p, NOW)
       await page.goto(pages.prn.path(p.ExternalId.toLowerCase()))
       await expect(page.locator('main')).toContainText(
@@ -1196,7 +1196,7 @@ const CASE_DEFS = [
     mutates: true,
     async run({ page, snap, prnDb }) {
       const p = noteById(`MYDW-${TAG}-${c.note}-DW-DEC`)
-      test.skip(!p, 'seeded December note missing: run gather.js --seed')
+      test.skip(!p, 'seeded December note missing: run stack.js --seed')
       const e = rules.expectedFor(p, NOW)
       const year = C + c.accept
       const other = c.accept ? C : C + 1
@@ -1291,7 +1291,7 @@ const CASE_DEFS = [
     mutates: true,
     async run({ page, snap, prnDb }) {
       const p = noteById(`MYDW-${TAG}-${c.note}-DW-DEC`)
-      test.skip(!p, 'seeded December note missing: run gather.js --seed')
+      test.skip(!p, 'seeded December note missing: run stack.js --seed')
       expect(rules.expectedFor(p, NOW).choiceOfYear, 'two-year note').toBe(true)
       const t = p.TonnageValue
       // Awaiting in both years until actioned, so a reject removes it from both.

@@ -13,9 +13,9 @@ Runs the automated cases in `tests/mydw-e2e.spec.js` through `.claude/skills/myd
 **No duplicated code.** This skill reuses:
 
 - **Accounts:** the `csoc-e2e` matrix accounts from `.claude/skills/csoc-e2e/data/matrix.js`.
-- **From `mydw-manual-test`:** expected copy (`lib/copy.js`), December Waste year rules (`lib/rules.js`), locators (`lib/pages.js`), data snapshot/restore/seed (`lib/db.js`), and the scenario switch.
+- **LOCAL stack tools (`local/`):** expected copy (`lib/copy.js`), December Waste year rules (`lib/rules.js`), locators (`lib/pages.js`), data snapshot/restore/seed (`lib/db.js`) and the scenario switch, driven by `node .claude/skills/mydw-e2e/local/stack.js` (see its header). State is in `.state/` (gitignored).
 - **Evidence:** the screenshot recorder and Word builder from `utils/`.
-- **PRN database:** `prn-db.mjs` reads it for the audit trail, obligation year and CSV checks. LOCAL goes through `mydw-manual-test` `lib/db.js`. tst uses `tst1_prn` over `mssql` with the same connection as `epr-playwright-bdd`, **SELECT only**.
+- **PRN database:** `prn-db.mjs` reads it for the audit trail, obligation year and CSV checks. LOCAL goes through `local/lib/db.js`. tst uses `tst1_prn` over `mssql` with the same connection as `epr-playwright-bdd`, **SELECT only**.
 
 For a ticket key, read the ACs first with the shared `jira-read` skill (`node .claude/skills/jira-read/jira.mjs issue <KEY>`), then choose `--cases`.
 
@@ -49,8 +49,8 @@ node .claude/skills/mydw-e2e/runner.mjs --env tst --regulator NRW --org-type DRP
 
 **LOCAL preconditions:**
 
-- **Stack:** running with time shift and mock B2C (`mydw-manual-test` `reference/scenarios.md`).
-- **Snapshot:** a PRN snapshot exists (`node scripts/gather.js --snapshot` in `mydw-manual-test`, on a freshly seeded stack).
+- **Stack:** running with time shift and mock B2C (`reference/scenarios.md`).
+- **Snapshot:** a PRN snapshot exists (`node .claude/skills/mydw-e2e/local/stack.js --snapshot`, on a freshly seeded stack).
 - **Docker:** the runner restarts `epr-packaging-frontend` and `b2c-mock` when it changes scenario or flags. Tell the user before starting a LOCAL run, because it rewrites `TIMESHIFT_DATETIME` in `epr-local-environment/.env` and puts it back afterwards.
 
 **tst preconditions:**
@@ -70,7 +70,7 @@ The console ends with pass/fail/skip counts and one line per non-passing case. T
 
 ## Reporting failures
 
-Map each failure to a story using the ids in its title, and check `mydw-manual-test` `reference/known-issues.md` (K-numbers) before calling it new. Expected failures at the time of writing:
+Map each failure to a story using the ids in its title, and check `reference/known-issues.md` (K-numbers) before calling it new. Expected failures at the time of writing:
 
 - **K16:** TST-05 at S1/S2, details box loads expanded.
 - **K17:** TST-19, CSV not year-specific.

@@ -27,8 +27,9 @@ Rules:
 ## copied-skills-stay-identical
 
 - **When:** running `npx prettier --write` across `.claude/` on `feat/claude-knowledge`.
-- **Do:** format only the files you changed. The skills copied from `feat/manual-test-skills` (`csoc-e2e`,
-  `mydw-manual-test`, `unsubmitted-orgs`) must stay byte-identical, or the two branches conflict when merged.
+- **Do:** format only the files you changed.
+- **Superseded (9 Oct 2026):** this branch no longer keeps files byte-identical with `feat/manual-test-skills`; the
+  user said not to work around that branch. Restructure on the merits.
 - **Source:** adding `qa-ticket`, 8 Oct 2026.
 - **Recurrences:** —
 

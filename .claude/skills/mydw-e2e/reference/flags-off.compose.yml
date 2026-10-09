@@ -3,7 +3,7 @@
 #
 #   cd <epr-local-environment repo root>
 #   docker compose -f compose.yml -f compose.b2cmock.yml -f compose.timeshift.yml \
-#     -f ../waste-obligations-journey-tests/.claude/skills/mydw-manual-test/reference/flags-off.compose.yml \
+#     -f ../waste-obligations-journey-tests/.claude/skills/mydw-e2e/reference/flags-off.compose.yml \
 #     --profile packaging --profile timeshift-packaging up -d --no-deps epr-packaging-frontend
 #
 # Drop this -f file and run the same command again to switch the flags back on.

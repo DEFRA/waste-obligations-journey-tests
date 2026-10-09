@@ -1,6 +1,6 @@
 // Read access to the PRN database for the MY&DW E2E checks (audit trail, obligation year, CSV contents).
 //
-//   local  the docker stack, through mydw-manual-test lib/db.js (sqlcmd inside the sqledge container)
+//   local  the docker stack, through local/lib/db.js (sqlcmd inside the sqledge container)
 //   tst    tst1_prn over mssql, SELECT only, apart from resetToAwaiting() (before each tst account and after each accept/reject case). Same connection as epr-playwright-bdd (features/utils/dbUtils.js):
 //          MYDW_TST_DB_SERVER / _USER / _PASSWORD / _NAME from this repo's .env, otherwise DBSERVER / DBUSERNAME /
 //          DBPASSWORD from MYDW_TST_DB_ENV_FILE (default ../epr-playwright-bdd/features/ENV/.env.tst).
@@ -103,7 +103,7 @@ async function tstQuery() {
 }
 
 function localQuery() {
-  const db = require('../mydw-manual-test/scripts/lib/db.js')
+  const db = require('./local/lib/db.js')
   return { query: async (text) => db.sqlJson(text), close: async () => {} }
 }
 

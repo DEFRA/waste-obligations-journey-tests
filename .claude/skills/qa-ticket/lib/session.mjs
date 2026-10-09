@@ -51,7 +51,7 @@ export async function resolveAccount(spec, env) {
   const [kind, a, b] = String(spec).split(':')
   if (kind === 'local') {
     if (env !== 'local') throw new Error(`${spec} only works on LOCAL`)
-    const { userFor } = require('../../mydw-manual-test/scripts/config.js')
+    const { userFor } = require('../../mydw-e2e/local/config.js')
     const user = userFor(a, b)
     return { label: `LOCAL ${a} ${b}`, mockUserId: user.userId }
   }
