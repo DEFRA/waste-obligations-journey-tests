@@ -10,3 +10,21 @@ id = "govuk-notify-api-key"
 description = "GOV.UK Notify API key"
 regex = '''[A-Za-z0-9_-]*-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'''
 tags = ["key", "govuk-notify"]
+
+# Plain passwords in code or data: `password: 'x'`, `"password": "x"`, `PASSWORD = 'x'`. The default rules only
+# catch high-entropy secrets, so a readable test password slips through without this. Values read from the
+# environment (process.env, requireEnv) or templates (${...}) don't match.
+[[rules]]
+id = "hardcoded-password"
+description = "Password value written in code or data"
+regex = '''(?i)["']?[a-z_]*(password|passwd|pwd)["']?\s*[:=]\s*["']([^"'\s$<{]{6,})["']'''
+secretGroup = 2
+tags = ["password"]
+[[rules.allowlists]]
+description = "Placeholders and examples"
+regexTarget = "match"
+regexes = [
+  '''(?i)(<[^>]*>|REDACTED|changeme|example|placeholder|your[-_ ]?password|xxx+|\*{3,})''',
+  # Unit-test fixtures named after the word itself, e.g. 'reader-password', 'admin-password'.
+  '''(?i)["'][a-z]+-password["']''',
+]
