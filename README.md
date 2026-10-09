@@ -356,6 +356,31 @@ Run them in Claude Code as `/<name>`, or just describe the task.
 | `csoc-e2e`                   | CSoC E2E across every regulator × DRP/CS: producer service, then Approve & Monitor (from the submodule), with emails and evidence packs                                                                                                                                       |
 | `unsubmitted-orgs`           | Checks the unsubmitted organisations API endpoint, with an API evidence pack                                                                                                                                                                                                  |
 
+### Skills from epr-qa-control-plane
+
+This repo doesn't join the QA control plane (it's built around Azure and PayCal). Instead it installs only the
+control-plane skills it chooses, pinned to one commit:
+
+- **The choice** is in `.claude/control-plane.json` (committed): the commit `ref`, the `skills` and any extra `paths`.
+- **The installed copies** are gitignored: each skill goes to `.claude/skills/cp-<name>/` (the `cp-` prefix stops it
+  replacing one of ours), and the scripts and docs it uses go to `.claude/control-plane/`, with paths rewritten.
+- **Source:** your clone of `epr-qa-control-plane` next to this repo (or `CONTROL_PLANE_PATH`). The repo is private,
+  so there is no download.
+
+```bash
+node .claude/install-control-plane.mjs                 # install what the manifest lists (after cloning or a pin change)
+node .claude/install-control-plane.mjs list            # every control-plane skill, what it uses, what's selected
+node .claude/install-control-plane.mjs add <skill>     # add one, then install
+node .claude/install-control-plane.mjs remove <skill>
+node .claude/install-control-plane.mjs update          # move the pin to origin/main and show what changed; commit the manifest
+```
+
+Claude Code says at the start of a session when the install is missing or out of date. Don't edit the `cp-*` copies,
+as each install overwrites them. To change one, fix it in the control plane, or copy it into `.claude/skills/` under
+its own name and adapt it (as `qa-ticket`, `brief` and `handoff` were). Most control-plane skills use its Jira
+scripts with `ATLASSIAN_USER` / `ATLASSIAN_TOKEN` (a classic token on the site URL), and some use Azure; `list` shows
+which.
+
 ### Credentials for the skills
 
 Add these to `.env`, which is gitignored. Never commit them or paste them into tickets.

@@ -40,6 +40,8 @@ Project skills are in `.claude/skills/<name>/SKILL.md`:
   - `e2e-test-plan`: a release E2E test plan from epic ids.
   - `security-impact-assessment`: a Fix Version against the Definition of Done security check.
 - **Background:** `wiki-lookup`, the programme's Confluence extract in the sibling `epr-qa-control-plane`.
+- **From the control plane:** `cp-*` skills are installed copies chosen in `.claude/control-plane.json`
+  (`node .claude/install-control-plane.mjs`). Don't edit them; they're overwritten on install.
 - **Specific suites:** `mydw-manual-test`, `mydw-e2e`, `csoc-e2e` and `unsubmitted-orgs`.
 
 New skills reuse the shared building blocks instead of copying them. `docs/handoff.md` holds the current QA state and
