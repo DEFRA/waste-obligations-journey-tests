@@ -12,7 +12,8 @@ Runs the automated cases in `tests/mydw-e2e.spec.js` through `.claude/skills/myd
 
 **No duplicated code.** This skill reuses:
 
-- **Accounts:** the `csoc-e2e` matrix accounts from `.claude/skills/csoc-e2e/data/matrix.js`.
+- **Accounts:** the `csoc-e2e` matrix accounts from the gitignored `.claude/skills/csoc-e2e/data/accounts.json` (set up per
+  `.claude/skills/csoc-e2e/data/README.md`).
 - **LOCAL stack tools (`local/`):** expected copy (`lib/copy.js`), December Waste year rules (`lib/rules.js`), locators (`lib/pages.js`), data snapshot/restore/seed (`lib/db.js`) and the scenario switch, driven by `node .claude/skills/mydw-e2e/local/stack.js` (see its header). State is in `.state/` (gitignored).
 - **Evidence:** the screenshot recorder and Word builder from `utils/`.
 - **PRN database:** `prn-db.mjs` reads it for the audit trail, obligation year and CSV checks. LOCAL goes through `local/lib/db.js`. tst uses `tst1_prn` over `mssql` with the same connection as `epr-playwright-bdd`, **SELECT only**.

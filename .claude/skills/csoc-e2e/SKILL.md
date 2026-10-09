@@ -93,6 +93,8 @@ Or equivalently: `npm run test:csoc-e2e -- --journey ... --regulator ... --org-t
 
 ## Preconditions to check before running
 
+0. `data/accounts.json` exists with all 8 accounts (copy `data/accounts.example.json`; see `data/README.md`). If it's
+   missing, stop and point the user to `data/README.md`; never invent or commit account details.
 1. Current working directory is `waste-obligations-journey-tests`. If not,
    `cd` there first.
 2. `.env` has values for:
@@ -120,7 +122,7 @@ Or equivalently: `npm run test:csoc-e2e -- --journey ... --regulator ... --org-t
 4. `docx` is installed (`npm ls docx` — should show `docx@9.x`).
 5. For email capture, the `claude` CLI is on PATH and logged in, and
    `claude mcp list` shows **claude.ai Gmail ✔ Connected**, signed in as
-   the `CSOC_TST_EMAIL` inbox (`.env`) — the inbox every `+tst+` producer
+   the inbox behind the `+tst+` usernames in `data/accounts.json` — the inbox every `+tst+` producer
    test account delivers to. (The Equal Experts Workspace allows neither
    IMAP app passwords nor a self-created OAuth app, so the connector is the
    only route.) If Gmail isn't connected the run still completes and the

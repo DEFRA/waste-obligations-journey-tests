@@ -35,7 +35,8 @@ export const REGULATOR_BY_COUNTRY = {
 // `referenceNumber` is the value the endpoint returns and the value AC4's
 // partial-search test uses. `organisationId` is the GUID the create/patch
 // declaration endpoints need.
-// `account` is the org's sign-in alias in the csoc-e2e matrix (CSOC_TST_EMAIL + alias), not an address.
+// `account` is the +tst+ alias of the org's csoc-e2e sign-in (the full details are in the gitignored
+// .claude/skills/csoc-e2e/data/accounts.json), not an address.
 export const DP_ORGS = Object.freeze({
   'GB-ENG': {
     country: 'GB-ENG',

@@ -1,0 +1,70 @@
+{
+  "EA": {
+    "DRP": {
+      "username": "yourname+tst+…@example.com",
+      "password": "<tst password>",
+      "companyName": "<company name>",
+      "orgId": "<6-digit org id>",
+      "organisationId": "<organisation GUID>"
+    },
+    "CS": {
+      "username": "yourname+tst+…@example.com",
+      "password": "<tst password>",
+      "companyName": "<company name>",
+      "orgId": "<6-digit org id>",
+      "organisationId": "<organisation GUID>",
+      "complianceSchemeId": "<compliance scheme GUID>"
+    }
+  },
+  "NRW": {
+    "DRP": {
+      "username": "yourname+tst+…@example.com",
+      "password": "<tst password>",
+      "companyName": "<company name>",
+      "orgId": "<6-digit org id>",
+      "organisationId": "<organisation GUID>"
+    },
+    "CS": {
+      "username": "yourname+tst+…@example.com",
+      "password": "<tst password>",
+      "companyName": "<company name>",
+      "orgId": "<6-digit org id>",
+      "organisationId": "<organisation GUID>",
+      "complianceSchemeId": "<compliance scheme GUID>"
+    }
+  },
+  "SEPA": {
+    "DRP": {
+      "username": "yourname+tst+…@example.com",
+      "password": "<tst password>",
+      "companyName": "<company name>",
+      "orgId": "<6-digit org id>",
+      "organisationId": "<organisation GUID>"
+    },
+    "CS": {
+      "username": "yourname+tst+…@example.com",
+      "password": "<tst password>",
+      "companyName": "<company name>",
+      "orgId": "<6-digit org id>",
+      "organisationId": "<organisation GUID>",
+      "complianceSchemeId": "<compliance scheme GUID>"
+    }
+  },
+  "NIEA": {
+    "DRP": {
+      "username": "yourname+tst+…@example.com",
+      "password": "<tst password>",
+      "companyName": "<company name>",
+      "orgId": "<6-digit org id>",
+      "organisationId": "<organisation GUID>"
+    },
+    "CS": {
+      "username": "yourname+tst+…@example.com",
+      "password": "<tst password>",
+      "companyName": "<company name>",
+      "orgId": "<6-digit org id>",
+      "organisationId": "<organisation GUID>",
+      "complianceSchemeId": "<compliance scheme GUID>"
+    }
+  }
+}

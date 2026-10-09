@@ -23,3 +23,6 @@ evidence/
 # Installed from epr-qa-control-plane by .claude/install-control-plane.mjs (the pin is in .claude/control-plane.json)
 .claude/control-plane/
 .claude/skills/cp-*/
+
+# csoc-e2e tst accounts (usernames, passwords, org ids): each user keeps their own; see .claude/skills/csoc-e2e/data/README.md
+.claude/skills/csoc-e2e/data/accounts.json

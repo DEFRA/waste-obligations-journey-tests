@@ -13,7 +13,7 @@ import {
 //
 //   MYDW_RUN=1         harness flag; without it the spec is a no-op, so `npm test` leaves it alone
 //   MYDW_ENV           local | tst
-//   REGULATOR/ORG_TYPE matrix cell; tst signs in with .claude/skills/csoc-e2e/data/matrix.js accounts,
+//   REGULATOR/ORG_TYPE matrix cell; tst signs in with the csoc-e2e accounts (data/accounts.json),
 //                      local with the seeded EA accounts (POP QUEST = DRP, Organisation Name = CS)
 //   MYDW_SCENARIO      local time-shift scenario (S1|S2|S3); REAL in tst
 //   MYDW_NOW           frontend clock (ISO) for local; tst uses the real date

@@ -576,7 +576,23 @@ async function main() {
     )
   }
 
-  if (args.dryRun) process.exit(0)
+  if (args.dryRun) {
+    // Check each planned account resolves from data/accounts.json, without printing credentials.
+    const { resolveMatrixEntry } = await loadMatrix()
+    let missing = 0
+    for (const r of runs) {
+      try {
+        const e = resolveMatrixEntry(r.regulator, r.orgType)
+        console.log(
+          `  account ${r.regulator}/${r.orgType}: ready (${e.companyName})`
+        )
+      } catch (err) {
+        missing++
+        console.log(`  account ${r.regulator}/${r.orgType}: ${err.message}`)
+      }
+    }
+    process.exit(missing ? 1 : 0)
+  }
 
   const summary = []
   for (const run of runs) {
