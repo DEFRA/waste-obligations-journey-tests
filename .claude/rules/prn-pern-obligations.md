@@ -29,7 +29,7 @@ Confirm against the code before relying on a detail; the app is still changing.
   2. now is before 1 Feb P+1: `[P, P+1]` (a choice of year).
   3. P+1 = C: `[C]`.
   4. otherwise expired.
-- The port of these rules is `.claude/skills/mydw-manual-test/scripts/lib/rules.js`. Use it to compute
+- The port of these rules is `.claude/skills/mydw-e2e/local/lib/rules.js`. Use it to compute
   expectations rather than re-deriving them.
 - **Blue tag** "Can be accepted towards Y[ or Y+1] recycling obligations": December Waste, awaiting, at least one
   year available, today in December or January, and issued between 1 Dec and 31 Jan of that window.
@@ -88,7 +88,7 @@ Confirm against the code before relying on a detail; the app is still changing.
 - **Status ids:** 1 ACCEPTED, 2 REJECTED, 3 CANCELLED, 4 AWAITING ACCEPTANCE.
 - **Owner:** `OrganisationId` is the producer's organisation id; on tst a compliance scheme's notes are under its
   `complianceSchemeId`. Query both.
-- **LOCAL:** `EprPrnBackend` in the `sqledge` container, via `mydw-manual-test` `lib/db.js` (snapshot, restore, seed).
+- **LOCAL:** `EprPrnBackend` in the `sqledge` container, via `mydw-e2e` `local/lib/db.js` (snapshot, restore, seed: `local/stack.js`).
 - **tst:** `tst1_prn`, via `.claude/skills/mydw-e2e/prn-db.mjs`, SELECT only apart from the reset to
   awaiting (`UPDATE Prn SET PrnStatusId = 4 WHERE OrganisationId IN (…)`). Credentials come from `.env` or
   `../epr-playwright-bdd/features/ENV/.env.tst`. **Never print them.**

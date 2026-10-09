@@ -27,7 +27,7 @@
 - **Scenarios:** S1 15 Dec 2026 12:00 (December window), S2 31 Jan 2027 23:59:59 (last second of the window),
   S3 1 Feb 2027 00:00:01 (after the window), S4 15 Dec 2027 12:00 (a year on, to catch hard-coded years).
 - **Accounts:** POP QUEST LTD (DRP) and Organisation Name (CS), each with AP, DP and basic users.
-- **Data:** the `mydw-manual-test` skill snapshots and restores the PRN tables, and seeds `MYDW-DP-…` / `MYDW-CS-…`
+- **Data:** `mydw-e2e`'s `local/stack.js` snapshots and restores the PRN tables, and seeds `MYDW-DP-…` / `MYDW-CS-…`
   December Waste and PERN notes (issue dates follow the frontend clock). Restore after every accept or reject.
 - Anything needing December/January, 1 February or a flag switched off can only be tested here.
 
@@ -49,7 +49,6 @@
 
 The full list is in `CLAUDE.md`. Notes for the suites:
 
-- `mydw-manual-test`: tester-confirmed MY&DW journeys on LOCAL (clock, seed, snapshot/restore, Word evidence).
 - `mydw-e2e`: the automated MY&DW release run (`tests/mydw-e2e.spec.js`, cases TST-xx / LOC-xx) on LOCAL and tst.
 - `csoc-e2e`: the CSoC E2E matrix run (producer and regulator sides, every regulator × DRP/CS). The regulator side
   comes from the `vendor/waste-packaging-regulator-tests` submodule: clone with `--recurse-submodules`, or run
@@ -70,6 +69,6 @@ The full list is in `CLAUDE.md`. Notes for the suites:
 
 ## Known issues
 
-`.claude/skills/mydw-manual-test/reference/known-issues.md` lists the MY&DW observations as K-numbers. The user ruled
+`.claude/skills/mydw-e2e/reference/known-issues.md` lists the MY&DW observations as K-numbers. The user ruled
 K1, K5, K9, K12, K18, K19 and K20 existing behaviour, not MY&DW, and K21 is withdrawn: don't report them as release
 defects.

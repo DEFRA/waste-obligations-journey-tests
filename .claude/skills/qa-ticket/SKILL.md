@@ -87,7 +87,7 @@ find out what the environment is **actually running**, before any test case:
 Reuse what exists before creating anything:
 
 - `data/`;
-- the `mydw-manual-test` seeds and its `reference/scenarios.md`;
+- the `mydw-e2e` LOCAL seeds and its `reference/scenarios.md`;
 - the `csoc-e2e` matrix accounts;
 - the tst PRN data (read through `mydw-e2e/prn-db.mjs`).
 
@@ -143,7 +143,7 @@ How results are recorded:
   - Record only the check that proved it, never failed attempts or workarounds.
 - **Script failures:** if a step fails because of the script (a selector), fix the script and rerun. Report a
   product failure as FAIL with what was seen. Never change an expected result to make a step pass.
-- **LOCAL data:** after mutating steps, restore it (`mydw-manual-test` `gather.js --restore`).
+- **LOCAL data:** after mutating steps, restore it (`node .claude/skills/mydw-e2e/local/stack.js --restore`).
 
 ### 9. Check and show the evidence
 

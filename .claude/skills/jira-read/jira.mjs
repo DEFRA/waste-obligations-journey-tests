@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Read-only Jira Cloud client shared by the skills in this repo (mydw-manual-test, csoc-e2e,
+// Read-only Jira Cloud client shared by the skills in this repo (qa-ticket, mydw-e2e, csoc-e2e,
 // unsubmitted-orgs). Only GET requests are made.
 //
 //   node .claude/skills/jira-read/jira.mjs issue MO-449 [--json]

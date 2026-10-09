@@ -1,6 +1,6 @@
 ---
 name: jira-read
-description: Read Jira tickets (description, acceptance criteria, status, parent epic) and list an epic's child items directly from eaflood.atlassian.net, read-only, using the JIRA_* credentials in this repo's .env. Use whenever a skill or the user needs a ticket's ACs or scope (e.g. "MO-449", "the children of MO-31"), instead of asking the user to paste them. Shared by mydw-manual-test, mydw-e2e, csoc-e2e and unsubmitted-orgs.
+description: Read Jira tickets (description, acceptance criteria, status, parent epic) and list an epic's child items directly from eaflood.atlassian.net, read-only, using the JIRA_* credentials in this repo's .env. Use whenever a skill or the user needs a ticket's ACs or scope (e.g. "MO-449", "the children of MO-31"), instead of asking the user to paste them. Shared by qa-ticket, e2e-test-plan, mydw-e2e, csoc-e2e and unsubmitted-orgs.
 user-invocable: true
 allowed-tools: Bash, Read
 argument-hint: <KEY> | children <EPIC[,EPIC]> | search "<JQL>"
@@ -8,7 +8,7 @@ argument-hint: <KEY> | children <EPIC[,EPIC]> | search "<JQL>"
 
 # Jira read
 
-The one place the skills in this repo read Jira (mydw-manual-test, mydw-e2e, csoc-e2e, unsubmitted-orgs). Other skills call the script below; they never copy it.
+The one place the skills in this repo read Jira (qa-ticket, e2e-test-plan, mydw-e2e, csoc-e2e, unsubmitted-orgs). Other skills call the script below; they never copy it.
 
 Run from the repo root:
 

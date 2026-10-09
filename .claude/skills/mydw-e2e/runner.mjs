@@ -8,7 +8,7 @@
 // tst signs in with the csoc-e2e matrix accounts (4 regulators x DRP/CS) on the real date. Before each account
 // it sets all that account's notes back to awaiting acceptance in tst1_prn (--no-reset to skip).
 // local uses the seeded EA accounts (POP QUEST = DRP, Organisation Name = CS): it switches the frontend
-// clock per scenario with the mydw-manual-test skill, restores PRN data around every case that accepts or
+// clock per scenario with local/stack.js, restores PRN data around every case that accepts or
 // rejects, and puts the original clock and flags back at the end.
 //
 // Output: evidence/MYDW-E2E/<ticket>/<timestamp>/<ENV>-<REG>-<ORG>.docx per account, next to SUMMARY.docx.
@@ -39,7 +39,8 @@ const REPO_ROOT = path.resolve(
   '..',
   '..'
 )
-const MYDW = path.join(REPO_ROOT, '.claude', 'skills', 'mydw-manual-test')
+const SKILL_DIR = path.join(REPO_ROOT, '.claude', 'skills', 'mydw-e2e')
+const LOCAL = path.join(SKILL_DIR, 'local')
 const SPEC = 'tests/mydw-e2e.spec.js'
 // Colour codes in Playwright error messages, stripped before they go into the Word pack.
 const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g')
@@ -72,16 +73,16 @@ const list = (value, all) =>
 
 // ---------------------------------------------------------------------------- local stack control
 
-function gather(args) {
-  return execFileSync('node', ['scripts/gather.js', ...args], {
-    cwd: MYDW,
+function stack(args) {
+  return execFileSync('node', ['local/stack.js', ...args], {
+    cwd: SKILL_DIR,
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024
   })
 }
 
 function localState() {
-  const preflight = require(path.join(MYDW, 'scripts', 'lib', 'preflight.js'))
+  const preflight = require(path.join(LOCAL, 'lib', 'preflight.js'))
   const env = preflight.frontendEnv()
   return {
     clock: preflight.frontendClock(),
@@ -97,8 +98,8 @@ function switchScenario(id) {
   say(
     `  switching frontend clock to ${id} (restarts frontend + b2c-mock, re-seeds MYDW-* notes)`
   )
-  gather(['--scenario', id])
-  gather(['--restore'])
+  stack(['--scenario', id])
+  stack(['--restore'])
 }
 
 // Frontend restarted with one flag off via a throwaway overlay; switchScenario() later recreates it with
@@ -108,12 +109,12 @@ function flagsOff(which) {
     which === 'DW'
       ? 'FeatureManagement__ShowDecemberWaste'
       : 'FeatureManagement__ShowMultiYearObligations'
-  const overlay = path.join(MYDW, '.state', `flag-off-${which}.compose.yml`)
+  const overlay = path.join(SKILL_DIR, '.state', `flag-off-${which}.compose.yml`)
   writeFileSync(
     overlay,
     `services:\n  epr-packaging-frontend:\n    environment:\n      ${name}: "false"\n`
   )
-  const { LOCAL_ENV_ROOT } = require(path.join(MYDW, 'scripts', 'config.js'))
+  const { LOCAL_ENV_ROOT } = require(path.join(LOCAL, 'config.js'))
   say(`  restarting frontend with ${name}=false`)
   execFileSync(
     'docker',
@@ -325,12 +326,12 @@ async function main() {
       }
       if (prnDb) await prnDb.close()
     } else {
-      const status = JSON.parse(gather(['--data-status']))
+      const status = JSON.parse(stack(['--data-status']))
       if (!status.snapshot)
         throw new Error(
-          'No PRN snapshot: run `node scripts/gather.js --snapshot` on a freshly seeded stack'
+          'No PRN snapshot: run `node .claude/skills/mydw-e2e/local/stack.js --snapshot` on a freshly seeded stack'
         )
-      if (!status.seeded) gather(['--seed'])
+      if (!status.seeded) stack(['--seed'])
       const start = localState()
       restoreClock = start.clock.raw || null
       const scenarios = list(opts.scenarios, ['S2', 'S1', 'S3', 'S4'])
@@ -344,7 +345,7 @@ async function main() {
       for (const scenario of scenarios) {
         if (!opts['flags-off'] && localState().scenario !== scenario)
           switchScenario(scenario)
-        else gather(['--restore'])
+        else stack(['--restore'])
         const state = localState()
         say(
           `\n■ scenario ${scenario} · clock ${state.clock.now.toISOString()} · flags MY=${state.flags.my} DW=${state.flags.dw}`
@@ -363,7 +364,7 @@ async function main() {
               headed: !!opts.headed
             }))
           )
-          gather(['--restore'])
+          stack(['--restore'])
         }
       }
     }
@@ -372,9 +373,9 @@ async function main() {
       const current = localState()
       if (opts['flags-off'] || current.clock.raw !== restoreClock) {
         say(`\n  restoring frontend clock ${restoreClock} with both flags on`)
-        gather(['--scenario', restoreClock])
+        stack(['--scenario', restoreClock])
       }
-      gather(['--restore'])
+      stack(['--restore'])
     }
   }
 

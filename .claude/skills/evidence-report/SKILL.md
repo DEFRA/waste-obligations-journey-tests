@@ -116,5 +116,5 @@ file is locked, it's open in Word: ask the user to close it rather than retrying
 - **Where it goes:** evidence lives under the gitignored `evidence/` folder, never in the repository.
 - **No secrets:** no passwords, tokens or `.env` values in anything recorded. Check screenshots and transcripts before
   sharing.
-- **Other skills:** `mydw-manual-test`, `mydw-e2e` and `csoc-e2e` still use their own builders. New skills use this
+- **Other skills:** `mydw-e2e` and `csoc-e2e` still use their own builders. New skills use this
   one; move the others over one at a time, checking each one's output still matches.

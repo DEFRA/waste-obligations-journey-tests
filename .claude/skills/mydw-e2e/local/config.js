@@ -2,7 +2,7 @@
 
 const path = require('path')
 
-// The skill lives in waste-obligations-journey-tests/.claude/skills/mydw-manual-test. Evidence is written to this
+// These tools live in waste-obligations-journey-tests/.claude/skills/mydw-e2e/local. Evidence is written to this
 // repo's (gitignored) evidence/ folder; the local docker stack is the sibling epr-local-environment checkout.
 const EVIDENCE_REPO =
   process.env.MYDW_EVIDENCE_REPO ||

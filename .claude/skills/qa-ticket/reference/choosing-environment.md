@@ -18,7 +18,7 @@ dev, and on "tst" when it's on CDP test. Check it with `node .claude/skills/cdp-
 
 | Env   | Packaging (sign-in, RPD pages)       | CDP (Waste Obligations)                                | Accounts                                      | Clock and data                                                           |
 | ----- | ------------------------------------ | ------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------ |
-| LOCAL | `https://localhost:7084`             | `https://localhost:8015/manage-recycling-obligations/` | mock B2C: `local:DRP\|CS:AP\|DP\|BU`          | Time shift, flags, seed/snapshot/restore (`mydw-manual-test`)            |
+| LOCAL | `https://localhost:7084`             | `https://localhost:8015/manage-recycling-obligations/` | mock B2C: `local:DRP\|CS:AP\|DP\|BU`          | Time shift, flags, seed/snapshot/restore (`mydw-e2e` `local/stack.js`)   |
 | dev9  | `https://rwd-dev9.azure.defra.cloud` | `waste-obligations.dev.cdp-int.defra.cloud`            | `env:<PREFIX>` from `.env` (ask the user)     | Real clock; shared data                                                  |
 | tst   | `https://rwd-tst1.azure.defra.cloud` | `waste-obligations.test.cdp-int.defra.cloud`           | `matrix:<REG>:<DRP\|CS>` (csoc-e2e) or `env:` | Real clock; shared data; `tst1_prn` readable (see `mydw-e2e/prn-db.mjs`) |
 

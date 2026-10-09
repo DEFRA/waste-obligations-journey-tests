@@ -27,7 +27,7 @@ Both flags are hard-coded `"true"` in `compose.yml` (`epr-packaging-frontend`). 
 - **What is shifted:** `epr-packaging-frontend`, and `b2c-mock` (token times).
 - **What is not shifted:** `epr-prn-common-backend`, `epr-pom-api-web`, `waste-obligations`. Status-history and `StatusUpdatedOn` timestamps therefore use the real date.
 
-To change scenario, run `node scripts/gather.js --scenario S1|S2|S3|S4` (or a literal `'YYYY-MM-DD hh:mm:ss'`). It:
+To change scenario, run `node .claude/skills/mydw-e2e/local/stack.js --scenario S1|S2|S3|S4` (or a literal `'YYYY-MM-DD hh:mm:ss'`). It:
 
 1. Rewrites `TIMESHIFT_DATETIME=` in `epr-local-environment/.env`. The previous value is printed.
 2. Runs `docker compose -f compose.yml -f compose.b2cmock.yml -f compose.timeshift.yml --profile packaging --profile timeshift-packaging up -d --no-deps --no-build --pull never --force-recreate epr-packaging-frontend b2c-mock`.

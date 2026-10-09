@@ -14,7 +14,7 @@
 
 - The user wants everything that can be automated to be automated; only cross-system journeys stay manual.
 - Changing scenario or flags recreates the frontend. After stopping a run part-way, restore the clock
-  (`gather.js --scenario …`) and the data (`gather.js --restore`).
+  (`stack.js --scenario …`) and the data (`stack.js --restore`).
 - Re-test before reporting: an issue seen once on tst (K21) was gone the next day. When the user challenges an issue,
   retest with a video and screenshots, and give the precondition that reproduces it.
 
