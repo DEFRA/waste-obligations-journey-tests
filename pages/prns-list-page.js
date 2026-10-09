@@ -183,7 +183,7 @@ export class PrnsListPage extends BasePage {
       name: number,
       exact: true
     })
-    return this.decemberWateFlashLabel()
+    return this.decemberWasteFlashLabel
       .locator('..')
       .filter({ has: numberLink })
       .getByTestId('december-waste-label')
@@ -202,7 +202,7 @@ export class PrnsListPage extends BasePage {
   }
 
   async expectNoDecemberWasteFlash(number) {
-    await expect(this.decemberWasteFlashForNumber(number)).toHaveCount(0)
+    await expect(this.decemberWasteFlashLabel).toHaveCount(0)
   }
 
   async expectDecemberWasteFlashCount(count) {
