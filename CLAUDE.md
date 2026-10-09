@@ -17,6 +17,7 @@ Loaded automatically from `.claude/rules/`:
 | `environments-and-test-data.md`      | LOCAL (time shift) and tst, flags, accounts, skills, known issues                  |
 | `testing-lessons.md`                 | What to check, how to run, and how results are reported                            |
 | `definition-of-done.md`              | What the CDP Definition of Done asks of QA sign-off, and the Security Impact Check |
+| `test-code-conventions.md`           | How Playwright code is written here: locators, waits, assertions, structure, data  |
 
 Update the relevant rules file when you learn something durable about the service; keep this file short.
 
@@ -35,6 +36,8 @@ Project skills are in `.claude/skills/<name>/SKILL.md`:
   - `brief`: the daily homepage.
   - `qa-ticket`: a ticket from IN QA through scope, PRs, environment and build check, approved plan, run, evidence
     and Jira.
+  - `review-tests`: reviews changed test code (branch or PR) for Playwright practice, ticket coverage, the test
+    pyramid, shift-left and industry standards.
   - `handoff`: the lessons ledger and the handoff doc at the end of a session.
 - **Releases:**
   - `e2e-test-plan`: a release E2E test plan from epic ids.

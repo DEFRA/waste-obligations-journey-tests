@@ -124,11 +124,11 @@ npm run report
 
 The suite runs one profile at a time, selected by the `PROFILE` env var. The CDP Portal injects this from the **Profile** field on the test-suite run page; locally you set it yourself.
 
-| `PROFILE`       | Specs run                                                                                                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `e2e` (default) | `tests/cookies-banner.spec.js`, `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js`, `tests/obligations-choose-year-dp.spec.js`, `tests/prns-list-journey-dp.spec.js` |
-| `accessibility` | `tests/accessibility.spec.js`                                                                                                                                                             |
-| `security`      | `tests/security.spec.js`                                                                                                                                                                  |
+| `PROFILE`       | Specs run                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e` (default) | `tests/cookies-banner.spec.js`, `tests/csoc-submission-dp.spec.js`, `tests/csoc-submission-cso.spec.js`, `tests/obligations-choose-year-dp.spec.js`, `tests/prns-list-journey-dp.spec.js`, `tests/prns-list-sort-filter-journey-dp.spec.js`. The skill-driven specs (`csoc-e2e-journey`, `mydw-e2e`, `unsubmitted-organisations-*`) list only a skipped placeholder unless their runner sets their environment |
+| `accessibility` | `tests/accessibility.spec.js`                                                                                                                                                                                                                                                                                                                                                                                  |
+| `security`      | `tests/security.spec.js`                                                                                                                                                                                                                                                                                                                                                                                       |
 
 Unset → `e2e` (so `npm test` and `npm run test:local` keep working as before). Any other value throws at config load and names the valid options.
 
@@ -343,6 +343,7 @@ Run them in Claude Code as `/<name>`, or just describe the task.
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `brief`                    | Daily homepage: your tickets, what's waiting in IN QA, any open session, handoff follow-ups, branch and stack state                                                                                                                                                           |
 | `qa-ticket`                | Takes a ticket from IN QA: agrees the AC scope, checks the PRs, picks LOCAL / dev9 / tst (CDP dev / test), verifies the deployed build, gets the test plan approved, runs it, builds the evidence, then attaches it and sets the Test Exit Summary (each Jira write approved) |
+| `review-tests`             | Reviews changed test code (branch or PR): Playwright practice, coverage against the ticket's ACs, test pyramid, shift-left and industry standards, with file:line findings and a coverage matrix                                                                              |
 | `e2e-test-plan`            | Builds a release E2E test plan from epic ids (TST, LOCAL and manual parts, coverage, open questions), as Markdown and Confluence-ready HTML                                                                                                                                   |
 | `evidence-report`          | Shared recorder and report builder: Word report, `test-cases.txt`, `evidence.txt`, `exit-summary.txt`, checked against a quality bar                                                                                                                                          |
 | `handoff`                  | End of session: records lessons and rewrites `docs/handoff.md`                                                                                                                                                                                                                |
@@ -378,6 +379,20 @@ as each install overwrites them. To change one, fix it in the control plane, or 
 its own name and adapt it (as `qa-ticket`, `brief` and `handoff` were). Most control-plane skills use its Jira
 scripts with `ATLASSIAN_USER` / `ATLASSIAN_TOKEN` (a classic token on the site URL), and some use Azure; `list` shows
 which.
+
+### Reviewing test code
+
+Three layers, from fastest to deepest:
+
+1. **Conventions:** `.claude/rules/test-code-conventions.md` says how Playwright code is written here (locators,
+   waits, assertions, structure, data, traceability). Claude Code loads it in every session.
+2. **Lint:** `eslint-plugin-playwright` runs its recommended rules as errors on `tests/`, `pages/`, `fixtures/` and
+   `auth/`, in the pre-commit hook and on every PR (`npm run lint`). Deliberate environment or entry-point branching
+   carries `// eslint-disable-next-line <rule> -- <reason>`; never a file-wide disable.
+3. **AI review:** `/review-tests` (or `/review-tests <PR#> --ticket MO-123`) scans the change
+   (`node .claude/skills/review-tests/scan.mjs`), then reviews it for Playwright practice, coverage against the
+   ticket's ACs, the test pyramid, shift-left and industry standards. It writes
+   `evidence/REVIEW/<PR or branch>/<timestamp>/review.md` and posts to the PR only when you approve the exact text.
 
 ### Credentials for the skills
 

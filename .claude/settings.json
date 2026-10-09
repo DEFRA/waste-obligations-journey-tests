@@ -6,6 +6,7 @@
       "Bash(node .claude/skills/qa-ticket/pr-status.mjs *)",
       "Bash(node .claude/skills/cdp-portal/cdp.mjs *)",
       "Bash(node .claude/install-control-plane.mjs *)",
+      "Bash(node .claude/skills/review-tests/scan.mjs *)",
       "Bash(node .claude/skills/evidence-report/build-report.mjs *)",
       "Bash(ls *)",
       "Bash(wc *)",
@@ -18,9 +19,14 @@
       "Bash(docker compose ps *)",
       "Bash(gh pr view *)",
       "Bash(gh pr list *)",
-      "Bash(gh search prs *)"
+      "Bash(gh search prs *)",
+      "Bash(gh pr diff *)"
     ],
-    "ask": ["Bash(node .claude/skills/jira-write/jira-write.mjs *)"],
+    "ask": [
+      "Bash(node .claude/skills/jira-write/jira-write.mjs *)",
+      "Bash(gh pr review *)",
+      "Bash(gh pr comment *)"
+    ],
     "deny": [
       "Read(**/.env)",
       "Read(**/.env.local)",
