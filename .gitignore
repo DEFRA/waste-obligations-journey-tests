@@ -20,3 +20,6 @@ security-report/
 FAILED
 
 evidence/
+# Installed from epr-qa-control-plane by .claude/install-control-plane.mjs (the pin is in .claude/control-plane.json)
+.claude/control-plane/
+.claude/skills/cp-*/
