@@ -91,7 +91,9 @@ test.describe(`CSoC ${JOURNEY ?? '<unset>'} · ${REGULATOR ?? '<unset>'} · ${OR
   })
 
   if (!IS_HARNESS_RUN) {
+    // eslint-disable-next-line playwright/expect-expect -- keeps the file listable when the harness env isn't set
     test('placeholder', () => {}) // covered by test.skip above
+
     return
   }
 
@@ -126,10 +128,12 @@ test.describe(`CSoC ${JOURNEY ?? '<unset>'} · ${REGULATOR ?? '<unset>'} · ${OR
       runProducerPhase(matrixEntry, JOURNEY, PHASE)
       break
     default:
+      // eslint-disable-next-line playwright/expect-expect -- fixme scaffold for a journey not built yet
       test.fixme(`${JOURNEY}: not implemented yet — scaffold only`, () => {
         // Journey stubs land here so `--matrix all` doesn't blow up. See
         // plans/given-this-is-the-purrfect-sutton.md for what each needs.
       })
+
       break
   }
 })
@@ -175,6 +179,7 @@ function runDrpHappyPath(entry) {
     const year = new Date().getFullYear()
     const directUrl = directCertificateUrl(entry, year)
 
+    // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: CDP journeys open the certificate URL directly
     if (directUrl) {
       await test.step('Navigates directly to the certificate submission URL', async () => {
         await page.goto(directUrl)
@@ -261,6 +266,7 @@ function runCsCompliant(entry) {
     const year = new Date().getFullYear()
     const directUrl = directCertificateUrl(entry, year)
 
+    // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: CDP journeys open the certificate URL directly
     if (directUrl) {
       await test.step('Navigates directly to the statement submission URL', async () => {
         await page.goto(directUrl)
@@ -355,6 +361,7 @@ function runCsReg43No(entry, { journey, obligationExpectedLabel }) {
     const year = new Date().getFullYear()
     const directUrl = directCertificateUrl(entry, year)
 
+    // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: CDP journeys open the certificate URL directly
     if (directUrl) {
       await test.step('Navigates directly to the statement submission URL', async () => {
         await page.goto(directUrl)
@@ -368,11 +375,13 @@ function runCsReg43No(entry, { journey, obligationExpectedLabel }) {
         await landingPage.goto()
         await screenshotRecorder.capture(page, 'Account home')
       })
+
       await test.step('Opens Manage recycling obligations', async () => {
         await landingPage.goToObligations()
         await obligationsPage.expectLoaded()
         await screenshotRecorder.capture(page, 'Manage recycling obligations')
       })
+
       await test.step('Starts CSoC submission', async () => {
         await obligationsPage.startCsocSubmission()
         await csocAboutPage.expectLoaded()
@@ -440,7 +449,14 @@ function runCsReg43No(entry, { journey, obligationExpectedLabel }) {
 // ─────────────────────────────────────────────────────────────────────────
 
 function runProducerPhase(entry, journey, phase) {
+  const producerFlow = { submit: submitFlow, resubmit: resubmitFlow }[phase]
+  if (!producerFlow) {
+    throw new Error(
+      `Unknown PHASE "${phase}" for producer ${journey}. Expected: submit, resubmit.`
+    )
+  }
   const label = `${journey} · ${entry.regulator} · ${entry.orgType} · phase=${phase}`
+
   test(`producer ${label}`, async ({
     page,
     landingPage,
@@ -455,33 +471,16 @@ function runProducerPhase(entry, journey, phase) {
     const year = new Date().getFullYear()
     const directUrl = directCertificateUrl(entry, year)
 
-    if (phase === 'submit') {
-      await submitFlow(entry, year, directUrl, {
-        page,
-        landingPage,
-        obligationsPage,
-        csocAboutPage,
-        csocSubmissionPage,
-        csocConfirmationPage,
-        csocViewPage,
-        screenshotRecorder
-      })
-    } else if (phase === 'resubmit') {
-      await resubmitFlow(entry, year, directUrl, {
-        page,
-        landingPage,
-        obligationsPage,
-        csocAboutPage,
-        csocSubmissionPage,
-        csocConfirmationPage,
-        csocViewPage,
-        screenshotRecorder
-      })
-    } else {
-      throw new Error(
-        `Unknown PHASE "${phase}" for producer ${journey}. Expected: submit, resubmit.`
-      )
-    }
+    await producerFlow(entry, year, directUrl, {
+      page,
+      landingPage,
+      obligationsPage,
+      csocAboutPage,
+      csocSubmissionPage,
+      csocConfirmationPage,
+      csocViewPage,
+      screenshotRecorder
+    })
   })
 }
 
@@ -510,11 +509,13 @@ async function submitFlow(entry, year, directUrl, pages) {
       await landingPage.goto()
       await screenshotRecorder.capture(page, 'Submit — account home')
     })
+
     await test.step('Opens Manage recycling obligations', async () => {
       await landingPage.goToObligations()
       await obligationsPage.expectLoaded()
       await screenshotRecorder.capture(page, 'Submit — manage recycling')
     })
+
     await test.step('Starts CSoC submission', async () => {
       await obligationsPage.startCsocSubmission()
       await csocAboutPage.expectLoaded()
@@ -587,26 +588,10 @@ async function resubmitFlow(entry, year, directUrl, pages) {
   })
 
   await test.step('Clicks Resubmit → lands on the About page', async () => {
-    // Prefer the Resubmit button — it's the UI-driven flow the FE offers
-    // after a cancel, and it re-establishes whatever server-side state the
-    // certificate page needs. Fall back to the direct URL only when the
-    // button isn't rendered (older FE build, or the state machine has
-    // routed us somewhere unexpected).
+    // The Resubmit button is the journey under test (E2E-04 / E2E-08): if it's missing, that's the defect.
     const resubmitBtn = obligationsPage.resubmitButton
-    const buttonVisible = await resubmitBtn.isVisible().catch(() => false)
-    if (buttonVisible) {
-      await resubmitBtn.click()
-    } else if (directUrl) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        '[resubmit] resubmit button not visible; falling back to direct URL'
-      )
-      await page.goto(directUrl)
-    } else {
-      throw new Error(
-        'Neither the Resubmit button nor a direct certificate URL is available — cannot start resubmission'
-      )
-    }
+    await expect(resubmitBtn).toBeVisible()
+    await resubmitBtn.click()
     // The click returns before the navigation lands, so give the About
     // page time to render — capturing straight away produced a blank
     // mid-navigation screenshot. Don't fail here: capture what loaded

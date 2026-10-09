@@ -43,11 +43,6 @@ test.describe('Unsubmitted Organisations Search — API', () => {
     'EVIDENCE_DIR not set — this spec is driven by .claude/skills/unsubmitted-orgs/runner.mjs'
   )
 
-  if (!IS_HARNESS_RUN) {
-    test('placeholder', () => {})
-    return
-  }
-
   test.beforeAll(async () => {
     transcripts = await transcriptRecorderFromEnv()
     // Best-effort reset: cancel any active declaration on the 8 known
@@ -83,6 +78,13 @@ test.describe('Unsubmitted Organisations Search — API', () => {
   test.afterEach(async () => {
     await apiContext?.dispose()
   })
+
+  if (!IS_HARNESS_RUN) {
+    // eslint-disable-next-line playwright/expect-expect -- keeps the file listable when the harness env isn't set
+    test('placeholder', () => {})
+
+    return
+  }
 
   // ─── AC1 — Identify unsubmitted organisations ─────────────────────────
   test.describe('AC1 — eligibility filter', () => {
@@ -187,6 +189,7 @@ test.describe('Unsubmitted Organisations Search — API', () => {
             responseBody: JSON.stringify(body, null, 2)
           }
         )
+        // eslint-disable-next-line playwright/no-conditional-in-test -- collects every org's mismatch, then fails once
         if (!resolved) {
           failures.push(
             `${org.country}/${org.registrationType} ref=${org.referenceNumber}: ` +
@@ -436,7 +439,7 @@ test.describe('Unsubmitted Organisations Search — API', () => {
         responseBody: JSON.stringify(body, null, 2)
       })
       expect(response.status()).toBe(200)
-      expect(body.unsubmittedOrganisations.length).toBe(1)
+      expect(body.unsubmittedOrganisations).toHaveLength(1)
     })
 
     test('total across all pages sums to the reported total', async () => {
@@ -534,13 +537,7 @@ test.describe('Unsubmitted Organisations Search — API', () => {
           const values = body.unsubmittedOrganisations
             .map((r) => r[lowerFirst(field)])
             .filter((v) => v !== null && v !== undefined)
-          const comparator =
-            typeof values[0] === 'string' ? stringCompare : (a, b) => a - b
-          const expected =
-            direction === 'asc'
-              ? [...values].sort(comparator)
-              : [...values].sort(comparator).reverse()
-          expect(values).toEqual(expected)
+          expect(values).toEqual(expectedOrder(values, direction))
         })
       }
     }
@@ -675,6 +672,14 @@ function lowerFirst(s) {
 // collation (lowercase letters rank after uppercase). Extracted so the
 // default-sort test and the parameterised field/direction tests both use
 // the same rule.
+// The order a sort should produce: strings by stringCompare, numbers numerically, reversed for desc.
+function expectedOrder(values, direction) {
+  const comparator =
+    typeof values[0] === 'string' ? stringCompare : (a, b) => a - b
+  const sorted = [...values].sort(comparator)
+  return direction === 'asc' ? sorted : sorted.reverse()
+}
+
 function stringCompare(a, b) {
   if (a === b) return 0
   return a < b ? -1 : 1

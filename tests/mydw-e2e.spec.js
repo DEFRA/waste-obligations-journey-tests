@@ -93,15 +93,9 @@ const mainText = async (page) => clean(await page.locator('main').innerText())
 async function signIn(page) {
   // A frontend that has just been restarted (scenario or flag switch) can take a while to answer the
   // first requests, so sign-in is retried rather than failing the whole account.
-  for (let attempt = 1; ; attempt++) {
-    try {
-      await signInOnce(page)
-      return
-    } catch (e) {
-      if (attempt >= 3) throw e
-      await page.waitForTimeout(10_000)
-    }
-  }
+  await expect(async () => {
+    await signInOnce(page)
+  }).toPass({ intervals: [10_000], timeout: 300_000 })
 }
 
 async function signInOnce(page) {
@@ -113,7 +107,12 @@ async function signInOnce(page) {
         .click({ noWaitAfter: true })
     }
   } else {
-    await page.waitForLoadState('networkidle')
+    // The sign-in form, or the app's error page with its "sign in" link.
+    await page
+      .getByLabel(/email/i)
+      .or(page.getByRole('link', { name: /sign in/i }))
+      .first()
+      .waitFor()
     if (page.url().includes('error')) {
       await page.getByRole('link', { name: /sign in/i }).click()
     }
@@ -437,6 +436,7 @@ function belongsToYear(p, year) {
 // ---------------------------------------------------------------------------------------------- cases
 
 // scope: which env/scenarios a case runs in. org: limit to an org type. mutates: accepts or rejects data.
+/* eslint-disable playwright/no-standalone-expect -- each case's run() is called from the test() below */
 const CASE_DEFS = [
   {
     id: 'TST-01',
@@ -908,9 +908,9 @@ const CASE_DEFS = [
       try {
         await setLanguage(page, 'cy')
         await page.goto('/report-data')
-        expect
-          .soft(await page.locator('html').getAttribute('lang'), 'html lang')
-          .toBe('cy')
+        await expect
+          .soft(page.locator('html'), 'html lang')
+          .toHaveAttribute('lang', 'cy')
         expect
           .soft(await mainText(page), 'tile in Welsh')
           .not.toContain(english.tile)
@@ -1621,6 +1621,7 @@ const CASE_DEFS = [
     }
   }
 ]
+/* eslint-enable playwright/no-standalone-expect */
 
 // ---------------------------------------------------------------------------------------------- suite
 
@@ -1665,7 +1666,9 @@ test.describe(`MY&DW E2E · ${ENV} · ${REGULATOR} ${ORG_TYPE} · ${SCENARIO}`, 
   })
 
   if (!RUN) {
+    // eslint-disable-next-line playwright/expect-expect -- keeps the file listable when the harness env isn't set
     test('placeholder', () => {})
+
     return
   }
 
@@ -1684,9 +1687,11 @@ test.describe(`MY&DW E2E · ${ENV} · ${REGULATOR} ${ORG_TYPE} · ${SCENARIO}`, 
           evidence: process.env.EVIDENCE_DIR
         })
       } finally {
+        // eslint-disable-next-line playwright/no-conditional-in-test -- cleanup differs by environment, not the check
         if (LOCAL && c.mutates) db.restore()
         // tst has no snapshot: put the account's notes back to awaiting acceptance, as the runner does
         // before each account, so later accept/reject cases still have notes to act on.
+        // eslint-disable-next-line playwright/no-conditional-in-test -- cleanup differs by environment, not the check
         if (!LOCAL && c.mutates && prnDb && prnDb.resetToAwaiting) {
           await prnDb.resetToAwaiting(ORG_IDS)
         }
