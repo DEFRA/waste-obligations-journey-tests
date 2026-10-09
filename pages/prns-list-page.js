@@ -184,7 +184,7 @@ export class PrnsListPage extends BasePage {
     return this.page
       .getByRole('row')
       .filter({ has: numberLink })
-      .locator('#december-waste-label')
+      .locator(':has-text("Can be accepted towards")')
   }
 
   async expectDecemberWasteFlash(number, text) {
@@ -196,7 +196,9 @@ export class PrnsListPage extends BasePage {
   }
 
   async expectDecemberWasteFlashCount(count) {
-    await expect(this.page.locator('#december-waste-label')).toHaveCount(count)
+    await expect(
+      this.page.locator(':has-text("Can be accepted towards")')
+    ).toHaveCount(count)
   }
 
   async openPrn(prn) {
