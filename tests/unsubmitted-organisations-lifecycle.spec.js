@@ -51,11 +51,6 @@ test.describe('Unsubmitted Organisations — lifecycle (submit / cancel / accept
     'EVIDENCE_DIR not set — driven by .claude/skills/unsubmitted-orgs/runner.mjs'
   )
 
-  if (!IS_HARNESS_RUN) {
-    test('placeholder', () => {})
-    return
-  }
-
   // NOT serial: each org's lifecycle is a self-contained test with ordered
   // steps inside — orgs are independent, so a failure on one shouldn't
   // block the other 7. (Playwright's workers: 1 still runs them one at a
@@ -73,6 +68,13 @@ test.describe('Unsubmitted Organisations — lifecycle (submit / cancel / accept
     await apiContext?.dispose()
   })
 
+  if (!IS_HARNESS_RUN) {
+    // eslint-disable-next-line playwright/expect-expect -- keeps the file listable when the harness env isn't set
+    test('placeholder', () => {})
+
+    return
+  }
+
   for (const seedOrg of ALL_ORGS) {
     test(`lifecycle: ${seedOrg.registrationType} · ${seedOrg.country} · ref ${seedOrg.referenceNumber}`, async () => {
       test.setTimeout(300_000) // 5 minutes per org — polling headroom
@@ -83,6 +85,7 @@ test.describe('Unsubmitted Organisations — lifecycle (submit / cancel / accept
       // isn't currently in the unsubmitted list, first try to clear any
       // active declaration via the hardcoded id, then re-resolve.
       let org = seedOrg
+
       await test.step('0. resolve live organisationId by reference number', async () => {
         try {
           await cancelActiveDeclarations(apiContext, seedOrg.organisationId, {
@@ -94,17 +97,11 @@ test.describe('Unsubmitted Organisations — lifecycle (submit / cancel / accept
         const resolved = await resolveLiveOrg(apiContext, seedOrg, {
           year: CURRENT_YEAR
         })
-        if (!resolved) {
-          throw new Error(
-            `Could not resolve live orgId for ${seedOrg.registrationType} ${seedOrg.country} ref ${seedOrg.referenceNumber} — org not currently in unsubmitted list. Test data may be stale, or the org has an unresettable Accepted declaration.`
-          )
-        }
-        if (resolved.organisationId !== seedOrg.organisationId) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            `[lifecycle] test-data drift: ${seedOrg.registrationType} ${seedOrg.country} ref ${seedOrg.referenceNumber} — using resolved orgId ${resolved.organisationId} (test-data said ${seedOrg.organisationId})`
-          )
-        }
+        expect(
+          resolved,
+          `Could not resolve live orgId for ${seedOrg.registrationType} ${seedOrg.country} ref ${seedOrg.referenceNumber} — org not currently in unsubmitted list. Test data may be stale, or the org has an unresettable Accepted declaration.`
+        ).toBeTruthy()
+        warnOnTestDataDrift(seedOrg, resolved)
         org = resolved
       })
 
@@ -137,6 +134,7 @@ test.describe('Unsubmitted Organisations — lifecycle (submit / cancel / accept
 
       // ── 2. Submit: create declaration, expect org to disappear ──
       let firstDeclarationId
+
       await test.step('2. create declaration → org disappears from unsubmitted', async () => {
         const created = await createDeclaration(apiContext, org, {
           year: CURRENT_YEAR
@@ -219,6 +217,7 @@ test.describe('Unsubmitted Organisations — lifecycle (submit / cancel / accept
 
       // ── 4+5. Create fresh, Accept, expect terminal absence ──
       let secondDeclarationId
+
       await test.step('4-5. new declaration → accept → org stays absent', async () => {
         const created = await createDeclaration(apiContext, org, {
           year: CURRENT_YEAR
@@ -284,3 +283,12 @@ test.describe('Unsubmitted Organisations — lifecycle (submit / cancel / accept
     })
   }
 })
+
+// The seeded org id can drift from the live one; the live id is used, and the drift is logged.
+function warnOnTestDataDrift(seedOrg, resolved) {
+  if (resolved.organisationId === seedOrg.organisationId) return
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[lifecycle] test-data drift: ${seedOrg.registrationType} ${seedOrg.country} ref ${seedOrg.referenceNumber} — using resolved orgId ${resolved.organisationId} (test-data said ${seedOrg.organisationId})`
+  )
+}

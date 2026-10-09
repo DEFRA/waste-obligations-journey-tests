@@ -57,6 +57,7 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
     await test.step(`${prefix} > Landing page`, async () => {
       await landingPage.goto(account)
       await expect(page).toHaveURL(APP_HOST)
+      // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
         await landingPage.expectLoaded()
       }
@@ -65,6 +66,7 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
     let usedYearSelection = false
     if (usesMultiYearObligations()) {
       usedYearSelection = true
+
       await test.step(`${prefix} > Choose a year`, async () => {
         await landingPage.goToChooseYear()
         await chooseYearPage.expectLoaded()
@@ -75,7 +77,9 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
     }
 
     await test.step(`${prefix} > Obligations page`, async () => {
+      // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
+        // eslint-disable-next-line playwright/no-conditional-in-test -- year selection may already have opened the obligations page
         if (!usedYearSelection) {
           await landingPage.goToObligations()
         }
@@ -87,6 +91,7 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
     })
 
     await test.step(`${prefix} > CSOC About page`, async () => {
+      // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
         await obligationsPage.startCsocSubmission()
       }
@@ -112,6 +117,7 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
     })
 
     await test.step(`${prefix} > CSOC View page`, async () => {
+      // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
         await obligationsPage.goto(account)
         await obligationsPage.openCertificateHub()
@@ -130,6 +136,7 @@ const walkCsocJourney = ({ account, prefix, page, request, pages }) => {
         'Security-test cancel',
         account
       )
+      // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
         await obligationsPage.goto(account)
         await obligationsPage.expectResubmitCardVisible()
