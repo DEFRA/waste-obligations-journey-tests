@@ -35,11 +35,12 @@ export const REGULATOR_BY_COUNTRY = {
 // `referenceNumber` is the value the endpoint returns and the value AC4's
 // partial-search test uses. `organisationId` is the GUID the create/patch
 // declaration endpoints need.
+// `account` is the org's sign-in alias in the csoc-e2e matrix (CSOC_TST_EMAIL + alias), not an address.
 export const DP_ORGS = Object.freeze({
   'GB-ENG': {
     country: 'GB-ENG',
     registrationType: 'DirectProducer',
-    email: 'tester+tst+England+CSOC1@example.com',
+    account: 'tst+England+CSOC1',
     referenceNumber: '339509',
     organisationId: '168498ac-3244-43d1-92fc-053934cd20a3',
     name: 'NIMBLEVIEW LTD'
@@ -47,7 +48,7 @@ export const DP_ORGS = Object.freeze({
   'GB-WLS': {
     country: 'GB-WLS',
     registrationType: 'DirectProducer',
-    email: 'tester+tst+Wales+CSOC2@example.com',
+    account: 'tst+Wales+CSOC2',
     referenceNumber: '339556',
     organisationId: 'd9fe0d62-d77a-43ac-9b9b-ff9d554d6b83',
     name: 'TORITSE LIMITED'
@@ -55,7 +56,7 @@ export const DP_ORGS = Object.freeze({
   'GB-SCT': {
     country: 'GB-SCT',
     registrationType: 'DirectProducer',
-    email: 'tester+tst+Scotland+CSOC3@example.com',
+    account: 'tst+Scotland+CSOC3',
     referenceNumber: '339557',
     organisationId: 'e8198b3c-bf74-4a07-89fb-2bbfdb4af285',
     name: 'NOVA HIGHLAND CLEANING LTD'
@@ -63,7 +64,7 @@ export const DP_ORGS = Object.freeze({
   'GB-NIR': {
     country: 'GB-NIR',
     registrationType: 'DirectProducer',
-    email: 'tester+tst+NI+CSOC4@example.com',
+    account: 'tst+NI+CSOC4',
     referenceNumber: '339558',
     organisationId: '41dc9e2b-a64d-4ac5-abb7-b537c88dd882',
     name: 'OSCEWEAR LTD'
@@ -75,7 +76,7 @@ export const CSO_ORGS = Object.freeze({
   'GB-ENG': {
     country: 'GB-ENG',
     registrationType: 'ComplianceScheme',
-    email: 'tester+tst+CSO+England+CSOC99810@example.com',
+    account: 'tst+CSO+England+CSOC99810',
     referenceNumber: '339579',
     organisationId: '871a1ffc-7dc4-454f-a5ea-c0535ab64452',
     name: 'CS_GENERATED_6428368_England'
@@ -83,7 +84,7 @@ export const CSO_ORGS = Object.freeze({
   'GB-WLS': {
     country: 'GB-WLS',
     registrationType: 'ComplianceScheme',
-    email: 'tester+tst+CSO+Wales+CSOC10640@example.com',
+    account: 'tst+CSO+Wales+CSOC10640',
     referenceNumber: '339581',
     organisationId: 'bad480e3-ba40-45e8-93ad-e7a6a482edb8',
     name: 'CS_GENERATED_8602833_Wales'
@@ -91,7 +92,7 @@ export const CSO_ORGS = Object.freeze({
   'GB-SCT': {
     country: 'GB-SCT',
     registrationType: 'ComplianceScheme',
-    email: 'tester+tst+CSO+Scotland+CSOC08473@example.com',
+    account: 'tst+CSO+Scotland+CSOC08473',
     referenceNumber: '339583',
     organisationId: 'dca57f96-0b55-4136-9456-5817830436bc',
     name: 'CS_GENERATED_3215350_Scotland'
@@ -99,7 +100,7 @@ export const CSO_ORGS = Object.freeze({
   'GB-NIR': {
     country: 'GB-NIR',
     registrationType: 'ComplianceScheme',
-    email: 'tester+tst+CSO+NI+CSOC68920@example.com',
+    account: 'tst+CSO+NI+CSOC68920',
     referenceNumber: '339585',
     organisationId: '6c0d6557-1dae-4337-afdf-99aa9dc0eb6f',
     name: 'CS_GENERATED_7028818_Northern Ireland'

@@ -1,5 +1,5 @@
 // Browser session for testing a ticket on LOCAL, dev9 or tst: the environment's URLs, the account to sign in as,
-// and sign-in through mock B2C (LOCAL) or real B2C (dev9, tst). Passwords are read from the matrix or .env and are
+// and sign-in through mock B2C (LOCAL) or real B2C (dev9, tst). Passwords are read from .env (the matrix's via CSOC_TST_EMAIL / CSOC_TST_PASSWORD) and are
 // never printed.
 //
 //   import { openSession } from '<repo>/.claude/skills/qa-ticket/lib/session.mjs'
@@ -56,9 +56,8 @@ export async function resolveAccount(spec, env) {
     return { label: `LOCAL ${a} ${b}`, mockUserId: user.userId }
   }
   if (kind === 'matrix') {
-    const { matrix } = await import('../../csoc-e2e/data/matrix.js')
-    const entry = matrix[a] && matrix[a][b]
-    if (!entry) throw new Error(`no matrix account ${a} ${b}`)
+    const { resolveMatrixEntry } = await import('../../csoc-e2e/data/matrix.js')
+    const entry = resolveMatrixEntry(a, b) // throws for an unknown account or missing .env credentials
     return {
       label: `${a} ${b} (${entry.companyName})`,
       email: entry.username,
