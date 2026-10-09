@@ -18,6 +18,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the secret scan reads every commit in the PR
+
+      # Same config as the pre-commit hook; fails the check on any finding. The binary is pinned and checksum-verified.
+      - name: Secret scan (gitleaks)
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          curl -sSfLO "${base}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" gitleaks
+          ./gitleaks git --no-banner --redact --config .gitleaks.toml \
+            --log-opts="origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }}"
 
       - name: Test code and Create Test Coverage Reports
         uses: actions/setup-node@v7
@@ -28,7 +43,6 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - run: npm run test:unit
-
 # Uncomment this to run the tests in your test suite
 #  tests:
 #    name: Run Journey Tests

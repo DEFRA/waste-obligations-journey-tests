@@ -27,6 +27,17 @@ nvm use
 
 Docker is required for the containerised flows (`docker:test:local`, building the CDP image).
 
+### Secret scanning
+
+[gitleaks](https://github.com/gitleaks/gitleaks) checks for secrets with `.gitleaks.toml`: gitleaks' default rules,
+GOV.UK Notify keys, and passwords written into code or data (`password: '…'`).
+
+- **Before each commit:** the pre-commit hook scans the staged changes. Install it once with `brew install gitleaks`;
+  without it the hook warns and skips the scan.
+- **On every pull request:** `check-pull-request.yml` scans the PR's commits and fails on any finding.
+- **Credentials** belong in `.env` or other gitignored files, never in code, test data or docs. If one is committed,
+  treat it as exposed and rotate it; rewriting history doesn't make it private again.
+
 ### Setup
 
 Install dependencies and download the Chromium binary used by Playwright:
