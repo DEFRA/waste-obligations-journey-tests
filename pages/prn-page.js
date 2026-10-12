@@ -44,7 +44,7 @@ export class PrnPage extends BasePage {
   // The accepted confirmation view: success banner, the year the PRN counts
   // towards, a green Accepted tag and the follow-on buttons. The obligations
   // button depends on the frontend's FEATURE_MANAGE_OBLIGATIONS, so the caller
-  // passes true/false to assert it, or undefined to leave it unchecked.
+  // passes true to assert it is shown or false to assert it is absent.
   async expectLoadedForAcceptedPrn(prn, { account, obligationsButton } = {}) {
     const type = prn.type === 'PERN' ? 'PERN' : 'PRN'
     const year = prn.obligationYear
@@ -98,7 +98,6 @@ export class PrnPage extends BasePage {
       getPrnsListUrl(account, year).href
     )
 
-    if (obligationsButton === undefined) return
     const obligations = this.page.getByRole('button', {
       name: `View your ${year} recycling obligations progress`,
       exact: true

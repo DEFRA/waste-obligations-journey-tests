@@ -1,8 +1,6 @@
 import { test, expect } from '../fixtures/pages.fixture.js'
 import { getPrnUrl } from '../utils/journey-entry-point.js'
-import { logJourney } from '../utils/journey-log.js'
 import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
-import { reportSkippedSteps } from '../utils/skipped-steps.js'
 import {
   FEATURE_MANAGE_OBLIGATIONS,
   readBooleanEnv,
@@ -33,6 +31,19 @@ const ACCOUNTS = [
 // The backend marks PERNs with type 'PERN'; everything else is a PRN.
 const typeOf = (prn) => (prn.type === 'PERN' ? 'PERN' : 'PRN')
 
+// ENVIRONMENT identifies the target. Local and the shared Docker action seed
+// accepted PRNs, so a missing one fails there; deployed targets are not
+// guaranteed to have one, so the test skips instead. Kept outside the test
+// body to satisfy playwright/no-conditional-in-test.
+function expectSeededOnLocal(prn, prnType) {
+  if (process.env.ENVIRONMENT === 'local') {
+    expect(
+      prn,
+      `The local journey fixture must contain an accepted ${prnType}.`
+    ).toBeDefined()
+  }
+}
+
 for (const { account, label, storageState, prnType } of ACCOUNTS) {
   test.describe(`Accepted ${prnType} view (${label})`, () => {
     test.use({ storageState })
@@ -48,28 +59,14 @@ for (const { account, label, storageState, prnType } of ACCOUNTS) {
         const prns = await listAcceptedPrns(request, getOrgId(account))
         return prns.find((p) => typeOf(p) === prnType)
       })
-      // ENVIRONMENT identifies the target. Local and the shared Docker action
-      // seed accepted PRNs; deployed targets are not guaranteed to have one.
-      if (process.env.ENVIRONMENT === 'local') {
-        expect(
-          prn,
-          `The local journey fixture must contain an accepted ${prnType}.`
-        ).toBeDefined()
-      }
-      if (!prn) {
-        const warning = `No accepted ${prnType} on this deployed environment; the accepted view was not checked.`
-        logJourney(test.info(), `WARNING: ${warning}`)
-        test.info().annotations.push({ type: 'warning', description: warning })
-        test.skip(true, warning)
-      }
+
+      expectSeededOnLocal(prn, prnType)
+      test.skip(
+        !prn,
+        `No accepted ${prnType} on this deployed environment; the accepted view was not checked.`
+      )
 
       const obligationsButton = readBooleanEnv(FEATURE_MANAGE_OBLIGATIONS)
-      if (obligationsButton === undefined) {
-        await reportSkippedSteps(
-          'obligations progress button',
-          `${FEATURE_MANAGE_OBLIGATIONS} is not set for this runner`
-        )
-      }
 
       // The view must show the PRN's own obligation year, not ?year: with no
       // ?year the frontend uses its default year, and a wrong ?year must not
