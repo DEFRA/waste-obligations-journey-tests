@@ -26,6 +26,9 @@ const YEAR = 2026
 test.use({ storageState: { cookies: [], origins: [] } })
 
 test.describe('Producer PRNs list (DP)', () => {
+  // Routes differ by entry point (Packaging sign-in or direct CDP) and feature flags, and seeded-data checks
+  // run on LOCAL only. Every route not taken is reported with reportSkippedSteps or a warning annotation.
+  /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
   test('log in and view the PRNs list for the requested year', async ({
     page,
     request,
@@ -67,12 +70,14 @@ test.describe('Producer PRNs list (DP)', () => {
 
     const packaging = usesPackagingEntryPoint()
     const prnsUrl = getProducerPrnsUrl(YEAR)
+
     await test.step('open the entry point', async () => {
       await page.goto(
         packaging ? getJourneyStartPath('dp', YEAR) : prnsUrl.toString(),
         { timeout: 60_000 }
       )
     })
+
     if (!packaging) {
       await skipUnlessPrnsSignInOffered(page)
     }
@@ -92,6 +97,7 @@ test.describe('Producer PRNs list (DP)', () => {
           await landingPage.goToChooseYear()
           await chooseYearPage.expectLoaded()
         })
+
         await test.step(`select ${YEAR} and check the obligations page`, async () => {
           await chooseYearPage.selectYear(YEAR)
           await chooseYearPage.clickContinue()
@@ -102,6 +108,7 @@ test.describe('Producer PRNs list (DP)', () => {
           'Azure choose a year',
           'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS is false for this environment'
         )
+
         await test.step('open obligations from Azure account home', async () => {
           await landingPage.goToObligations()
           await obligationsPage.expectLoaded()
@@ -145,6 +152,7 @@ test.describe('Producer PRNs list (DP)', () => {
       await test.step('assert the seeded PRN values in the list', async () => {
         await prnsListPage.expectPrnVisible(expectedPrn)
       })
+
       await test.step('check the standard PRN can be selected for bulk accept', async () => {
         expect(
           selectablePrn,
@@ -153,6 +161,7 @@ test.describe('Producer PRNs list (DP)', () => {
         await prnsListPage.expectPrnSelectable(selectablePrn)
         await prnsListPage.expectAcceptSelectedButtonVisible()
       })
+
       await test.step('open the seeded PRN from its number link', async () => {
         await prnsListPage.openPrn(expectedPrn)
         await expect(page).toHaveURL(
@@ -197,4 +206,5 @@ test.describe('Producer PRNs list (DP)', () => {
       })
     }
   })
+  /* eslint-enable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 })

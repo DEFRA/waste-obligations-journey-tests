@@ -81,16 +81,7 @@ test.describe('Cookie banner and cookies page', () => {
     await expect(
       page.getByText('You’ve accepted analytics cookies.')
     ).toBeVisible()
-    if (gtmKey) {
-      await expect(
-        page.locator(`script[src*="gtm.js?id=${gtmKey}"]`)
-      ).toHaveCount(1)
-    }
-    if (measurementId) {
-      await expect(
-        page.locator(`script[src*="gtag/js?id=${measurementId}"]`)
-      ).toHaveCount(1)
-    }
+    await expectAnalyticsScriptsLoaded(page, { gtmKey, measurementId })
 
     const dataLayer = await getDataLayerEntries(page)
     expect(dataLayer).toEqual(
@@ -101,41 +92,7 @@ test.describe('Cookie banner and cookies page', () => {
         })
       ])
     )
-    if (gtmKey) {
-      const indexOfEntry = (predicate) => dataLayer.findIndex(predicate)
-      const defaultAt = indexOfEntry(
-        (entry) =>
-          entry.values?.[0] === 'consent' && entry.values?.[1] === 'default'
-      )
-      const updateAt = indexOfEntry(
-        (entry) =>
-          entry.values?.[0] === 'consent' && entry.values?.[1] === 'update'
-      )
-      const startAt = indexOfEntry((entry) => entry.values?.event === 'gtm.js')
-
-      expect(
-        dataLayer.filter((entry) => entry.values?.event === 'gtm.js')
-      ).toHaveLength(1)
-      // the grant must be queued before GTM's start event
-      expect(defaultAt).toBeGreaterThanOrEqual(0)
-      expect(defaultAt).toBeLessThan(updateAt)
-      expect(updateAt).toBeLessThan(startAt)
-    }
-    if (measurementId) {
-      expect(dataLayer).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            kind: 'arguments',
-            values: ['config', measurementId]
-          })
-        ])
-      )
-      expect(
-        dataLayer.some(
-          (entry) => entry.kind === 'arguments' && entry.values[0] === 'js'
-        )
-      ).toBe(true)
-    }
+    expectAnalyticsStartedAfterConsent(dataLayer, { gtmKey, measurementId })
     expect(await readConsentPolicyFromPage(page)).toEqual(
       expect.objectContaining({ confirmed: true, analytics: true })
     )
@@ -225,7 +182,7 @@ test.describe('Cookie banner and cookies page', () => {
     await page.reload()
     await setTestGaCookies(page, measurementId)
 
-    const expectedNames = ga4CookieName ? ['_ga', ga4CookieName] : ['_ga']
+    const expectedNames = gaCookieNames(ga4CookieName)
     expect(await getGaCookieNames(page)).toEqual(
       expect.arrayContaining(expectedNames)
     )
@@ -238,16 +195,7 @@ test.describe('Cookie banner and cookies page', () => {
     expect(await readConsentPolicyFromPage(page)).toEqual(
       expect.objectContaining({ confirmed: true, analytics: true })
     )
-    if (gtmKey) {
-      await expect(
-        page.locator(`script[src*="gtm.js?id=${gtmKey}"]`)
-      ).toHaveCount(1)
-    }
-    if (measurementId) {
-      await expect(
-        page.locator(`script[src*="gtag/js?id=${measurementId}"]`)
-      ).toHaveCount(1)
-    }
+    await expectAnalyticsScriptsLoaded(page, { gtmKey, measurementId })
   })
 
   test('history restoration after rejection clears GA cookies and does not restart analytics', async ({
@@ -328,9 +276,7 @@ test.describe('Cookie banner and cookies page', () => {
       main.getByRole('heading', { name: 'Analytics cookies', level: 2 })
     ).toBeVisible()
     await expect(main.getByText('_ga', { exact: true })).toBeVisible()
-    if (ga4CookieName) {
-      await expect(main.getByText(ga4CookieName)).toBeVisible()
-    }
+    await expectGa4CookieListed(main, ga4CookieName)
     await expect(main.getByText('4 hours', { exact: true })).toBeVisible()
     await expect(
       main.getByText(GA_COOKIE_EXPIRES_TEXT, { exact: true }).first()
@@ -359,3 +305,77 @@ test.describe('Cookie banner and cookies page', () => {
     await expect(main.getByText('4 hours')).toHaveCount(0)
   })
 })
+
+// A banner configures GTM, GA4 or both. These helpers check whichever is configured, and fail if neither is,
+// so a missing configuration can't make the checks pass silently.
+function expectSomeAnalyticsConfigured({ gtmKey, measurementId }) {
+  expect(
+    Boolean(gtmKey || measurementId),
+    'banner has data-gtm-key or data-measurement-id'
+  ).toBe(true)
+}
+
+async function expectAnalyticsScriptsLoaded(page, { gtmKey, measurementId }) {
+  expectSomeAnalyticsConfigured({ gtmKey, measurementId })
+  if (gtmKey) {
+    await expect(
+      page.locator(`script[src*="gtm.js?id=${gtmKey}"]`)
+    ).toHaveCount(1)
+  }
+  if (measurementId) {
+    await expect(
+      page.locator(`script[src*="gtag/js?id=${measurementId}"]`)
+    ).toHaveCount(1)
+  }
+}
+
+function expectAnalyticsStartedAfterConsent(
+  dataLayer,
+  { gtmKey, measurementId }
+) {
+  expectSomeAnalyticsConfigured({ gtmKey, measurementId })
+  if (gtmKey) {
+    const indexOfEntry = (predicate) => dataLayer.findIndex(predicate)
+    const defaultAt = indexOfEntry(
+      (entry) =>
+        entry.values?.[0] === 'consent' && entry.values?.[1] === 'default'
+    )
+    const updateAt = indexOfEntry(
+      (entry) =>
+        entry.values?.[0] === 'consent' && entry.values?.[1] === 'update'
+    )
+    const startAt = indexOfEntry((entry) => entry.values?.event === 'gtm.js')
+
+    expect(
+      dataLayer.filter((entry) => entry.values?.event === 'gtm.js')
+    ).toHaveLength(1)
+    // the grant must be queued before GTM's start event
+    expect(defaultAt).toBeGreaterThanOrEqual(0)
+    expect(defaultAt).toBeLessThan(updateAt)
+    expect(updateAt).toBeLessThan(startAt)
+  }
+  if (measurementId) {
+    expect(dataLayer).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'arguments',
+          values: ['config', measurementId]
+        })
+      ])
+    )
+    expect(
+      dataLayer.some(
+        (entry) => entry.kind === 'arguments' && entry.values[0] === 'js'
+      )
+    ).toBe(true)
+  }
+}
+
+// _ga always; the GA4 property cookie too when a measurement id is configured.
+function gaCookieNames(ga4CookieName) {
+  return ga4CookieName ? ['_ga', ga4CookieName] : ['_ga']
+}
+
+async function expectGa4CookieListed(main, ga4CookieName) {
+  if (ga4CookieName) await expect(main.getByText(ga4CookieName)).toBeVisible()
+}

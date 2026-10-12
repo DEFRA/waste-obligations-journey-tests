@@ -1,2 +1,8 @@
-npm run git:pre-commit-hook
+# Secret scan of the staged changes (skipped with a warning when gitleaks isn't installed: brew install gitleaks).
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner --config .gitleaks.toml || exit 1
+else
+  echo "pre-commit: gitleaks not installed - skipping the secret scan (brew install gitleaks)" >&2
+fi
 
+npm run git:pre-commit-hook

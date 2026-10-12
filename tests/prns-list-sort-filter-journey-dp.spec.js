@@ -102,10 +102,7 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
       // Filtered results can only be checked against the baseline when it
       // holds every PRN, not just the first page.
       const summary = await prnsListPage.readResultsSummary()
-      baselineComplete =
-        summary === null
-          ? baselineRows.length === 0
-          : summary.total === baselineRows.length
+      baselineComplete = holdsEveryPrn(summary, baselineRows)
     })
 
     for (const [sortValue, label] of Object.entries(SORT_MAP)) {
@@ -126,6 +123,7 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
           verify: () => expect(values).toEqual(expectedOrder(values, direction))
         })
       })
+
       await test.step(`setting sort=${sortValue} url value updates sorted list by ${label}`, async () => {
         // Build from the current URL so the proxy prefix and year are kept.
         const url = new URL(page.url())
@@ -320,3 +318,8 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
     await expect(prnsListPage.sortSelect).toBeEnabled()
   })
 })
+
+// True when the rows read are every PRN: no results summary means no PRNs at all.
+function holdsEveryPrn(summary, rows) {
+  return summary === null ? rows.length === 0 : summary.total === rows.length
+}

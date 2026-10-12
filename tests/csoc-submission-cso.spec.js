@@ -58,21 +58,22 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
       const submitted = list.filter(
         (d) => d.status === DECLARATION_STATUS.Submitted
       )
-      if (submitted.length !== 1) {
-        throw new Error(
-          `Expected exactly one Submitted declaration for org ${orgId} year ${year}; got ${submitted.length}`
-        )
-      }
+      expect(
+        submitted,
+        `exactly one Submitted declaration for org ${orgId} year ${year}`
+      ).toHaveLength(1)
       return submitted[0].id
     }
 
     const submitCsoc = async () => {
       skipUnlessCsocEnabled()
       await landingPage.goto(ACCOUNT)
+      // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
         await landingPage.expectLoaded()
         await landingPage.openObligations(chooseYearPage, obligationsPage, year)
         obligationsRows = await obligationsPage.readObligationsTable()
+        // eslint-disable-next-line playwright/no-conditional-expect -- the obligations table is only on the Packaging route
         expect(obligationsRows.length).toBeGreaterThan(0)
         await obligationsPage.startCsocSubmission()
       }
@@ -87,6 +88,7 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     }
 
     const viewCsocViaUi = async (declarationId) => {
+      // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
         await obligationsPage.goto(ACCOUNT)
         await obligationsPage.openCertificateHub()
@@ -118,6 +120,7 @@ test.describe('CSOC lifecycle journey (CSO)', () => {
     })
 
     await test.step('Scenario 4: obligations page shows resubmit; audit reflects Cancelled with reason', async () => {
+      // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
         await obligationsPage.goto(ACCOUNT)
         await obligationsPage.expectResubmitCardVisible()

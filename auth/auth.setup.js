@@ -9,6 +9,11 @@ import {
 import { establishProxySession } from '../utils/proxy-session.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+// Where sign-in lands: Account home through the Packaging sign-in, or the CSoC page when entering CDP directly.
+const LANDING_HEADING = usesPackagingEntryPoint()
+  ? 'Account home -'
+  : /About your \d{4} certificate of compliance/i
+
 const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'dp.json')
 
 setup('authenticate', async ({ page }) => {
@@ -24,9 +29,14 @@ setup('authenticate', async ({ page }) => {
   // The B2C flow can resolve in two ways:
   //   - straight to the login form on b2clogin.com
   //   - back to /report-data/error (e.g. UX004) requiring a "Sign in" click
-  // Wait for the redirect chain to settle, then branch on URL.
-  await page.waitForLoadState('networkidle')
+  // Wait for either, then branch on URL.
+  await page
+    .getByLabel(/email/i)
+    .or(page.getByRole('link', { name: /sign in/i }))
+    .first()
+    .waitFor({ timeout: 60_000 })
 
+  // eslint-disable-next-line playwright/no-conditional-in-test -- B2C sometimes routes via the app's error page
   if (page.url().includes('error')) {
     await page.getByRole('link', { name: /sign in/i }).click()
   }
@@ -35,17 +45,9 @@ setup('authenticate', async ({ page }) => {
   await page.getByLabel(/password/i).fill(password)
   await page.getByRole('button', { name: /sign in|continue|next/i }).click()
 
-  if (usesPackagingEntryPoint()) {
-    await expect(
-      page.getByRole('heading', { name: 'Account home -' })
-    ).toBeVisible({ timeout: 60_000 })
-  } else {
-    await expect(
-      page.getByRole('heading', {
-        name: /About your \d{4} certificate of compliance/i
-      })
-    ).toBeVisible({ timeout: 60_000 })
-  }
+  await expect(
+    page.getByRole('heading', { name: LANDING_HEADING })
+  ).toBeVisible({ timeout: 60_000 })
 
   await establishProxySession(page, 'dp')
 
