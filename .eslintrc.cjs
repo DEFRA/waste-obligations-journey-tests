@@ -26,6 +26,10 @@ module.exports = {
       rules: {
         'no-unused-vars': 'off'
       }
+    },
+    {
+      files: ['tests/**/*.js'],
+      extends: ['plugin:playwright/recommended']
     }
   ],
   parserOptions: {
