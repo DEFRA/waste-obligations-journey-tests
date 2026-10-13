@@ -140,3 +140,12 @@ export function usesShowPrnsOnCdp() {
     usesPackagingEntryPoint() && isFeatureFlagEnabled(FEATURE_SHOW_PRNS_ON_CDP)
   )
 }
+
+// The waste-obligations entry point can reach the PRNs list through the CDP
+// obligations page, which the frontend serves only with FEATURE_MANAGE_OBLIGATIONS.
+export function usesCdpObligations() {
+  return (
+    !usesPackagingEntryPoint() &&
+    isFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)
+  )
+}

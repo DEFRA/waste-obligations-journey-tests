@@ -6,6 +6,7 @@ import {
   isFeatureFlagEnabled,
   readBooleanEnv,
   resolvePrnsAvailability,
+  usesCdpObligations,
   usesShowPrnsOnCdp
 } from '../utils/environment-features.js'
 
@@ -123,6 +124,34 @@ test('usesShowPrnsOnCdp follows FEATURE_SHOW_PRNS_ON_CDP in Packaging mode', () 
     process.env.JOURNEY_ENTRY_POINT = 'waste-obligations'
     process.env.FEATURE_SHOW_PRNS_ON_CDP = 'true'
     assert.equal(usesShowPrnsOnCdp(), false)
+  } finally {
+    for (const key of keys) {
+      if (original[key] === undefined) delete process.env[key]
+      else process.env[key] = original[key]
+    }
+  }
+})
+
+test('usesCdpObligations follows FEATURE_MANAGE_OBLIGATIONS at the waste-obligations entry point', () => {
+  const keys = ['JOURNEY_ENTRY_POINT', 'FEATURE_MANAGE_OBLIGATIONS']
+  const original = Object.fromEntries(
+    keys.map((key) => [key, process.env[key]])
+  )
+
+  try {
+    process.env.JOURNEY_ENTRY_POINT = 'waste-obligations'
+    process.env.FEATURE_MANAGE_OBLIGATIONS = 'true'
+    assert.equal(usesCdpObligations(), true)
+
+    process.env.FEATURE_MANAGE_OBLIGATIONS = 'false'
+    assert.equal(usesCdpObligations(), false)
+
+    delete process.env.FEATURE_MANAGE_OBLIGATIONS
+    assert.equal(usesCdpObligations(), false)
+
+    process.env.JOURNEY_ENTRY_POINT = 'packaging'
+    process.env.FEATURE_MANAGE_OBLIGATIONS = 'true'
+    assert.equal(usesCdpObligations(), false)
   } finally {
     for (const key of keys) {
       if (original[key] === undefined) delete process.env[key]

@@ -6,6 +6,7 @@ import {
 } from '../utils/login.js'
 import {
   getJourneyStartPath,
+  getObligationsUrl,
   usesPackagingEntryPoint,
   getProducerPrnsUrl
 } from '../utils/journey-entry-point.js'
@@ -15,6 +16,7 @@ import {
   skipUnlessPrnsConfigured,
   skipUnlessPrnsEnabled,
   skipUnlessPrnsSignInOffered,
+  usesCdpObligations,
   usesMultiYearObligations,
   usesShowPrnsOnCdp
 } from '../utils/environment-features.js'
@@ -69,13 +71,17 @@ test.describe('Producer PRNs list (DP)', () => {
     }
 
     const packaging = usesPackagingEntryPoint()
+    const cdpObligations = usesCdpObligations()
     const prnsUrl = getProducerPrnsUrl(YEAR)
 
     await test.step('open the entry point', async () => {
-      await page.goto(
-        packaging ? getJourneyStartPath('dp', YEAR) : prnsUrl.toString(),
-        { timeout: 60_000 }
-      )
+      let entryUrl = prnsUrl.toString()
+      if (packaging) {
+        entryUrl = getJourneyStartPath('dp', YEAR)
+      } else if (cdpObligations) {
+        entryUrl = getObligationsUrl('dp', YEAR).toString()
+      }
+      await page.goto(entryUrl, { timeout: 60_000 })
     })
 
     if (!packaging) {
@@ -137,9 +143,21 @@ test.describe('Producer PRNs list (DP)', () => {
     } else {
       await reportSkippedSteps(
         'Azure account home and choose a year',
-        'unavailable at the waste-obligations entry point; entered the PRNs page directly for ' +
-          YEAR
+        'unavailable at the waste-obligations entry point'
       )
+
+      if (cdpObligations) {
+        await test.step(`open the PRNs list from the CDP obligations page for ${YEAR}`, async () => {
+          await obligationsPage.expectLoadedForYear(YEAR)
+          await obligationsPage.openCdpPrnsList()
+        })
+      } else {
+        await reportSkippedSteps(
+          'CDP obligations page',
+          'FEATURE_MANAGE_OBLIGATIONS is not true for this environment; entered the PRNs page directly for ' +
+            YEAR
+        )
+      }
     }
 
     await skipUnlessPrnsEnabled(prnsListPage)
