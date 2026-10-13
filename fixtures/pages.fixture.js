@@ -4,6 +4,7 @@ import { LandingPage } from '../pages/landing-page.js'
 import { ChooseYearPage } from '../pages/choose-year-page.js'
 import { ObligationsPage } from '../pages/obligations-page.js'
 import { PrnsListPage } from '../pages/prns-list-page.js'
+import { PrnsCheckSelectionPage } from '../pages/prns-check-selection-page.js'
 import { PrnPage } from '../pages/prn-page.js'
 import { CsocAboutPage } from '../pages/csoc-about-page.js'
 import { CsocSubmissionPage } from '../pages/csoc-submission-page.js'
@@ -45,6 +46,9 @@ export const test = base.extend({
   },
   prnsListPage: async ({ page }, use) => {
     await use(new PrnsListPage(page))
+  },
+  prnsCheckSelectionPage: async ({ page }, use) => {
+    await use(new PrnsCheckSelectionPage(page))
   },
   prnPage: async ({ page }, use) => {
     await use(new PrnPage(page))

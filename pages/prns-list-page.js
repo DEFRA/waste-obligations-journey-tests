@@ -177,6 +177,48 @@ export class PrnsListPage extends BasePage {
     ).toBeVisible()
   }
 
+  // Rows offered for multi-select (those with a checkbox), with the values
+  // the check-selection page repeats. Issuer names are read for comparison
+  // only and must not be logged.
+  async readSelectableRows() {
+    const rows = await this.page
+      .locator('table.app-prns-table tbody tr')
+      .evaluateAll((rows) =>
+        rows
+          .filter((row) => row.querySelector('input[type="checkbox"]'))
+          .map((row) => {
+            const cells = row.querySelectorAll('td')
+            const text = (cell) =>
+              cell?.textContent?.replace(/\s+/g, ' ').trim() || ''
+            return {
+              number: text(cells[0]?.querySelector('a')),
+              material: text(cells[1]),
+              issuedAt: text(cells[2]),
+              issuer: text(cells[4]),
+              tonnage: text(cells[5])
+            }
+          })
+      )
+    return rows.map((row) => ({
+      ...row,
+      tonnageValue: Number(row.tonnage.replaceAll(',', ''))
+    }))
+  }
+
+  async selectPrn(number) {
+    await this.page.getByRole('checkbox', { name: `Select ${number}` }).check()
+  }
+
+  async clickAcceptSelected() {
+    await this.acceptSelectedButton.click()
+  }
+
+  async expectNoPrnSelected() {
+    await expect(
+      this.page.locator('input[type="checkbox"]:checked')
+    ).toHaveCount(0)
+  }
+
   async openPrn(prn) {
     await this.page.getByRole('link', { name: prn.number, exact: true }).click()
   }

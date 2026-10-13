@@ -9,6 +9,15 @@ export class PrnPage extends BasePage {
     })
   }
 
+  // For pages reached from a PRN number link when only the number is known
+  // (e.g. from the check-selection page on a deployed run).
+  async expectLoadedForNumber(number) {
+    await expect(this.heading).toBeVisible()
+    await expect(this.page.locator('.app-inset-text')).toContainText(
+      new RegExp(`(PRN|PERN) number: ${number}`)
+    )
+  }
+
   // An awaiting-acceptance PRN or PERN offers Accept (a link styled as a
   // button) and a disabled Reject; nothing here is clicked.
   async expectLoadedForAwaitingPrn(prn) {
