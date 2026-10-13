@@ -56,3 +56,16 @@ export function expectedCheckSelectionGroups(rows) {
       a.heading.localeCompare(b.heading)
   )
 }
+
+const PAPER_ROW_PATTERN = /^paper/i
+const FIBRE_ROW_PATTERN = /^fib(re|er)/i
+
+// The first selectable list row whose material is paper and the first whose
+// material is fibre ({ paper, fibre }, either undefined when absent). The list
+// shows the backend's material value, e.g. 'Paper' or 'Fibre'.
+export function findPaperAndFibreRows(rows) {
+  return {
+    paper: rows.find((row) => PAPER_ROW_PATTERN.test(row.material)),
+    fibre: rows.find((row) => FIBRE_ROW_PATTERN.test(row.material))
+  }
+}

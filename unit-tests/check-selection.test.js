@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import {
   PAPER_GROUP_HEADING,
   checkSelectionGroupHeading,
-  expectedCheckSelectionGroups
+  expectedCheckSelectionGroups,
+  findPaperAndFibreRows
 } from '../utils/check-selection.js'
 
 test('material headings use the list filter labels', () => {
@@ -45,4 +46,30 @@ test('groups rows by heading with per-group totals, in filter order', () => {
 
 test('no rows means no groups', () => {
   assert.deepEqual(expectedCheckSelectionGroups([]), [])
+})
+
+test('finds the first paper row and the first fibre row', () => {
+  const rows = [
+    { number: 'PRN1', material: 'Steel' },
+    { number: 'PRN2', material: 'Fibre' },
+    { number: 'PRN3', material: 'Paper' },
+    { number: 'PRN4', material: 'Paper' },
+    { number: 'PRN5', material: 'Fiber' }
+  ]
+
+  const { paper, fibre } = findPaperAndFibreRows(rows)
+
+  assert.equal(paper.number, 'PRN3')
+  assert.equal(fibre.number, 'PRN2')
+})
+
+test('reports a missing paper or fibre row as undefined', () => {
+  assert.deepEqual(
+    findPaperAndFibreRows([{ number: 'PRN1', material: 'Paper' }]),
+    { paper: { number: 'PRN1', material: 'Paper' }, fibre: undefined }
+  )
+  assert.deepEqual(findPaperAndFibreRows([]), {
+    paper: undefined,
+    fibre: undefined
+  })
 })
