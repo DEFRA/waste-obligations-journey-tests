@@ -13,8 +13,11 @@ export class PrnPage extends BasePage {
   // (e.g. from the check-selection page on a deployed run).
   async expectLoadedForNumber(number) {
     await expect(this.heading).toBeVisible()
+    // A RegExp is matched against the raw text, which wraps the number onto
+    // its own line, so allow any whitespace after the label.
+    const escaped = number.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
     await expect(this.page.locator('.app-inset-text')).toContainText(
-      new RegExp(`(PRN|PERN) number: ${number}`)
+      new RegExp(String.raw`(PRN|PERN) number:\s*${escaped}`)
     )
   }
 

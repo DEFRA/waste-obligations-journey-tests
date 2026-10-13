@@ -7,6 +7,9 @@ import { logJourney } from '../utils/journey-log.js'
 
 const YEAR = 2026
 
+const CHECK_SELECTION_REDIRECT_MESSAGE =
+  'Accept selected should redirect to the check-selection page. A frontend without it (before MO-470) re-renders the PRNs list instead; check the journey targets a frontend build that includes it.'
+
 // A non-default sort chosen before selecting, so "Go back" can be checked to
 // return to the same list view rather than a reset one.
 const LIST_SORT = {
@@ -83,7 +86,7 @@ test.describe('Producer PRNs check selection (DP)', () => {
     })
 
     await test.step('check the check-selection page loads for the requested year', async () => {
-      await expect(page).toHaveURL(
+      await expect(page, CHECK_SELECTION_REDIRECT_MESSAGE).toHaveURL(
         (url) =>
           url.pathname.endsWith(checkSelectionPath()) &&
           url.searchParams.get('year') === String(YEAR)

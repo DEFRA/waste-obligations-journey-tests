@@ -7,6 +7,9 @@ import { logJourney } from '../utils/journey-log.js'
 
 const YEAR = 2026
 
+const CHECK_SELECTION_REDIRECT_MESSAGE =
+  'Accept selected should redirect to the check-selection page. A frontend without it (before MO-470) re-renders the PRNs list instead; check the journey targets a frontend build that includes it.'
+
 // storageState comes from cso-auth.setup.js (playwright/.auth/cso.json).
 test.use({ storageState: 'playwright/.auth/cso.json' })
 
@@ -54,7 +57,7 @@ test.describe('Compliance scheme PRNs check selection (CSO)', () => {
     })
 
     await test.step('check the CSO check-selection page loads', async () => {
-      await expect(page).toHaveURL(
+      await expect(page, CHECK_SELECTION_REDIRECT_MESSAGE).toHaveURL(
         (url) =>
           url.pathname.endsWith(`${listPath()}/check-selection`) &&
           url.searchParams.get('year') === String(YEAR)
