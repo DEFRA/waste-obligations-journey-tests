@@ -158,14 +158,50 @@ export function getJourneyViewPath(account, declarationId) {
   throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
 }
 
+// The CDP frontend's per-account root: /producer/{organisationId} for a direct
+// producer, /cso/{schemeId} for a compliance scheme.
+function accountBasePath(account) {
+  if (account === 'cso') {
+    return `/cso/${requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')}`
+  }
+
+  if (account === 'dp') {
+    return `/producer/${requireEnv('WASTE_OBLIGATION_ORG_ID')}`
+  }
+
+  throw new Error(`Unknown journey account "${account}". Expected dp or cso.`)
+}
+
+// Omits ?year when year is undefined; the frontend then uses its default year.
+function accountUrl(account, path, year) {
+  return wasteObligationsFrontendUrl(
+    `${accountBasePath(account)}${path}`,
+    year === undefined
+      ? ''
+      : new URLSearchParams({ year: String(year) }).toString()
+  )
+}
+
+// A single PRN page, for the producer or the compliance scheme. year is
+// optional: the page shows the PRN's own year whatever ?year says.
+export function getPrnUrl(account, prnId, year) {
+  return accountUrl(account, `/prns/${prnId}`, year)
+}
+
+// The PRNs list for a year, for the producer or the compliance scheme.
+export function getPrnsListUrl(account, year) {
+  return accountUrl(account, '/prns', year)
+}
+
+// The obligations progress page for a year, for the producer or the
+// compliance scheme.
+export function getObligationsUrl(account, year) {
+  return accountUrl(account, '/obligations', year)
+}
+
 // The CDP PRNs destination is independent of any certificate navigation.
 export function getProducerPrnsUrl(year) {
-  const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
-
-  return wasteObligationsFrontendUrl(
-    `/producer/${organisationId}/prns`,
-    new URLSearchParams({ year: String(year) }).toString()
-  )
+  return getPrnsListUrl('dp', year)
 }
 
 export function getCsoPrnsUrl(year) {

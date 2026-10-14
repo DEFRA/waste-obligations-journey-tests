@@ -43,4 +43,33 @@ export class PrnPage extends BasePage {
     await expect(rejectButton).toBeVisible()
     await expect(rejectButton).toBeDisabled()
   }
+
+  // A smoke check of the accepted confirmation view: the success banner names
+  // the note's type and the year it counts towards, both from real data. The
+  // banner's other wording, the Status tag, the inset and which buttons show
+  // are covered by waste-obligations-frontend's route tests.
+  async expectLoadedForAcceptedPrn(prn) {
+    const type = prn.type === 'PERN' ? 'PERN' : 'PRN'
+    await expect(this.heading).toBeVisible()
+    await expect(
+      this.page.locator(
+        '.govuk-notification-banner--success .govuk-notification-banner__heading'
+      )
+    ).toHaveText(
+      `You accepted this ${type} towards your ${prn.obligationYear} recycling obligations`
+    )
+  }
+
+  // The follow-on to the PRNs list for the year the note counts towards.
+  async acceptOrRejectMore(year) {
+    const button = this.page.getByRole('button', {
+      name: `Accept or reject more PRNs and PERNs for ${year}`,
+      exact: true
+    })
+    await expect(button).toBeVisible()
+    await Promise.all([
+      this.page.waitForURL(/\/prns(\?|$)/, { waitUntil: 'domcontentloaded' }),
+      button.click()
+    ])
+  }
 }

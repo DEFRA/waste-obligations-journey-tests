@@ -13,6 +13,7 @@ export const FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS =
   'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS'
 export const FEATURE_ANALYTICS = 'FEATURE_ANALYTICS'
 export const FEATURE_SHOW_PRNS_ON_CDP = 'FEATURE_SHOW_PRNS_ON_CDP'
+export const FEATURE_MANAGE_OBLIGATIONS = 'FEATURE_MANAGE_OBLIGATIONS'
 
 export function skipUnlessEnabled(enabled, reason) {
   test.skip(!enabled, reason)
@@ -137,5 +138,14 @@ export function usesMultiYearObligations() {
 export function usesShowPrnsOnCdp() {
   return (
     usesPackagingEntryPoint() && isFeatureFlagEnabled(FEATURE_SHOW_PRNS_ON_CDP)
+  )
+}
+
+// The waste-obligations entry point can reach the PRNs list through the CDP
+// obligations page, which the frontend serves only with FEATURE_MANAGE_OBLIGATIONS.
+export function usesCdpObligations() {
+  return (
+    !usesPackagingEntryPoint() &&
+    isFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)
   )
 }

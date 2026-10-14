@@ -127,6 +127,20 @@ export class ObligationsPage extends BasePage {
     ])
   }
 
+  // The CDP obligations page's link under the awaiting-acceptance count. The
+  // exact name skips the "... for {year}" link in the What to do next card.
+  async openCdpPrnsList() {
+    const link = this.page.getByRole('link', {
+      name: 'Accept or reject PRNs and PERNs',
+      exact: true
+    })
+    await expect(link).toBeVisible()
+    await Promise.all([
+      this.page.waitForURL(/\/prns(\?|$)/, { waitUntil: 'domcontentloaded' }),
+      link.click()
+    ])
+  }
+
   async readObligationsTable() {
     return this.readGovukTable(this.materialObligationsTable)
   }

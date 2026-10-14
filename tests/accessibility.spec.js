@@ -1,12 +1,19 @@
-import { test } from '../fixtures/pages.fixture.js'
+import { test, expect } from '../fixtures/pages.fixture.js'
 import { TEST_USER_NAME } from '../data/csoc.data.js'
-import { getOrgId } from '../utils/waste-obligations-api.js'
+import { getOrgId, listAcceptedPrns } from '../utils/waste-obligations-api.js'
 import {
   findOnlySubmittedDeclaration,
   resetOrgDeclarations
 } from '../utils/test-setup.js'
-import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
-import { skipUnlessCsocEnabled } from '../utils/environment-features.js'
+import {
+  getPrnUrl,
+  usesPackagingEntryPoint
+} from '../utils/journey-entry-point.js'
+import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
+import {
+  skipUnlessCsocEnabled,
+  skipUnlessPrnsConfigured
+} from '../utils/environment-features.js'
 import {
   initialiseAccessibilityChecking,
   analyseAccessibility,
@@ -56,6 +63,32 @@ async function openCsocView({
     await csocViewPage.goto(account, declaration.id)
   }
   await csocViewPage.expectLoaded(year)
+}
+
+// Opens an already-accepted PRN or PERN, selected by type as in
+// prn-accepted-view.spec.js. Nothing is accepted here.
+async function openAcceptedPrn({ account, prnType, page, request, prnPage }) {
+  skipUnlessPrnsConfigured()
+  const prns = await listAcceptedPrns(request, getOrgId(account))
+  const prn = prns.find((p) => (p.type === 'PERN' ? 'PERN' : 'PRN') === prnType)
+  if (process.env.ENVIRONMENT === 'local') {
+    expect(
+      prn,
+      `The local journey fixture must contain an accepted ${prnType}.`
+    ).toBeDefined()
+  }
+  test.skip(
+    !prn,
+    `No accepted ${prnType} on this deployed environment; the accepted view was not scanned.`
+  )
+
+  const prnUrl = getPrnUrl(account, prn.id, prn.obligationYear)
+  await ensureProxySessionForWebKit(page, prnUrl.href)
+  await page.goto(prnUrl.href, { timeout: 60_000 })
+  await expect(prnPage.heading).toBeVisible()
+  await expect(
+    page.locator('.govuk-notification-banner--success')
+  ).toBeVisible()
 }
 
 test.describe('Accessibility testing — CSOC journey', () => {
@@ -197,4 +230,39 @@ test.describe('Accessibility testing — CSOC journey', () => {
       })
     })
   })
+})
+
+test.describe('Accessibility testing — Accepted PRN view', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('prn-accepted-view')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, prnType } of [
+    { account: 'dp', label: 'DP', prnType: 'PRN' },
+    { account: 'cso', label: 'CSO', prnType: 'PERN' }
+  ]) {
+    test.describe(label, () => {
+      test.use({ storageState: `playwright/.auth/${account}.json` })
+
+      test(`scan the accepted ${prnType} view`, async ({
+        page,
+        request,
+        prnPage
+      }) => {
+        await test.step(`${label} > Accepted ${prnType} view`, async () => {
+          await openAcceptedPrn({ account, prnType, page, request, prnPage })
+          await analyseAccessibility(page, `${account}-prn-accepted-view`)
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
+    })
+  }
 })
