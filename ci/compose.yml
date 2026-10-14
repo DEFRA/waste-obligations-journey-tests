@@ -69,15 +69,37 @@ services:
       start_period: 5s
       start_interval: 2s
 
+  waste-organisations-postgres:
+    image: postgres:16-alpine
+    environment:
+      # Matches the Postgres section in waste-organisations' appsettings.Development.json
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: waste_organisations
+    volumes:
+      - waste-organisations-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d waste_organisations" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    profiles:
+      - packaging
+      - obligations
+      - regulator
+
   waste-organisations:
     image: ${WASTE_ORGANISATIONS_IMAGE:-defradigital/waste-organisations:latest}
     pull_policy: always
     depends_on:
       mongodb:
         condition: service_healthy
+      waste-organisations-postgres:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       Mongo__DatabaseUri: mongodb://mongodb:27017/
+      Postgres__DefaultHost: waste-organisations-postgres
       AWS_REGION: eu-west-2
       AWS_DEFAULT_REGION: eu-west-2
       AWS_ACCESS_KEY_ID: test
@@ -283,3 +305,6 @@ services:
       retries: 30
       start_period: 5s
       start_interval: 2s
+
+volumes:
+  waste-organisations-postgres-data:
