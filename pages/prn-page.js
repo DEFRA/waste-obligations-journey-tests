@@ -9,6 +9,18 @@ export class PrnPage extends BasePage {
     })
   }
 
+  // For pages reached from a PRN number link when only the number is known
+  // (e.g. from the check-selection page on a deployed run).
+  async expectLoadedForNumber(number) {
+    await expect(this.heading).toBeVisible()
+    // A RegExp is matched against the raw text, which wraps the number onto
+    // its own line, so allow any whitespace after the label.
+    const escaped = number.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+    await expect(this.page.locator('.app-inset-text')).toContainText(
+      new RegExp(String.raw`(PRN|PERN) number:\s*${escaped}`)
+    )
+  }
+
   // An awaiting-acceptance PRN or PERN offers Accept (a link styled as a
   // button) and a disabled Reject; nothing here is clicked.
   async expectLoadedForAwaitingPrn(prn) {

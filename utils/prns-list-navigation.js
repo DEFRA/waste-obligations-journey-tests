@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { requireEnv } from './env.js'
 import { submitB2CCredentials } from './login.js'
 import {
+  getCsoPrnsUrl,
   getProducerPrnsUrl,
   getWasteObligationsFrontendBaseUrl
 } from './journey-entry-point.js'
@@ -10,6 +11,13 @@ import { skipUnlessPrnsEnabled } from './environment-features.js'
 function producerPrnsListUrl(year) {
   return new URL(
     getProducerPrnsUrl(year).toString(),
+    getWasteObligationsFrontendBaseUrl()
+  ).toString()
+}
+
+function csoPrnsListUrl(year) {
+  return new URL(
+    getCsoPrnsUrl(year).toString(),
     getWasteObligationsFrontendBaseUrl()
   ).toString()
 }
@@ -49,17 +57,38 @@ export async function openAuthenticatedProducerPrnsList(
   { page, prnsListPage },
   year
 ) {
+  await openAuthenticatedPrnsList(
+    { page, prnsListPage },
+    producerPrnsListUrl(year),
+    'DP'
+  )
+}
+
+// The CSO twin of openAuthenticatedProducerPrnsList, for specs using the
+// storageState saved by cso-auth.setup.js.
+export async function openAuthenticatedCsoPrnsList(
+  { page, prnsListPage },
+  year
+) {
+  await openAuthenticatedPrnsList(
+    { page, prnsListPage },
+    csoPrnsListUrl(year),
+    'CSO'
+  )
+}
+
+async function openAuthenticatedPrnsList({ page, prnsListPage }, url, account) {
   await test.step('open the PRNs list with the saved session', async () => {
-    await page.goto(producerPrnsListUrl(year), { timeout: 60_000 })
+    await page.goto(url, { timeout: 60_000 })
     await page.waitForLoadState('networkidle')
 
     expect(
       page.url(),
-      'The saved DP session was not accepted: the PRNs list redirected to sign-in.'
+      `The saved ${account} session was not accepted: the PRNs list redirected to sign-in.`
     ).not.toMatch(/b2clogin|signin-oidc/)
     await expect(
       page.getByLabel(/email/i),
-      'The saved DP session was not accepted: the PRNs list showed a sign-in form.'
+      `The saved ${account} session was not accepted: the PRNs list showed a sign-in form.`
     ).toHaveCount(0)
   })
 
