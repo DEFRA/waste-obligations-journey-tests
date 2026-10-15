@@ -239,16 +239,15 @@ default, credential, endpoint or dependency in a participating service:
    Currently both are `false` on every deployed environment while the feature
    is in development.
 3. Check WireMock contracts, Floci initialisers and
-   `ci/seed-waste-organisations.mjs` for changed dependencies or scenario data.
+   `ci/generate-waste-organisations-mappings.mjs` for changed dependencies or scenario data.
    Keep dependency contracts with the consuming service.
 4. Identify any corresponding deployed CDP or Azure flag/secret change and its
    owner. Do not assume local Docker settings propagate to deployed services.
 5. Coordinate matching branches or explicit service revisions, and record which
-   were tested. Waste Organisations currently uses a published image; its
-   same-named branch is not selected by the action. Use an explicit
-   `WASTE_ORGANISATIONS_IMAGE` for an alternative image. For a locally built,
-   unpublished image, also start Compose with `--pull never`: this service's
-   Compose definition otherwise always attempts a registry pull.
+   were tested. Waste Organisations is represented by journey-owned WireMock
+   fixtures in the Docker stack; its image and same-named branch are not used.
+   Keep the fixture responses aligned with the service API and the frontend
+   and backend consumers. Deployed journeys still use the real service.
 6. Run affected profiles in the applicable modes. State in the change description
    which journey setup was amended, or why no update is needed, and record any
    unavailable environment. Do not skip scenarios to hide configuration gaps.

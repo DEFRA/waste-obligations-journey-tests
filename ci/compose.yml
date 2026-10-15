@@ -49,6 +49,9 @@ services:
       start_interval: 2s
 
   wiremock:
+    depends_on:
+      waste-organisations-wiremock-init:
+        condition: service_completed_successfully
     image: sheyenrath/wiremock.net:latest
     volumes:
       - ${CI_STACK_RUNTIME_DIR:?CI_STACK_RUNTIME_DIR must identify the generated CI stack directory}/wiremock:/app/__admin/mappings:ro
@@ -69,57 +72,18 @@ services:
       start_period: 5s
       start_interval: 2s
 
-  waste-organisations:
-    image: ${WASTE_ORGANISATIONS_IMAGE:-defradigital/waste-organisations:latest}
-    pull_policy: always
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      Mongo__DatabaseUri: mongodb://mongodb:27017/
-      AWS_REGION: eu-west-2
-      AWS_DEFAULT_REGION: eu-west-2
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      AWS_EMF_ENABLED: "false"
-      AWS_EMF_ENVIRONMENT: Local
-      Acl__Clients__Developer__Type: ApiKey
-      Acl__Clients__Developer__Secret: developer-pwd
-      Acl__Clients__Developer__Scopes__0: read
-      Acl__Clients__Developer__Scopes__1: write
-      Acl__Clients__waste-obligations__Type: ApiKey
-      Acl__Clients__waste-obligations__Secret: waste-obligations-pwd
-      Acl__Clients__waste-obligations__Scopes__0: read
-      Acl__Clients__waste-obligations-frontend__Type: ApiKey
-      Acl__Clients__waste-obligations-frontend__Secret: waste-obligations-frontend-pwd
-      Acl__Clients__waste-obligations-frontend__Scopes__0: read
-      Acl__Clients__waste-organisations-seed__Type: ApiKey
-      Acl__Clients__waste-organisations-seed__Secret: waste-organisations-seed-pwd
-      Acl__Clients__waste-organisations-seed__Scopes__0: read
-      Acl__Clients__waste-organisations-seed__Scopes__1: write
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 2s
-      timeout: 5s
-      retries: 25
-      start_period: 5s
-      start_interval: 2s
-
-  # Scenario data is owned by the journey suite because the tests choose the
-  # identifiers and assertions. It is seeded through the public service API,
-  # not by reaching into MongoDB.
-  waste-organisations-seed:
+  # Journey-owned fixtures replace the organisation API in this Docker stack.
+  # Both application services read them from the shared WireMock instance.
+  waste-organisations-wiremock-init:
     image: node:22-alpine
-    depends_on:
-      waste-organisations:
-        condition: service_healthy
     environment:
       WASTE_OBLIGATION_ORG_ID: ${WASTE_OBLIGATION_ORG_ID:?WASTE_OBLIGATION_ORG_ID must be set}
       WASTE_OBLIGATION_CSO_ORG_ID: ${WASTE_OBLIGATION_CSO_ORG_ID:?WASTE_OBLIGATION_CSO_ORG_ID must be set}
+      JOURNEY_TEST_WIREMOCK_MAPPINGS_DIR: /output
     volumes:
-      - ./seed-waste-organisations.mjs:/seed.mjs:ro
-    entrypoint: ["node", "/seed.mjs"]
+      - ./generate-waste-organisations-mappings.mjs:/generate.mjs:ro
+      - ${CI_STACK_RUNTIME_DIR:?CI_STACK_RUNTIME_DIR must identify the generated CI stack directory}/wiremock:/output
+    entrypoint: ["node", "/generate.mjs"]
 
   waste-obligations:
     image: ${WASTE_OBLIGATIONS_IMAGE:-defradigital/waste-obligations:latest}
@@ -130,8 +94,6 @@ services:
       floci:
         condition: service_healthy
       wiremock:
-        condition: service_healthy
-      waste-organisations:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -164,7 +126,7 @@ services:
       PrnCommonBackend__ClientSecret: waste-obligations-pwd
       PrnCommonBackend__Scope: api://prn-common/.default
       PrnCommonBackend__BaseAddress: http://wiremock/
-      WasteOrganisations__BaseAddress: http://waste-organisations:8080/
+      WasteOrganisations__BaseAddress: http://wiremock/
       WasteOrganisations__ClientId: waste-obligations
       WasteOrganisations__ClientSecret: waste-obligations-pwd
       AccountBackend__TokenEndpoint: http://wiremock/oauth2/v2.0/token
@@ -194,10 +156,6 @@ services:
         condition: service_healthy
       waste-obligations:
         condition: service_healthy
-      waste-organisations:
-        condition: service_healthy
-      waste-organisations-seed:
-        condition: service_completed_successfully
     environment:
       PORT: 3000
       NODE_ENV: production
@@ -206,7 +164,7 @@ services:
       REDIS_HOST: redis
       REDIS_TLS: "false"
       USE_SINGLE_INSTANCE_CACHE: "true"
-      WASTE_ORGANISATIONS_API_BASE_URL: http://waste-organisations:8080/
+      WASTE_ORGANISATIONS_API_BASE_URL: http://wiremock/
       WASTE_ORGANISATIONS_API_AUTH_MODE: basic
       WASTE_ORGANISATIONS_API_CLIENT_ID: waste-obligations-frontend
       WASTE_ORGANISATIONS_API_CLIENT_SECRET: waste-obligations-frontend-pwd

@@ -228,10 +228,29 @@ The CI frontend enables `FEATURE_SHOW_PRNS` so the PRNs route is exercised, and 
 
 The stack contains only the journey's runtime dependencies:
 
-- `waste-obligations`, `waste-obligations-frontend` and the published `waste-organisations` image;
+- `waste-obligations` and `waste-obligations-frontend`;
 - MongoDB, Redis, Floci, an Nginx TLS ingress and `packaging-waste-proxy`;
 - service-owned WireMock contracts for the Azure-hosted Backend Account API, PRN common backend and GOV.UK Notify; and
-- journey-owned organisation scenario data, seeded through the Waste Organisations API.
+- journey-owned Waste Organisations WireMock fixtures for the DP and CSO accounts.
+
+Waste Organisations is stubbed only in this Docker stack. Both the frontend and
+backend use `http://wiremock/` for its API. The one-shot
+`waste-organisations-wiremock-init` service generates organisation lookups and an
+unfiltered organisation list from the configured DP/CSO IDs, with the same names,
+empty addresses and current-year registrations as the previous API seed. It also
+provides `/health/authorized`. Lookups accept the two application Basic-auth
+clients; unknown IDs return 404 and missing/incorrect credentials return 401.
+There are no organisation write mocks: the journeys do not change these records.
+The list fixture supports unfiltered reads only; it does not implement search
+filters. Declarations, status changes and audit history still use the real Waste
+Obligations service. Deployed journeys continue to use the configured real
+services.
+
+The fixture shape follows the Waste Organisations OpenAPI snapshot at revision
+`8db38c583acb6830c488d9f4471fc0c92dac4217`; this spike does not yet automate
+OpenAPI validation or provider-image contract checks. The generator and scenario
+data belong to this repository, while the other WireMock contracts remain owned
+by their consuming services.
 
 The runner checks out the backend and frontend at their resolved revisions for CI setup assets, using `main` assets when a matching branch is absent. The workflow is available through **Run workflow** and as a reusable workflow. The [Waste Obligations](https://github.com/DEFRA/waste-obligations#journey-tests) and [Waste Obligations frontend](https://github.com/DEFRA/waste-obligations-frontend#journey-tests) pull-request workflows use the composite runner directly. It requires the two B2C login accounts, `WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET`, and `GOVUK_NOTIFY_API_KEY` as GitHub secrets. The journey's organisation and submitter identifiers are non-secret scenario data defined in the workflow.
 
