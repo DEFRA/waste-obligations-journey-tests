@@ -1,3 +1,6 @@
 package-lock.json
 node_modules
 docker
+utils/mydw-local/.state
+evidence
+vendor

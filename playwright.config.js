@@ -24,6 +24,9 @@ const PROFILE_IGNORE = {
   e2e: ['**/accessibility.spec.js', '**/security.spec.js'],
   accessibility: [
     '**/csoc-submission*.spec.js',
+    '**/csoc-e2e-journey.spec.js',
+    '**/mydw-e2e.spec.js',
+    '**/unsubmitted-organisations-*.spec.js',
     '**/obligations-choose-year-dp.spec.js',
     '**/prns-list-journey-dp.spec.js',
     '**/prn-accepted-view.spec.js',
@@ -32,6 +35,9 @@ const PROFILE_IGNORE = {
   ],
   security: [
     '**/csoc-submission*.spec.js',
+    '**/csoc-e2e-journey.spec.js',
+    '**/mydw-e2e.spec.js',
+    '**/unsubmitted-organisations-*.spec.js',
     '**/obligations-choose-year-dp.spec.js',
     '**/prns-list-journey-dp.spec.js',
     '**/prn-accepted-view.spec.js',

@@ -16,8 +16,11 @@ playwrightRules['playwright/no-skipped-test'] = [
 playwrightRules['playwright/expect-expect'] = [
   'error',
   {
-    assertFunctionPatterns: ['(^|\\.)expect[A-Z]', '^assert[A-Z]'],
-    assertFunctionNames: ['walkCsocJourney']
+    assertFunctionPatterns: ['(^|\\.)expect[A-Z]', '^assert[A-Z]', 'Flow$'],
+    assertFunctionNames: [
+      'walkCsocJourney',
+      'run' // mydw-e2e: each case's c.run() holds its assertions
+    ]
   }
 ]
 

@@ -1,0 +1,70 @@
+{
+  "EA": {
+    "DRP": {
+      "username": "<sign-in email>",
+      "password": "<tst password>",
+      "companyName": "<organisation name>",
+      "orgId": "<organisation number>",
+      "organisationId": "<organisation GUID>"
+    },
+    "CS": {
+      "username": "<sign-in email>",
+      "password": "<tst password>",
+      "companyName": "<organisation name>",
+      "orgId": "<organisation number>",
+      "organisationId": "<organisation GUID>",
+      "complianceSchemeId": "<compliance scheme GUID>"
+    }
+  },
+  "NRW": {
+    "DRP": {
+      "username": "<sign-in email>",
+      "password": "<tst password>",
+      "companyName": "<organisation name>",
+      "orgId": "<organisation number>",
+      "organisationId": "<organisation GUID>"
+    },
+    "CS": {
+      "username": "<sign-in email>",
+      "password": "<tst password>",
+      "companyName": "<organisation name>",
+      "orgId": "<organisation number>",
+      "organisationId": "<organisation GUID>",
+      "complianceSchemeId": "<compliance scheme GUID>"
+    }
+  },
+  "SEPA": {
+    "DRP": {
+      "username": "<sign-in email>",
+      "password": "<tst password>",
+      "companyName": "<organisation name>",
+      "orgId": "<organisation number>",
+      "organisationId": "<organisation GUID>"
+    },
+    "CS": {
+      "username": "<sign-in email>",
+      "password": "<tst password>",
+      "companyName": "<organisation name>",
+      "orgId": "<organisation number>",
+      "organisationId": "<organisation GUID>",
+      "complianceSchemeId": "<compliance scheme GUID>"
+    }
+  },
+  "NIEA": {
+    "DRP": {
+      "username": "<sign-in email>",
+      "password": "<tst password>",
+      "companyName": "<organisation name>",
+      "orgId": "<organisation number>",
+      "organisationId": "<organisation GUID>"
+    },
+    "CS": {
+      "username": "<sign-in email>",
+      "password": "<tst password>",
+      "companyName": "<organisation name>",
+      "orgId": "<organisation number>",
+      "organisationId": "<organisation GUID>",
+      "complianceSchemeId": "<compliance scheme GUID>"
+    }
+  }
+}

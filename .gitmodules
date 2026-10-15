@@ -1,0 +1,5 @@
+[submodule "vendor/waste-packaging-regulator-tests"]
+	path = vendor/waste-packaging-regulator-tests
+	url = https://github.com/DEFRA/waste-packaging-regulator-tests.git
+	branch = main
+	ignore = untracked

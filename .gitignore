@@ -20,3 +20,8 @@ security-report/
 FAILED
 
 evidence/
+
+# tst test accounts (usernames, passwords, org ids): each user keeps their own, see "Test accounts (tst)" in the README
+data/tst-accounts.json
+# MY&DW local stack state (PRN snapshot, seeded rows)
+utils/mydw-local/.state/

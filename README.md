@@ -171,6 +171,44 @@ Cookie banner and GA assertions read the GTM and measurement IDs from the render
 
 Shared backend admin credentials (`WASTE_OBLIGATION_USERNAME` / `WASTE_OBLIGATION_PASSWORD` / `JOURNEY_USER` / `JOURNEY_PASSWORD`) are tenant-agnostic and used for both accounts.
 
+### Journey suites
+
+Four specs run release-level journeys across the tst accounts or the time-shifted local stack. Without the variables
+below they list a single skipped placeholder, so `npm test`, CI and CDP Portal runs are unaffected.
+
+| Spec                                                                 | What it covers                                                            | Required variables                                                                                        |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `tests/csoc-e2e-journey.spec.js`                                     | CSoC producer side, per regulator × org type (E2E-01.x, E2E-04, E2E-08)   | `JOURNEY`, `REGULATOR` (EA, NRW, SEPA, NIEA), `ORG_TYPE` (DRP, CS), `EVIDENCE_DIR`; optional `PHASE`      |
+| `regulator-tests/csoc-e2e-external.spec.js`                          | CSoC regulator side in Approve & Monitor, after the producer submits      | See the top of the spec; run with `sh bin/run-regulator-spec.sh` (uses the regulator-tests submodule)     |
+| `tests/mydw-e2e.spec.js`                                             | Multi-Year obligations and December Waste release cases (TST-xx, LOC-xx)  | `MYDW_RUN=1`, `MYDW_ENV` (local, tst), `REGULATOR`, `ORG_TYPE`, `EVIDENCE_DIR`; see the top of the spec   |
+| `tests/unsubmitted-organisations-api.spec.js`, `…-lifecycle.spec.js` | The unsubmitted organisations search endpoint (AC1–AC6) and state changes | `EVIDENCE_DIR`, plus `WASTE_OBLIGATIONS_BACKEND_URL` and `WASTE_OBLIGATIONS_API_KEY` (see `.env.example`) |
+
+For example:
+
+```bash
+JOURNEY=E2E-01.1 REGULATOR=EA ORG_TYPE=DRP EVIDENCE_DIR=evidence/csoc npx playwright test tests/csoc-e2e-journey.spec.js --project=chrome-mac
+```
+
+#### Test accounts (tst)
+
+The suites sign in as one producer organisation per regulator × org type (8 accounts). Their usernames, passwords and
+organisation ids are **not in the repository**: keep them in `data/tst-accounts.json`, which is gitignored.
+
+1. `cp data/tst-accounts.example.json data/tst-accounts.json`
+2. Fill in all 8 entries (`EA`, `NRW`, `SEPA`, `NIEA`, each with `DRP` and `CS`): the sign-in email and password of
+   an approved person, the organisation name, its number (`orgId`), its GUID (`organisationId`) and, for `CS`, the
+   compliance scheme GUID (`complianceSchemeId`). Ask the team for the current accounts.
+3. Never commit the file or paste its values anywhere. If it's ever pushed, rotate the passwords.
+
+`utils/tst-accounts.js` reads the file when a test needs an account, so listing tests works without it.
+
+#### Local stack for MY&DW
+
+`utils/mydw-local/stack.js` controls the time-shifted local stack the LOCAL cases need: the frozen clock
+(`--scenario S1|S2|S3`), a baseline of the PRN data (`--snapshot`, `--restore`, `--data-status`) and the seeded
+December Waste notes (`--seed`, `--unseed`). Its state is kept in `utils/mydw-local/.state/` (gitignored). Run
+`node utils/mydw-local/stack.js --preflight` first; the header of `stack.js` lists every option.
+
 ### Debugging locally
 
 Step through tests in the Playwright Inspector:
