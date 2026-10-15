@@ -21,3 +21,26 @@ export function findStandardSelectablePrn(prns, date = new Date()) {
       prn.decemberWaste === false && prn.obligationYear === complianceYear
   )
 }
+
+// One standard selectable PRN for each of `materials` (API material names),
+// keyed by material. A material with no such PRN is left out.
+export function findStandardSelectablePrnsByMaterial(
+  prns,
+  materials,
+  date = new Date()
+) {
+  const found = {}
+
+  for (const material of materials) {
+    const prn = findStandardSelectablePrn(
+      prns.filter((candidate) => candidate.material === material),
+      date
+    )
+
+    if (prn) {
+      found[material] = prn
+    }
+  }
+
+  return found
+}

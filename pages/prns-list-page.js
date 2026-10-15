@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import { listMaterialText } from '../utils/prn-material.js'
 
 export async function selectAndWaitForNavigation(
   page,
@@ -61,6 +62,16 @@ export class PrnsListPage extends BasePage {
     this.sortSelect = page.locator('#sort')
     this.materialSelect = page.locator('#filter')
     this.clearAllLink = page.locator('#clearSortFilter')
+    this.nextPageLink = page.locator('.govuk-pagination__next a')
+  }
+
+  async hasNextPage() {
+    return (await this.nextPageLink.count()) > 0
+  }
+
+  async goToNextPage() {
+    await clickAndWaitForNavigation(this.page, this.nextPageLink)
+    await this.expectLoaded()
   }
 
   async readPrnRows() {
@@ -155,7 +166,7 @@ export class PrnsListPage extends BasePage {
     await expect(numberLink).toBeVisible()
     await expect(row).toHaveCount(1)
     for (const value of [
-      prn.material,
+      listMaterialText(prn.material),
       prn.issuer.organisationName,
       String(prn.tonnage)
     ]) {
