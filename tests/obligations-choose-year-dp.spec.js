@@ -10,6 +10,7 @@ import { getOrgId } from '../utils/waste-obligations-api.js'
 import { reportSkippedSteps } from '../utils/skipped-steps.js'
 import {
   skipUnlessCsocEnabled,
+  skipUnlessDeclarationsSubmittable,
   usesMultiYearObligations
 } from '../utils/environment-features.js'
 import {
@@ -39,6 +40,7 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
   }) => {
     test.setTimeout(180_000)
     skipUnlessCsocEnabled()
+    skipUnlessDeclarationsSubmittable()
     const packaging = usesPackagingEntryPoint()
 
     await test.step('open the entry point and sign in as the producer', async () => {

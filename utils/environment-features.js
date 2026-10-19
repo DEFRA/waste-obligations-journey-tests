@@ -1,5 +1,6 @@
 import { test } from '@playwright/test'
 import { usesPackagingEntryPoint } from './journey-entry-point.js'
+import { canSubmitDeclarations } from './journey-clock.js'
 
 export const ANALYTICS_ACCEPT_BUTTON_NAME =
   /accept analytics cookies|derbyn cwcis dadansoddeg/i
@@ -153,5 +154,15 @@ export function usesCdpObligations() {
   return (
     !usesPackagingEntryPoint() &&
     isFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)
+  )
+}
+
+// The waste-obligations API runs on the real date and only takes a declaration
+// for the current compliance year, so a time-shifted scenario in a later
+// compliance year cannot submit one.
+export function skipUnlessDeclarationsSubmittable() {
+  skipUnlessEnabled(
+    canSubmitDeclarations(),
+    'JOURNEY_NOW is in a later compliance year than the waste-obligations API, which runs on the real date and rejects declarations for it'
   )
 }
