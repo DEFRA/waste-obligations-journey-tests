@@ -16,9 +16,10 @@ import {
   findOnlySubmittedDeclaration,
   resetOrgDeclarations
 } from '../utils/test-setup.js'
+import { getJourneyYear } from '../utils/journey-year.js'
 
 const ACCOUNT = 'dp'
-const YEAR = 2026
+const YEAR = getJourneyYear()
 
 test.use({ storageState: { cookies: [], origins: [] } })
 

@@ -2,8 +2,9 @@ import { test, expect } from '../fixtures/pages.fixture.js'
 import { skipUnlessPrnsConfigured } from '../utils/environment-features.js'
 import { openAuthenticatedProducerPrnsList } from '../utils/prns-list-navigation.js'
 import { logJourney } from '../utils/journey-log.js'
+import { getJourneyYear } from '../utils/journey-year.js'
 
-const YEAR = 2026
+const YEAR = getJourneyYear()
 
 // The list's sort when no `sort` param is present in the URL.
 const DEFAULT_SORT = 'IssuedAtDescending'

@@ -20,8 +20,9 @@ import {
 } from '../utils/environment-features.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
 import { findStandardSelectablePrn } from '../utils/prn-selection.js'
+import { getJourneyYear } from '../utils/journey-year.js'
 
-const YEAR = 2026
+const YEAR = getJourneyYear()
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
