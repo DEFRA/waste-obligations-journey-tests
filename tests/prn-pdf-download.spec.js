@@ -195,12 +195,15 @@ for (const { account, label, storageState, prnType } of ACCOUNTS) {
     }) => {
       skipUnlessPrnsConfigured()
 
-      const prn = (await listRejectedPrns(request, getOrgId(account)))[0]
-      test.skip(!prn, `No rejected note for ${label} in this environment`)
+      const prn = (await listRejectedPrns(request, getOrgId(account))).find(
+        (p) => typeOf(p) === prnType && p.status === 'Rejected'
+      )
+      expectSeededOnLocal(prn, `a rejected ${prnType}`)
+      test.skip(!prn, `No rejected ${prnType} on this deployed environment`)
 
-      await test.step(`open rejected note ${prn.number}`, async () => {
+      await test.step(`open rejected ${prnType} ${prn.number}`, async () => {
         await openPrn({ page, prnPage }, account, prn)
-        await expect(prnPage.heading).toBeVisible()
+        await prnPage.expectLoadedForRejectedPrn(prn)
       })
 
       await test.step('the link is within the green banner', async () => {

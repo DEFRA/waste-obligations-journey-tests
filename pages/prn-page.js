@@ -60,6 +60,17 @@ export class PrnPage extends BasePage {
     )
   }
 
+  // A rejected note shows the green banner. The download control sits inside it.
+  async expectLoadedForRejectedPrn(prn) {
+    const type = prn.type === 'PERN' ? 'PERN' : 'PRN'
+    await expect(this.heading).toBeVisible()
+    await expect(
+      this.page.locator(
+        '.govuk-notification-banner--success .govuk-notification-banner__heading'
+      )
+    ).toHaveText(`${type} rejected.`)
+  }
+
   // The follow-on to the PRNs list for the year the note counts towards.
   async acceptOrRejectMore(year) {
     const button = this.page.getByRole('button', {
