@@ -114,6 +114,11 @@ export async function listAcceptedPrns(request, orgId) {
   return listPrns(request, orgId, 'Accepted')
 }
 
+// Rejected notes are not on the browser's awaiting list either.
+export async function listRejectedPrns(request, orgId) {
+  return listPrns(request, orgId, 'Rejected')
+}
+
 async function listPrns(request, orgId, status) {
   const response = await request.get(
     `${getBackendBaseUrl()}/organisations/${orgId}/prns?status=${status}`,

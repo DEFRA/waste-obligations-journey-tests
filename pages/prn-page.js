@@ -72,4 +72,81 @@ export class PrnPage extends BasePage {
       button.click()
     ])
   }
+
+  // The "Download this ... as a PDF" control. It is a button, not a link.
+  pdfButton() {
+    return this.page.getByRole('button', {
+      name: /^download this .*as a pdf$/i
+    })
+  }
+
+  // The cookie banner covers the top of the page on a small screen, so a user
+  // would dismiss it before using a control in the green banner.
+  async dismissCookieBannerIfShown() {
+    const reject = this.page.getByRole('button', {
+      name: 'Reject analytics cookies'
+    })
+
+    if (await reject.isVisible()) {
+      await reject.click()
+    }
+  }
+
+  // Awaiting acceptance and Accepted views: the control is the last thing on
+  // the page, below the note's details and the other buttons.
+  async expectPdfControlAtBase() {
+    const button = this.pdfButton()
+    await expect(button).toBeVisible()
+    await expect(
+      this.page.locator('.govuk-notification-banner').filter({ has: button })
+    ).toHaveCount(0)
+
+    const contentBelow = await button.evaluate((control) => {
+      const main = document.querySelector('main')
+      const bottom = control.getBoundingClientRect().bottom
+      const isControlsAncestor = (node) =>
+        node.contains(control) || control.contains(node)
+
+      return [
+        ...main.querySelectorAll(
+          'p, h1, h2, h3, li, td, dd, dt, label, a, button'
+        )
+      ]
+        .filter(
+          (node) =>
+            !isControlsAncestor(node) &&
+            node.innerText.trim() &&
+            node.getBoundingClientRect().top >= bottom - 1
+        )
+        .map((node) => node.innerText.trim().slice(0, 40))
+    })
+
+    expect(
+      contentBelow,
+      'Nothing in the page should come after the PDF control'
+    ).toEqual([])
+  }
+
+  // Confirmation and Rejection views: the control is inside the green banner.
+  async expectPdfControlInGreenBanner() {
+    const banner = this.page
+      .locator('.govuk-notification-banner--success')
+      .filter({ has: this.pdfButton() })
+
+    await expect(banner).toHaveCount(1)
+    await expect(banner).toBeVisible()
+  }
+
+  // Clicks the control and returns what the browser downloaded.
+  async downloadPdf() {
+    const [download] = await Promise.all([
+      this.page.waitForEvent('download', { timeout: 60_000 }),
+      this.pdfButton().click()
+    ])
+
+    return {
+      filename: download.suggestedFilename(),
+      file: await download.path()
+    }
+  }
 }
