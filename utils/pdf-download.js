@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, readdirSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { expect, test } from '@playwright/test'
 
 // Helpers for checking a PDF downloaded from the PRN page.
 //
@@ -107,4 +108,63 @@ export function ocrPdf(file) {
 
 export function readFileBytes(file) {
   return readFileSync(file)
+}
+
+// The filename and that the download is a real PDF; the content too, with OCR
+// when pdftoppm and tesseract are installed.
+export async function expectPdf(
+  { filename, file },
+  prn,
+  { includes = [], excludes = [] } = {}
+) {
+  expect(filename, 'The PDF is named after the PRN number').toBe(
+    `${prn.number}.pdf`
+  )
+
+  const bytes = readFileBytes(file)
+  expect(looksLikePdf(bytes), 'The download is a PDF').toBe(true)
+  expect(pdfPageCount(bytes), 'The PDF has at least one page').toBeGreaterThan(
+    0
+  )
+
+  await expectPdfContent(file, prn, { includes, excludes })
+}
+
+export async function expectPdfContent(
+  file,
+  prn,
+  { includes = [], excludes = [] } = {}
+) {
+  const ocrAvailable = isOcrAvailable()
+
+  test.info().annotations.push({
+    type: 'pdf-content',
+    description: ocrAvailable
+      ? 'Content read back with OCR'
+      : 'pdftoppm or tesseract is not installed: the PDF content was not checked'
+  })
+
+  if (!ocrAvailable) {
+    return
+  }
+
+  const text = ocrPdf(file)
+
+  expect(mentions(text, prn.number, 2), `The PDF shows ${prn.number}`).toBe(
+    true
+  )
+  expect(
+    mentions(text, String(prn.tonnage)),
+    `The PDF shows ${prn.tonnage} tonnes`
+  ).toBe(true)
+
+  for (const wanted of includes) {
+    expect(mentions(text, wanted, 3), `The PDF says "${wanted}"`).toBe(true)
+  }
+
+  for (const excluded of excludes) {
+    expect(mentions(text, excluded), `The PDF leaves out "${excluded}"`).toBe(
+      false
+    )
+  }
 }

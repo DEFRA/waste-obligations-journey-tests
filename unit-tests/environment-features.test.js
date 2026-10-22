@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   ANALYTICS_ACCEPT_BUTTON_NAME,
   PAGE_NOT_FOUND_HEADING,
+  expectSeededOnLocal,
   isFeatureFlagEnabled,
   readBooleanEnv,
   resolvePrnsAvailability,
@@ -22,6 +23,14 @@ test('page not found heading matches English and Welsh 404 copy', () => {
   assert.match('Heb ddod o hyd i’r dudalen', PAGE_NOT_FOUND_HEADING)
   assert.match("Heb ddod o hyd i'r dudalen", PAGE_NOT_FOUND_HEADING)
   assert.doesNotMatch('Accept or reject PRNs and PERNs', PAGE_NOT_FOUND_HEADING)
+})
+
+test('expectSeededOnLocal requires the note only on local', () => {
+  expectSeededOnLocal(undefined, 'an accepted PRN', { ENVIRONMENT: 'dev' })
+  assert.throws(() =>
+    expectSeededOnLocal(undefined, 'an accepted PRN', { ENVIRONMENT: 'local' })
+  )
+  expectSeededOnLocal({ id: '1' }, 'an accepted PRN', { ENVIRONMENT: 'local' })
 })
 
 test('readBooleanEnv treats missing and blank values as unset', () => {

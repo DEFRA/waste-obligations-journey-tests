@@ -1,5 +1,34 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
+import { getPrnUrl } from '../utils/journey-entry-point.js'
+import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
+import { noteType } from '../utils/prn-selection.js'
+
+export const CONFIRM_ACCEPT_BUTTON_NAME = 'Yes, accept'
+export const DOWNLOAD_PDF_BUTTON_PREFIX = 'Download this'
+export const DOWNLOAD_PDF_BUTTON_NAME = new RegExp(
+  `^${DOWNLOAD_PDF_BUTTON_PREFIX} .*as a pdf$`,
+  'i'
+)
+
+export function acceptThisNoteName(prn) {
+  return `Accept this ${noteType(prn)}`
+}
+
+export function rejectThisNoteName(prn) {
+  return `Reject this ${noteType(prn)}`
+}
+
+// The action buttons and the download control. The download prefix covers the
+// awaiting and accepted wordings, which share one locator.
+export function labelsExcludedFromPdf(prn) {
+  return [
+    acceptThisNoteName(prn),
+    rejectThisNoteName(prn),
+    DOWNLOAD_PDF_BUTTON_PREFIX,
+    CONFIRM_ACCEPT_BUTTON_NAME
+  ]
+}
 
 export class PrnPage extends BasePage {
   constructor(page) {
@@ -7,6 +36,18 @@ export class PrnPage extends BasePage {
     this.heading = page.getByRole('heading', {
       name: /^packaging recycling note$/i
     })
+  }
+
+  // Opens one PRN page. Without a proxy session the goto bounces through B2C
+  // sign-in, which crashes Playwright's WebKit backend.
+  async goto(account, prn) {
+    const url = getPrnUrl(account, prn.id, prn.obligationYear)
+
+    await ensureProxySessionForWebKit(this.page, url.href)
+    await this.page.goto(url.href, { timeout: 60_000 })
+    await expect(this.page).toHaveURL(
+      (current) => current.pathname === url.pathname
+    )
   }
 
   // For pages reached from a PRN number link when only the number is known
@@ -24,22 +65,14 @@ export class PrnPage extends BasePage {
   // An awaiting-acceptance PRN or PERN offers Accept (a link styled as a
   // button) and a disabled Reject; nothing here is clicked.
   async expectLoadedForAwaitingPrn(prn) {
-    const type = prn.type === 'PERN' ? 'PERN' : 'PRN'
+    const type = noteType(prn)
     await expect(this.heading).toBeVisible()
     // Styled as a heading but rendered as a div, so it has no heading role.
     await expect(this.page.locator('.app-inset-text')).toContainText(
       `${type} number: ${prn.number}`
     )
-    await expect(
-      this.page.getByRole('button', {
-        name: `Accept this ${type}`,
-        exact: true
-      })
-    ).toBeVisible()
-    const rejectButton = this.page.getByRole('button', {
-      name: `Reject this ${type}`,
-      exact: true
-    })
+    await expect(this.acceptButton(prn)).toBeVisible()
+    const rejectButton = this.rejectButton(prn)
     await expect(rejectButton).toBeVisible()
     await expect(rejectButton).toBeDisabled()
   }
@@ -49,7 +82,7 @@ export class PrnPage extends BasePage {
   // banner's other wording, the Status tag, the inset and which buttons show
   // are covered by waste-obligations-frontend's route tests.
   async expectLoadedForAcceptedPrn(prn) {
-    const type = prn.type === 'PERN' ? 'PERN' : 'PRN'
+    const type = noteType(prn)
     await expect(this.heading).toBeVisible()
     await expect(
       this.page.locator(
@@ -62,13 +95,39 @@ export class PrnPage extends BasePage {
 
   // A rejected note shows the green banner. The download control sits inside it.
   async expectLoadedForRejectedPrn(prn) {
-    const type = prn.type === 'PERN' ? 'PERN' : 'PRN'
+    const type = noteType(prn)
     await expect(this.heading).toBeVisible()
     await expect(
       this.page.locator(
         '.govuk-notification-banner--success .govuk-notification-banner__heading'
       )
     ).toHaveText(`${type} rejected.`)
+  }
+
+  acceptButton(prn) {
+    return this.page.getByRole('button', {
+      name: acceptThisNoteName(prn),
+      exact: true
+    })
+  }
+
+  rejectButton(prn) {
+    return this.page.getByRole('button', {
+      name: rejectThisNoteName(prn),
+      exact: true
+    })
+  }
+
+  // Accepts the open note and waits until the confirmation view replaces the
+  // confirm-accept page.
+  async accept(prn) {
+    await this.acceptButton(prn).click()
+    await this.page
+      .getByRole('button', { name: CONFIRM_ACCEPT_BUTTON_NAME, exact: true })
+      .click()
+    await expect(this.page).toHaveURL(
+      (url) => !url.pathname.includes('confirm-accept')
+    )
   }
 
   // The follow-on to the PRNs list for the year the note counts towards.
@@ -87,20 +146,8 @@ export class PrnPage extends BasePage {
   // The "Download this ... as a PDF" control. It is a button, not a link.
   pdfButton() {
     return this.page.getByRole('button', {
-      name: /^download this .*as a pdf$/i
+      name: DOWNLOAD_PDF_BUTTON_NAME
     })
-  }
-
-  // The cookie banner covers the top of the page on a small screen, so a user
-  // would dismiss it before using a control in the green banner.
-  async dismissCookieBannerIfShown() {
-    const reject = this.page.getByRole('button', {
-      name: 'Reject analytics cookies'
-    })
-
-    if (await reject.isVisible()) {
-      await reject.click()
-    }
   }
 
   // Awaiting acceptance and Accepted views: the control is the last thing on
@@ -146,18 +193,5 @@ export class PrnPage extends BasePage {
 
     await expect(banner).toHaveCount(1)
     await expect(banner).toBeVisible()
-  }
-
-  // Clicks the control and returns what the browser downloaded.
-  async downloadPdf() {
-    const [download] = await Promise.all([
-      this.page.waitForEvent('download', { timeout: 60_000 }),
-      this.pdfButton().click()
-    ])
-
-    return {
-      filename: download.suggestedFilename(),
-      file: await download.path()
-    }
   }
 }

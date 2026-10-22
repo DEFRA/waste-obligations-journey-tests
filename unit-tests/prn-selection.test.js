@@ -4,8 +4,26 @@ import {
   findPrnAcceptableInto,
   findStandardSelectablePrn,
   getComplianceYear,
+  noteType,
+  PRN_ACCOUNTS,
   resolveAcceptanceYears
 } from '../utils/prn-selection.js'
+
+test('noteType maps PERN and treats every other type as a PRN', () => {
+  assert.equal(noteType({ type: 'PERN' }), 'PERN')
+  assert.equal(noteType({ type: 'PRN' }), 'PRN')
+  assert.equal(noteType({}), 'PRN')
+})
+
+test('note accounts pair each login with the note type that login opens', () => {
+  assert.deepEqual(
+    PRN_ACCOUNTS.map(({ account, prnType }) => [account, prnType]),
+    [
+      ['dp', 'PRN'],
+      ['cso', 'PERN']
+    ]
+  )
+})
 
 test('compliance year assigns January to the previous year', () => {
   assert.equal(getComplianceYear(new Date('2027-01-31T12:00:00Z')), 2026)
