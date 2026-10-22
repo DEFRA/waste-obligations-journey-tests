@@ -1,3 +1,24 @@
+// Each login opens one note type, so a run covers both the PRN and PERN wording.
+export const PRN_ACCOUNTS = [
+  {
+    account: 'dp',
+    label: 'DP',
+    storageState: 'playwright/.auth/dp.json',
+    prnType: 'PRN'
+  },
+  {
+    account: 'cso',
+    label: 'CSO',
+    storageState: 'playwright/.auth/cso.json',
+    prnType: 'PERN'
+  }
+]
+
+// The backend marks PERNs with type 'PERN'; everything else is a PRN.
+export function noteType(prn) {
+  return prn.type === 'PERN' ? 'PERN' : 'PRN'
+}
+
 // Mirrors the frontend's compliance year: Feb–Jan in Europe/London, so
 // January belongs to the previous year.
 export function getComplianceYear(date = new Date()) {

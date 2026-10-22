@@ -17,6 +17,32 @@ export class BasePage {
     await this.page.getByRole(role, { name }).click()
   }
 
+  // The cookie banner covers the top of the page on a small screen, so a user
+  // would dismiss it before using a control underneath it. It is absent once
+  // the choice has been saved.
+  async dismissCookieBannerIfShown() {
+    const reject = this.page.getByRole('button', {
+      name: 'Reject analytics cookies'
+    })
+
+    if (await reject.isVisible()) {
+      await reject.click()
+    }
+  }
+
+  // Clicks a control and returns what the browser downloaded.
+  async download(locator) {
+    const [download] = await Promise.all([
+      this.page.waitForEvent('download', { timeout: 60_000 }),
+      locator.click()
+    ])
+
+    return {
+      filename: download.suggestedFilename(),
+      file: await download.path()
+    }
+  }
+
   // Env-agnostic populated-field check for GDS summary lists: locate the
   // `<dd>` paired with a `<dt>` of the given label and assert its trimmed
   // text exceeds `minLength`. Used in place of equality checks against

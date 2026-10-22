@@ -5,15 +5,13 @@ import {
   findOnlySubmittedDeclaration,
   resetOrgDeclarations
 } from '../utils/test-setup.js'
+import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
 import {
-  getPrnUrl,
-  usesPackagingEntryPoint
-} from '../utils/journey-entry-point.js'
-import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
-import {
+  expectSeededOnLocal,
   skipUnlessCsocEnabled,
   skipUnlessPrnsConfigured
 } from '../utils/environment-features.js'
+import { noteType, PRN_ACCOUNTS } from '../utils/prn-selection.js'
 import {
   initialiseAccessibilityChecking,
   analyseAccessibility,
@@ -70,21 +68,14 @@ async function openCsocView({
 async function openAcceptedPrn({ account, prnType, page, request, prnPage }) {
   skipUnlessPrnsConfigured()
   const prns = await listAcceptedPrns(request, getOrgId(account))
-  const prn = prns.find((p) => (p.type === 'PERN' ? 'PERN' : 'PRN') === prnType)
-  if (process.env.ENVIRONMENT === 'local') {
-    expect(
-      prn,
-      `The local journey fixture must contain an accepted ${prnType}.`
-    ).toBeDefined()
-  }
+  const prn = prns.find((candidate) => noteType(candidate) === prnType)
+  expectSeededOnLocal(prn, `an accepted ${prnType}`)
   test.skip(
     !prn,
     `No accepted ${prnType} on this deployed environment; the accepted view was not scanned.`
   )
 
-  const prnUrl = getPrnUrl(account, prn.id, prn.obligationYear)
-  await ensureProxySessionForWebKit(page, prnUrl.href)
-  await page.goto(prnUrl.href, { timeout: 60_000 })
+  await prnPage.goto(account, prn)
   await expect(prnPage.heading).toBeVisible()
   await expect(
     page.locator('.govuk-notification-banner--success')
@@ -242,12 +233,9 @@ test.describe('Accessibility testing — Accepted PRN view', () => {
     generateAccessibilityReportIndex()
   })
 
-  for (const { account, label, prnType } of [
-    { account: 'dp', label: 'DP', prnType: 'PRN' },
-    { account: 'cso', label: 'CSO', prnType: 'PERN' }
-  ]) {
+  for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
     test.describe(label, () => {
-      test.use({ storageState: `playwright/.auth/${account}.json` })
+      test.use({ storageState })
 
       test(`scan the accepted ${prnType} view`, async ({
         page,
