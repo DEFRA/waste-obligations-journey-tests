@@ -8,8 +8,8 @@ const SCRIPT = fileURLToPath(
 )
 
 // The local stack reads PRNs from its own database.
-// CI (ENVIRONMENT=local with WIREMOCK_ADMIN_URL) reads them from WireMock.
-const isCi = process.env.WIREMOCK_ADMIN_URL
+// CI reads them from WireMock - process.env.IS_CI.
+const isCi = ['true', true].includes(process.env.IS_CI)
 
 function runSeedScript(action, account) {
   if (isCi) return
