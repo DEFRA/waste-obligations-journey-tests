@@ -43,6 +43,8 @@ export function findStandardSelectablePrnsByMaterial(
   }
 
   return found
+}
+
 // December waste's choice window: from 1 December of its year to 1 February
 // the year after, in UTC (UK is GMT in both months).
 const DECEMBER = 12
