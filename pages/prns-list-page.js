@@ -231,6 +231,14 @@ export class PrnsListPage extends BasePage {
   }
 
   async openPrn(prn) {
+    // On a small viewport the cookie banner covers the top of the list, so a user would dismiss it first.
+    const rejectAnalytics = this.page.getByRole('button', {
+      name: 'Reject analytics cookies'
+    })
+    if (await rejectAnalytics.isVisible()) {
+      await rejectAnalytics.click()
+    }
+
     await this.page.getByRole('link', { name: prn.number, exact: true }).click()
   }
 

@@ -6,8 +6,9 @@ import {
   MATERIAL_FILTER_LABELS,
   listMaterialText
 } from '../utils/prn-material.js'
+import { getJourneyYear } from '../utils/journey-year.js'
 
-const YEAR = 2026
+const YEAR = getJourneyYear()
 
 // The list's sort when no `sort` param is present in the URL.
 const DEFAULT_SORT = 'IssuedAtDescending'

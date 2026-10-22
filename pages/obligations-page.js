@@ -141,6 +141,16 @@ export class ObligationsPage extends BasePage {
     ])
   }
 
+  // The CDP obligations page's "Number of PRNs and PERNs awaiting acceptance" figure.
+  async readAwaitingAcceptanceCount() {
+    const figure = this.page
+      .locator('.govuk-inset-text')
+      .filter({ hasText: /awaiting acceptance/i })
+      .locator('p.govuk-body-l')
+    await expect(figure).toBeVisible()
+    return Number((await figure.textContent()).trim())
+  }
+
   async readObligationsTable() {
     return this.readGovukTable(this.materialObligationsTable)
   }

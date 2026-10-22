@@ -21,9 +21,14 @@ import {
   usesShowPrnsOnCdp
 } from '../utils/environment-features.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
-import { findStandardSelectablePrn } from '../utils/prn-selection.js'
+import {
+  findPrnAcceptableInto,
+  findStandardSelectablePrn
+} from '../utils/prn-selection.js'
+import { getJourneyNow } from '../utils/journey-clock.js'
+import { getJourneyYear } from '../utils/journey-year.js'
 
-const YEAR = 2026
+const YEAR = getJourneyYear()
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
@@ -51,12 +56,17 @@ test.describe('Producer PRNs list (DP)', () => {
       expectedPrn =
         await test.step('read the seeded PRN awaiting acceptance', async () => {
           const prns = await listAwaitingPrns(request, getOrgId('dp'))
-          selectablePrn = findStandardSelectablePrn(prns)
+          selectablePrn = findStandardSelectablePrn(prns, getJourneyNow())
           expect(
             prns.length,
             'The local journey fixture must contain a PRN awaiting acceptance.'
           ).toBeGreaterThan(0)
-          const prn = prns[0]
+          // The list for YEAR offers only the notes acceptable into it at the scenario clock.
+          const prn = findPrnAcceptableInto(prns, YEAR, getJourneyNow())
+          test.skip(
+            prn === undefined,
+            `No seeded PRN can be accepted into ${YEAR} at ${getJourneyNow().toISOString()}`
+          )
           for (const value of [
             prn.number,
             prn.material,

@@ -1,5 +1,6 @@
 import { test } from '@playwright/test'
 import { usesPackagingEntryPoint } from './journey-entry-point.js'
+import { canSubmitDeclarations } from './journey-clock.js'
 
 export const ANALYTICS_ACCEPT_BUTTON_NAME =
   /accept analytics cookies|derbyn cwcis dadansoddeg/i
@@ -83,6 +84,10 @@ export function pageNotFoundHeading(page) {
   return page.getByRole('heading', { name: PAGE_NOT_FOUND_HEADING })
 }
 
+export const PRNS_LIST_HEADING = /accept or reject prns and perns/i
+
+// The CDP hop from Packaging can arrive already signed in (the session carries across), so the PRNs list
+// heading counts as a valid landing state alongside the sign-in form and the sign-in link.
 export async function skipUnlessPrnsSignInOffered(page) {
   const configured = readBooleanEnv(FEATURE_SHOW_PRNS)
   if (configured === false) {
@@ -93,10 +98,12 @@ export async function skipUnlessPrnsSignInOffered(page) {
   const notFound = pageNotFoundHeading(page)
   const email = page.getByLabel(/email/i)
   const signIn = page.getByRole('link', { name: /^sign in$/i })
+  const alreadySignedIn = page.getByRole('heading', { name: PRNS_LIST_HEADING })
 
   await email
     .or(notFound)
     .or(signIn)
+    .or(alreadySignedIn)
     .waitFor({ state: 'visible', timeout: 15_000 })
 
   if ((await signIn.isVisible()) && !(await email.isVisible())) {
@@ -147,5 +154,15 @@ export function usesCdpObligations() {
   return (
     !usesPackagingEntryPoint() &&
     isFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)
+  )
+}
+
+// The waste-obligations API runs on the real date and only takes a declaration
+// for the current compliance year, so a time-shifted scenario in a later
+// compliance year cannot submit one.
+export function skipUnlessDeclarationsSubmittable() {
+  skipUnlessEnabled(
+    canSubmitDeclarations(),
+    'JOURNEY_NOW is in a later compliance year than the waste-obligations API, which runs on the real date and rejects declarations for it'
   )
 }
