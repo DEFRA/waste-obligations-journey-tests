@@ -104,7 +104,8 @@ function buildHeaders(authHeader) {
   }
 }
 
-// Match the browser list's default first-page AwaitingAcceptance query.
+// Every awaiting-acceptance note, not the first page only. The browser list
+// filters this same set by year.
 export async function listAwaitingPrns(request, orgId) {
   return listPrns(request, orgId, 'AwaitingAcceptance')
 }
@@ -119,9 +120,47 @@ export async function listRejectedPrns(request, orgId) {
   return listPrns(request, orgId, 'Rejected')
 }
 
-async function listPrns(request, orgId, status) {
+const FETCH_PAGE_SIZE = 100
+
+function reportedPageSize(body) {
+  return Number.isInteger(body.pageSize) && body.pageSize > 0
+    ? body.pageSize
+    : null
+}
+
+// The API offsets a page by (page - 1) * the page size of that request.
+// Trust a smaller size only when the first page is full at that size.
+function pageSizeFromFirstResponse(body, requested) {
+  const reported = reportedPageSize(body)
+  const count = body.prns.length
+
+  if (reported != null && reported < requested && count === reported) {
+    return reported
+  }
+
+  return requested
+}
+
+function appendUnseenPrns(prns, seenIds, items) {
+  for (const prn of items) {
+    if (prn?.id != null && seenIds.has(prn.id)) {
+      continue
+    }
+    if (prn?.id != null) {
+      seenIds.add(prn.id)
+    }
+    prns.push(prn)
+  }
+}
+
+async function readPrnPage(request, orgId, status, page, pageSize) {
+  const params = new URLSearchParams({
+    status,
+    page: String(page),
+    pageSize: String(pageSize)
+  })
   const response = await request.get(
-    `${getBackendBaseUrl()}/organisations/${orgId}/prns?status=${status}`,
+    `${getBackendBaseUrl()}/organisations/${orgId}/prns?${params}`,
     { headers: buildHeaders(await getAuthHeader()) }
   )
   if (!response.ok()) {
@@ -135,7 +174,29 @@ async function listPrns(request, orgId, status) {
       `GET organisation PRNs (status=${status}) returned unexpected shape: ${JSON.stringify(body).slice(0, 500)}`
     )
   }
-  return body.prns
+
+  return body
+}
+
+// One page at a time. The page count and page size stay on the first response,
+// and a repeated note is kept once, so a later page cannot end the walk or
+// shift the next offset.
+async function listPrns(request, orgId, status) {
+  const first = await readPrnPage(request, orgId, status, 1, FETCH_PAGE_SIZE)
+  const pageSize = pageSizeFromFirstResponse(first, FETCH_PAGE_SIZE)
+  const total = Number.isInteger(first.total) ? first.total : first.prns.length
+  const pageCount = pageSize > 0 ? Math.ceil(total / pageSize) : 1
+  const prns = []
+  const seenIds = new Set()
+
+  appendUnseenPrns(prns, seenIds, first.prns)
+
+  for (let page = 2; page <= pageCount; page += 1) {
+    const body = await readPrnPage(request, orgId, status, page, pageSize)
+    appendUnseenPrns(prns, seenIds, body.prns)
+  }
+
+  return prns
 }
 
 export async function listDeclarations(request, orgId, obligationYear) {

@@ -1,3 +1,5 @@
+import { getJourneyNow } from './journey-clock.js'
+
 // Each login opens one note type, so a run covers both the PRN and PERN wording.
 export const PRN_ACCOUNTS = [
   {
@@ -19,14 +21,18 @@ export function noteType(prn) {
   return prn.type === 'PERN' ? 'PERN' : 'PRN'
 }
 
+// Built once. Acceptance years are resolved for every note on a list.
+const ukYearMonthFormat = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/London',
+  year: 'numeric',
+  month: 'numeric'
+})
+
 // Mirrors the frontend's compliance year: Feb–Jan in Europe/London, so
-// January belongs to the previous year.
-export function getComplianceYear(date = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/London',
-    year: 'numeric',
-    month: 'numeric'
-  }).formatToParts(date)
+// January belongs to the previous year. An omitted date is the scenario
+// clock, so a time-shifted run does not fall back to the machine date.
+export function getComplianceYear(date = getJourneyNow()) {
+  const parts = ukYearMonthFormat.formatToParts(date)
   const year = Number(parts.find((part) => part.type === 'year').value)
   const month = Number(parts.find((part) => part.type === 'month').value)
   return month === 1 ? year - 1 : year
@@ -35,7 +41,7 @@ export function getComplianceYear(date = new Date()) {
 // A standard PRN in the current compliance year is always offered for
 // multi-select. December waste depends on the Dec–Jan window, so it is never
 // chosen here; the frontend unit tests own that rule.
-export function findStandardSelectablePrn(prns, date = new Date()) {
+export function findStandardSelectablePrn(prns, date = getJourneyNow()) {
   const complianceYear = getComplianceYear(date)
   return prns.find(
     (prn) =>
@@ -59,7 +65,7 @@ const NO_CHOICE_UNTIL_YEAR = 2026
  * @param {Date} [now]
  * @returns {number[]}
  */
-export function resolveAcceptanceYears(prn, now = new Date()) {
+export function resolveAcceptanceYears(prn, now = getJourneyNow()) {
   const prnYear = prn?.obligationYear
   const thisYear = getComplianceYear(now)
 
@@ -91,6 +97,6 @@ export function resolveAcceptanceYears(prn, now = new Date()) {
 }
 
 // The first awaiting note the list for `year` should offer at `now`.
-export function findPrnAcceptableInto(prns, year, now = new Date()) {
+export function findPrnAcceptableInto(prns, year, now = getJourneyNow()) {
   return prns.find((prn) => resolveAcceptanceYears(prn, now).includes(year))
 }

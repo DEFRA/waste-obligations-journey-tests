@@ -48,6 +48,21 @@ const standard2025 = {
 }
 const inSeptember2026 = new Date('2026-09-28T12:00:00Z')
 
+test('an omitted date follows JOURNEY_NOW rather than the machine date', () => {
+  const previous = process.env.JOURNEY_NOW
+  process.env.JOURNEY_NOW = '2027-02-01T00:00:01Z'
+  try {
+    assert.deepEqual(resolveAcceptanceYears(standard2026), [])
+    assert.equal(getComplianceYear(), 2027)
+  } finally {
+    if (previous === undefined) {
+      delete process.env.JOURNEY_NOW
+    } else {
+      process.env.JOURNEY_NOW = previous
+    }
+  }
+})
+
 test('finds a standard PRN in the current compliance year', () => {
   assert.equal(
     findStandardSelectablePrn(

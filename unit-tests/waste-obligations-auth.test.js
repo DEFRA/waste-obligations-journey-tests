@@ -9,6 +9,15 @@ import {
   deleteDeclaration
 } from '../utils/waste-obligations-api.js'
 
+function isAwaitingPrnList(url) {
+  const parsed = new URL(url, 'http://127.0.0.1')
+
+  return (
+    parsed.pathname === '/organisations/org/prns' &&
+    parsed.searchParams.get('status') === 'AwaitingAcceptance'
+  )
+}
+
 test('backend authentication over HTTP', async (t) => {
   const keys = [
     'WASTE_OBLIGATIONS_API_BASE_URL',
@@ -37,9 +46,7 @@ test('backend authentication over HTTP', async (t) => {
     if (req.url === '/token') {
       res.statusCode = tokenStatus
       res.end(rawTokenBody ?? JSON.stringify(tokenBody))
-    } else if (
-      req.url === '/organisations/org/prns?status=AwaitingAcceptance'
-    ) {
+    } else if (isAwaitingPrnList(req.url)) {
       res.statusCode = prnStatus
       res.end(JSON.stringify(prnBody))
     } else {
@@ -204,4 +211,76 @@ test('backend authentication over HTTP', async (t) => {
       }
     }
   )
+})
+
+test('awaiting PRNs follow the reported page size and keep a repeated note once', async () => {
+  const keys = [
+    'WASTE_OBLIGATIONS_API_BASE_URL',
+    'WASTE_OBLIGATION_USERNAME',
+    'WASTE_OBLIGATION_PASSWORD'
+  ]
+  const original = keys.map((key) => process.env[key])
+  const calls = []
+  const pages = {
+    1: {
+      prns: [
+        { id: 'a', number: 'PRN001' },
+        { id: 'b', number: 'PRN002' }
+      ],
+      total: 5,
+      pageSize: 2
+    },
+    2: {
+      prns: [
+        { id: 'a', number: 'PRN001' },
+        { id: 'c', number: 'PRN003' }
+      ],
+      total: 2,
+      pageSize: 20
+    },
+    3: {
+      prns: [{ id: 'd', number: 'PRN004' }],
+      total: 4,
+      pageSize: 2
+    }
+  }
+  const server = createServer((req, res) => {
+    calls.push(req.url)
+    const page = Number(
+      new URL(req.url, 'http://127.0.0.1').searchParams.get('page')
+    )
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify(pages[page]))
+  })
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const api = await request.newContext()
+  try {
+    Object.assign(process.env, {
+      WASTE_OBLIGATIONS_API_BASE_URL: `http://127.0.0.1:${server.address().port}`,
+      WASTE_OBLIGATION_USERNAME: 'reader',
+      WASTE_OBLIGATION_PASSWORD: 'reader-password'
+    })
+
+    const prns = await listAwaitingPrns(api, 'org')
+
+    assert.deepEqual(
+      prns.map((prn) => prn.number),
+      ['PRN001', 'PRN002', 'PRN003', 'PRN004']
+    )
+    assert.deepEqual(calls, [
+      '/organisations/org/prns?status=AwaitingAcceptance&page=1&pageSize=100',
+      '/organisations/org/prns?status=AwaitingAcceptance&page=2&pageSize=2',
+      '/organisations/org/prns?status=AwaitingAcceptance&page=3&pageSize=2'
+    ])
+  } finally {
+    await api.dispose()
+    await new Promise((resolve) => server.close(resolve))
+    keys.forEach((key, index) => {
+      if (original[index] === undefined) {
+        delete process.env[key]
+      } else {
+        process.env[key] = original[index]
+      }
+    })
+  }
 })
