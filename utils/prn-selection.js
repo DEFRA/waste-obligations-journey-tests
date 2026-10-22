@@ -1,4 +1,4 @@
-import { getJourneyNow } from './journey-clock.js'
+import { getComplianceYear, getJourneyNow } from './journey-clock.js'
 
 // Each login opens one note type, so a run covers both the PRN and PERN wording.
 export const PRN_ACCOUNTS = [
@@ -19,23 +19,6 @@ export const PRN_ACCOUNTS = [
 // The backend marks PERNs with type 'PERN'; everything else is a PRN.
 export function noteType(prn) {
   return prn.type === 'PERN' ? 'PERN' : 'PRN'
-}
-
-// Built once. Acceptance years are resolved for every note on a list.
-const ukYearMonthFormat = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Europe/London',
-  year: 'numeric',
-  month: 'numeric'
-})
-
-// Mirrors the frontend's compliance year: Feb–Jan in Europe/London, so
-// January belongs to the previous year. An omitted date is the scenario
-// clock, so a time-shifted run does not fall back to the machine date.
-export function getComplianceYear(date = getJourneyNow()) {
-  const parts = ukYearMonthFormat.formatToParts(date)
-  const year = Number(parts.find((part) => part.type === 'year').value)
-  const month = Number(parts.find((part) => part.type === 'month').value)
-  return month === 1 ? year - 1 : year
 }
 
 // A standard PRN in the current compliance year is always offered for

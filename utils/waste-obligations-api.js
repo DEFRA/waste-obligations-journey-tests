@@ -132,7 +132,7 @@ function reportedPageSize(body) {
 // Trust a smaller size only when the first page is full at that size.
 function pageSizeFromFirstResponse(body, requested) {
   const reported = reportedPageSize(body)
-  const count = body.prns.length
+  const count = body.items.length
 
   if (reported != null && reported < requested && count === reported) {
     return reported
@@ -141,81 +141,99 @@ function pageSizeFromFirstResponse(body, requested) {
   return requested
 }
 
-function appendUnseenPrns(prns, seenIds, items) {
-  for (const prn of items) {
-    if (prn?.id != null && seenIds.has(prn.id)) {
+function appendUnseen(items, seenIds, pageItems) {
+  for (const item of pageItems) {
+    if (item?.id != null && seenIds.has(item.id)) {
       continue
     }
-    if (prn?.id != null) {
-      seenIds.add(prn.id)
+    if (item?.id != null) {
+      seenIds.add(item.id)
     }
-    prns.push(prn)
+    items.push(item)
   }
-}
-
-async function readPrnPage(request, orgId, status, page, pageSize) {
-  const params = new URLSearchParams({
-    status,
-    page: String(page),
-    pageSize: String(pageSize)
-  })
-  const response = await request.get(
-    `${getBackendBaseUrl()}/organisations/${orgId}/prns?${params}`,
-    { headers: buildHeaders(await getAuthHeader()) }
-  )
-  if (!response.ok()) {
-    throw new Error(
-      `GET organisation PRNs (status=${status}) failed: ${response.status()} ${await response.text()}`
-    )
-  }
-  const body = await response.json()
-  if (!Array.isArray(body.prns)) {
-    throw new Error(
-      `GET organisation PRNs (status=${status}) returned unexpected shape: ${JSON.stringify(body).slice(0, 500)}`
-    )
-  }
-
-  return body
 }
 
 // One page at a time. The page count and page size stay on the first response,
-// and a repeated note is kept once, so a later page cannot end the walk or
-// shift the next offset.
-async function listPrns(request, orgId, status) {
-  const first = await readPrnPage(request, orgId, status, 1, FETCH_PAGE_SIZE)
+// and a repeated item is kept once, so a later page cannot end the walk or
+// shift the next offset. `readPage` returns `{ items, total, pageSize }`.
+async function readAllPages(readPage) {
+  const first = await readPage(1, FETCH_PAGE_SIZE)
   const pageSize = pageSizeFromFirstResponse(first, FETCH_PAGE_SIZE)
-  const total = Number.isInteger(first.total) ? first.total : first.prns.length
+  const total = Number.isInteger(first.total) ? first.total : first.items.length
   const pageCount = pageSize > 0 ? Math.ceil(total / pageSize) : 1
-  const prns = []
+  const items = []
   const seenIds = new Set()
 
-  appendUnseenPrns(prns, seenIds, first.prns)
+  appendUnseen(items, seenIds, first.items)
 
   for (let page = 2; page <= pageCount; page += 1) {
-    const body = await readPrnPage(request, orgId, status, page, pageSize)
-    appendUnseenPrns(prns, seenIds, body.prns)
+    const body = await readPage(page, pageSize)
+    appendUnseen(items, seenIds, body.items)
   }
 
-  return prns
+  return items
 }
 
-export async function listDeclarations(request, orgId, obligationYear) {
+async function readJsonPage(request, path, itemsKey, query, description) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    params.set(key, String(value))
+  }
   const response = await request.get(
-    `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations?obligationYear=${obligationYear}`,
-    { headers: buildHeaders(await getAuthHeader()) }
+    `${getBackendBaseUrl()}${path}?${params}`,
+    {
+      headers: buildHeaders(await getAuthHeader())
+    }
   )
   if (!response.ok()) {
     throw new Error(
-      `GET compliance-declarations failed: ${response.status()} ${await response.text()}`
+      `${description} failed: ${response.status()} ${await response.text()}`
     )
   }
   const body = await response.json()
-  if (!Array.isArray(body.complianceDeclarations)) {
+  if (!Array.isArray(body[itemsKey])) {
     throw new Error(
-      `GET compliance-declarations returned unexpected shape: ${JSON.stringify(body).slice(0, 500)}`
+      `${description} returned unexpected shape: ${JSON.stringify(body).slice(0, 500)}`
     )
   }
-  return body.complianceDeclarations
+
+  return {
+    items: body[itemsKey],
+    total: body.total,
+    pageSize: body.pageSize
+  }
+}
+
+async function listAll(request, path, itemsKey, query, description) {
+  return readAllPages((page, pageSize) =>
+    readJsonPage(
+      request,
+      path,
+      itemsKey,
+      { ...query, page, pageSize },
+      description
+    )
+  )
+}
+
+async function listPrns(request, orgId, status) {
+  return listAll(
+    request,
+    `/organisations/${orgId}/prns`,
+    'prns',
+    { status },
+    `GET organisation PRNs (status=${status})`
+  )
+}
+
+export async function listDeclarations(request, orgId, obligationYear) {
+  return listAll(
+    request,
+    `/organisations/${orgId}/compliance-declarations`,
+    'complianceDeclarations',
+    { obligationYear },
+    'GET compliance-declarations'
+  )
 }
 
 export async function setDeclarationStatus(

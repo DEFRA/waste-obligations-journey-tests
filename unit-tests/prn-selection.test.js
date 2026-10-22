@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { getComplianceYear, getJourneyNow } from '../utils/journey-clock.js'
 import {
   findPrnAcceptableInto,
   findStandardSelectablePrn,
-  getComplianceYear,
   noteType,
   PRN_ACCOUNTS,
   resolveAcceptanceYears
@@ -25,12 +25,6 @@ test('note accounts pair each login with the note type that login opens', () => 
   )
 })
 
-test('compliance year assigns January to the previous year', () => {
-  assert.equal(getComplianceYear(new Date('2027-01-31T12:00:00Z')), 2026)
-  assert.equal(getComplianceYear(new Date('2027-02-01T12:00:00Z')), 2027)
-  assert.equal(getComplianceYear(new Date('2026-12-31T12:00:00Z')), 2026)
-})
-
 const standard2026 = {
   number: 'STD',
   decemberWaste: false,
@@ -48,19 +42,11 @@ const standard2025 = {
 }
 const inSeptember2026 = new Date('2026-09-28T12:00:00Z')
 
-test('an omitted date follows JOURNEY_NOW rather than the machine date', () => {
-  const previous = process.env.JOURNEY_NOW
-  process.env.JOURNEY_NOW = '2027-02-01T00:00:01Z'
-  try {
-    assert.deepEqual(resolveAcceptanceYears(standard2026), [])
-    assert.equal(getComplianceYear(), 2027)
-  } finally {
-    if (previous === undefined) {
-      delete process.env.JOURNEY_NOW
-    } else {
-      process.env.JOURNEY_NOW = previous
-    }
-  }
+test('acceptance years follow a JOURNEY_NOW clock rather than the machine date', () => {
+  const now = getJourneyNow({ JOURNEY_NOW: '2027-02-01T00:00:01Z' })
+
+  assert.equal(getComplianceYear(now), 2027)
+  assert.deepEqual(resolveAcceptanceYears(standard2026, now), [])
 })
 
 test('finds a standard PRN in the current compliance year', () => {
