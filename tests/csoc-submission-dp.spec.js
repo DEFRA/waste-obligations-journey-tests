@@ -6,7 +6,10 @@ import {
   setDeclarationStatus
 } from '../utils/waste-obligations-api.js'
 import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
-import { skipUnlessCsocEnabled } from '../utils/environment-features.js'
+import {
+  skipUnlessCsocEnabled,
+  skipUnlessDeclarationsSubmittable
+} from '../utils/environment-features.js'
 import { resetOrgDeclarations } from '../utils/test-setup.js'
 
 // Direct Producer journey. Mirrors the CSO twin in csoc-submission-cso.spec.js
@@ -65,6 +68,7 @@ test.describe('CSOC lifecycle journey (DP)', () => {
 
     const submitCsoc = async () => {
       skipUnlessCsocEnabled()
+      skipUnlessDeclarationsSubmittable()
       await landingPage.goto(ACCOUNT)
       // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
