@@ -46,6 +46,18 @@ function servicePath(path) {
   return `${prefix}${path}`
 }
 
+// The CDP manage-obligations page for the compliance scheme, for `year`.
+export function getCsoObligationsPath(year) {
+  const schemeId = requireEnv('WASTE_OBLIGATION_CSO_ORG_ID')
+  return servicePath(`/cso/${schemeId}/obligations?year=${year}`)
+}
+
+// The CDP manage-obligations page for the direct producer, for `year`.
+export function getProducerObligationsPath(year) {
+  const organisationId = requireEnv('WASTE_OBLIGATION_ORG_ID')
+  return servicePath(`/producer/${organisationId}/obligations?year=${year}`)
+}
+
 export function getJourneyStartPath(account, year = new Date().getFullYear()) {
   if (usesPackagingEntryPoint()) {
     return '/report-data'

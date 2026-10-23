@@ -2,6 +2,10 @@ import { test, expect } from '../fixtures/pages.fixture.js'
 import { skipUnlessPrnsConfigured } from '../utils/environment-features.js'
 import { openAuthenticatedProducerPrnsList } from '../utils/prns-list-navigation.js'
 import { logJourney } from '../utils/journey-log.js'
+import {
+  MATERIAL_FILTER_LABELS,
+  listMaterialText
+} from '../utils/prn-material.js'
 import { getJourneyYear } from '../utils/journey-year.js'
 
 const YEAR = getJourneyYear()
@@ -9,18 +13,11 @@ const YEAR = getJourneyYear()
 // The list's sort when no `sort` param is present in the URL.
 const DEFAULT_SORT = 'IssuedAtDescending'
 
-const FILTER_MAP = {
-  Aluminium: 'Aluminium',
-  Glass: 'Glass other',
-  GlassRemelt: 'Glass re-melt',
-  Paper: 'Paper, board or fibre-based composite material',
-  Plastic: 'Plastic',
-  Steel: 'Steel',
-  Wood: 'Wood'
-}
+const FILTER_MAP = MATERIAL_FILTER_LABELS
 
-// Row materials each filter matches, where that's more than the filter value
-// itself: the Paper filter covers fibre-based composite PRNs too.
+// API materials each filter matches, where that's more than the filter value
+// itself: the Paper filter covers fibre-based composite PRNs too. Rows show
+// them as listMaterialText names them.
 const FILTER_ROW_MATERIALS = {
   Paper: ['Paper', 'Fibre']
 }
@@ -145,7 +142,9 @@ test.describe('Producer PRNs list sort and filter controls (DP)', () => {
         expect(new URL(page.url()).searchParams.get('material')).toBe(material)
 
         const rows = await prnsListPage.readPrnRows()
-        const allowed = FILTER_ROW_MATERIALS[material] ?? [material]
+        const allowed = (FILTER_ROW_MATERIALS[material] ?? [material]).map(
+          listMaterialText
+        )
 
         expect(
           rows

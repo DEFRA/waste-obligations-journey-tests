@@ -169,6 +169,21 @@ not change a shared environment's flags just to make a test pass.
   WireMock data and a full local stack. CI gets them from accepted DP and CSO
   mappings in the same initialiser. Local runs require one; deployed runs
   warn and skip when none exists.
+- The accept-and-obligations journeys (`@accept` in `prns-multiple-selection-journey-dp.spec.js`
+  and `-cso.spec.js`) accept one standard paper/board PRN and check the Manage
+  obligations page's tonnage accepted goes up by that PRN's tonnage. It runs only with
+  `ENVIRONMENT=local` on the CDP entry point, and only in the e2e profile (`grepInvert` excludes `@accept` elsewhere). It
+  changes data, so the state must be put back after each attempt:
+  - CI: `IS_CI=true` and `WIREMOCK_ADMIN_URL` are set by the runner (the CI WireMock is published
+    on that port), and the spec's `afterEach` resets the
+    `journey-producer-bulk-accept` and `journey-compliance-scheme-prn-accept` scenarios.
+  - Local: the PRN specs seed their awaiting PRNs in `beforeEach` and remove them in
+    `afterEach` through `utils/awaiting-prns.js`, which runs
+    `scripts/seed-prns.mjs` against the local `EprPrnBackend` database. Seeding and
+    removal run only when `ENVIRONMENT=local` and `IS_CI` is not `true`; elsewhere
+    they do nothing.
+    The CI stub moves Paper's accepted tonnage by the journey's paper PRN only
+    (PRN128, 15 t), so a CI run that accepts any other PRN will not match.
 - The same fixture seeds several PRNs with distinct materials, dates and
   tonnages, and answers each `filterBy`/`sortBy` query as the common backend
   would. The sort/filter journey asserts filtered membership, each sort order

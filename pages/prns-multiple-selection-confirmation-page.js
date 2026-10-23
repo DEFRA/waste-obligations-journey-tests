@@ -5,7 +5,7 @@ import { BasePage } from './base-page.js'
 // PRNs and PERNs" on the list. One table per material, a Total row per
 // table, a "Remove from selection" button per PRN, a disabled Accept and a
 // "Go back" button. Nothing here accepts a PRN.
-export class PrnsCheckSelectionPage extends BasePage {
+export class PrnsMultipleSelectionConfirmationPage extends BasePage {
   constructor(page) {
     super(page)
     this.heading = page.getByRole('heading', {
@@ -20,6 +20,10 @@ export class PrnsCheckSelectionPage extends BasePage {
       name: 'Go back',
       exact: true
     })
+  }
+
+  async clickAccept() {
+    await this.acceptButton.click()
   }
 
   async expectLoaded() {

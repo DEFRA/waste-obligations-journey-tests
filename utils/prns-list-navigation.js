@@ -80,7 +80,6 @@ export async function openAuthenticatedCsoPrnsList(
 async function openAuthenticatedPrnsList({ page, prnsListPage }, url, account) {
   await test.step('open the PRNs list with the saved session', async () => {
     await page.goto(url, { timeout: 60_000 })
-    await page.waitForLoadState('networkidle')
 
     expect(
       page.url(),

@@ -226,6 +226,23 @@ async function listPrns(request, orgId, status) {
   )
 }
 
+export async function readObligations(request, orgId, obligationYear) {
+  const response = await request.get(
+    `${getBackendBaseUrl()}/organisations/${orgId}/obligations?obligationYear=${obligationYear}`,
+    { headers: buildHeaders(await getAuthHeader()) }
+  )
+  if (!response.ok()) {
+    throw new Error(`GET organisation obligations failed: ${response.status()}`)
+  }
+  const body = await response.json()
+  if (!Array.isArray(body.obligations)) {
+    throw new Error(
+      'GET organisation obligations returned an unexpected response shape'
+    )
+  }
+  return body.obligations
+}
+
 export async function listDeclarations(request, orgId, obligationYear) {
   return listAll(
     request,

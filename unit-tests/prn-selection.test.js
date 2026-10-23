@@ -4,6 +4,7 @@ import { getComplianceYear, getJourneyNow } from '../utils/journey-clock.js'
 import {
   findPrnAcceptableInto,
   findStandardSelectablePrn,
+  findStandardSelectablePrnsByMaterial,
   noteType,
   PRN_ACCOUNTS,
   resolveAcceptanceYears
@@ -70,6 +71,26 @@ test('a 2026 standard PRN is no longer selectable once 2027 begins', () => {
   assert.equal(
     findStandardSelectablePrn([standard2026], new Date('2027-02-01T12:00:00Z')),
     undefined
+  )
+})
+
+test('finds a standard PRN for each material, leaving out materials with none', () => {
+  const paper = { ...standard2026, number: 'PAPER', material: 'Paper' }
+  const fibre = { ...standard2026, number: 'FIBRE', material: 'Fibre' }
+  const oldGlass = { ...standard2025, number: 'GLASS', material: 'Glass' }
+  const decemberRemelt = {
+    ...december2026,
+    number: 'REMELT',
+    material: 'GlassRemelt'
+  }
+
+  assert.deepEqual(
+    findStandardSelectablePrnsByMaterial(
+      [paper, fibre, oldGlass, decemberRemelt],
+      ['Paper', 'Fibre', 'Glass', 'GlassRemelt'],
+      inSeptember2026
+    ),
+    { Paper: paper, Fibre: fibre }
   )
 })
 
