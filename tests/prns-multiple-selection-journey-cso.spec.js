@@ -61,7 +61,7 @@ test.describe('Compliance scheme PRNs check selection go back (CSO)', () => {
     page,
     request,
     prnsListPage,
-    PrnsMultipleSelectionConfirmationPage
+    prnsMultipleSelectionConfirmationPage
   }) => {
     skipUnlessPrnsConfigured()
 
@@ -98,11 +98,11 @@ test.describe('Compliance scheme PRNs check selection go back (CSO)', () => {
 
     await test.step('submit the selection for review', async () => {
       await prnsListPage.clickAcceptSelected()
-      await PrnsMultipleSelectionConfirmationPage.expectLoaded()
+      await prnsMultipleSelectionConfirmationPage.expectLoaded()
     })
 
     await test.step('remove the glass other PRN and check it is no longer listed', async () => {
-      await PrnsMultipleSelectionConfirmationPage.removePrn(removed.number)
+      await prnsMultipleSelectionConfirmationPage.removePrn(removed.number)
 
       await expect(
         page.getByRole('link', { name: removed.number, exact: true })
@@ -112,7 +112,7 @@ test.describe('Compliance scheme PRNs check selection go back (CSO)', () => {
     await test.step('check paper/board and fibre share one table with their total', async () => {
       const paperAndFibre = [prns.Paper, prns.Fibre]
       const tables =
-        await PrnsMultipleSelectionConfirmationPage.readMaterialTables()
+        await prnsMultipleSelectionConfirmationPage.readMaterialTables()
 
       expect(tables.map((table) => table.heading)).toEqual([
         PAPER_GROUP_HEADING
@@ -127,7 +127,7 @@ test.describe('Compliance scheme PRNs check selection go back (CSO)', () => {
     })
 
     await test.step('go back to the PRNs list', async () => {
-      await PrnsMultipleSelectionConfirmationPage.clickGoBack()
+      await prnsMultipleSelectionConfirmationPage.clickGoBack()
       await prnsListPage.expectLoaded()
     })
 
@@ -163,8 +163,8 @@ test.describe('Compliance scheme accepts a PRN and sees it on manage obligations
     request,
     obligationsPage,
     prnsListPage,
-    PrnsMultipleSelectionConfirmationPage,
-    PrnsMultipleSelectionSuccessPage
+    prnsMultipleSelectionConfirmationPage,
+    prnsMultipleSelectionSuccessPage
   }) => {
     skipUnlessPrnsConfigured()
 
@@ -203,14 +203,14 @@ test.describe('Compliance scheme accepts a PRN and sees it on manage obligations
       await openAuthenticatedCsoPrnsList({ page, prnsListPage }, YEAR)
       await prnsListPage.selectPrn(prn.number)
       await prnsListPage.clickAcceptSelected()
-      await PrnsMultipleSelectionConfirmationPage.expectLoaded()
-      await PrnsMultipleSelectionConfirmationPage.clickAccept()
+      await prnsMultipleSelectionConfirmationPage.expectLoaded()
+      await prnsMultipleSelectionConfirmationPage.clickAccept()
     })
 
     await test.step('check the confirmation shows the accepted PRN and its tonnage', async () => {
-      await PrnsMultipleSelectionSuccessPage.expectLoaded(1, YEAR)
+      await prnsMultipleSelectionSuccessPage.expectLoaded(1, YEAR)
 
-      const tiles = await PrnsMultipleSelectionSuccessPage.readTiles()
+      const tiles = await prnsMultipleSelectionSuccessPage.readTiles()
       expect(tiles).toHaveLength(1)
       expect(tiles).toEqual(
         expectedAcceptedTiles([prn]).map(({ tonnageText, description }) => ({
@@ -221,7 +221,7 @@ test.describe('Compliance scheme accepts a PRN and sees it on manage obligations
     })
 
     await test.step(`go back to manage obligations for ${YEAR} from the confirmation`, async () => {
-      await PrnsMultipleSelectionSuccessPage.openObligationsProgress(YEAR)
+      await prnsMultipleSelectionSuccessPage.openObligationsProgress(YEAR)
       await obligationsPage.expectLoadedForYear(YEAR)
     })
 
