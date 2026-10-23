@@ -166,6 +166,22 @@ export const PRNS = {
       tonnage: 125
     },
     {
+      externalId: '9be372da-e280-4fd1-bc20-e491f30af629',
+      reprocessorExporterAgency: 'Environment Agency',
+      issuerNotes: 'Journey PRN list fixture',
+      processToBeUsed: 'R3',
+      decemberWaste: false,
+      issuedByOrg: 'Journey Reprocessors Ltd',
+      accreditationNumber: 'ACC123',
+      isExport: true,
+      prnNumber: 'PERN458',
+      accreditationYear: '2026',
+      obligationYear: '2026',
+      issueDate: '2026-04-01T09:30:00Z',
+      materialName: 'Aluminium',
+      tonnage: 15
+    },
+    {
       externalId: '9b3d6e1a-4c2f-4d8b-a7e5-1f0c2b3a4d59',
       reprocessorExporterAgency: 'Environment Agency',
       issuerNotes: 'Journey PRN list fixture',
