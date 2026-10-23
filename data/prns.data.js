@@ -1,5 +1,10 @@
+import { getComplianceYear } from '../utils/journey-clock.js'
+
 // Awaiting-acceptance PRNs seeded into the local stack's database before each DP and CSO
 // multi-selection test, and removed afterwards. Read by scripts/seed-prns.mjs.
+
+// The compliance year the specs use (getComplianceYear), so seeded PRNs match the year they select.
+const COMPLIANCE_YEAR = String(getComplianceYear())
 
 export const PRNS = {
   dp: [
@@ -13,8 +18,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN123',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-06-15T10:30:00Z',
       materialName: 'Aluminium',
       tonnage: 125
@@ -29,8 +34,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN124',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-06-10T09:00:00Z',
       materialName: 'Plastic',
       tonnage: 40
@@ -45,8 +50,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN125',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-05-20T11:15:00Z',
       materialName: 'Plastic',
       tonnage: 310
@@ -61,8 +66,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN126',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-05-02T14:45:00Z',
       materialName: 'Glass Other',
       tonnage: 75
@@ -77,8 +82,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN127',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-04-18T08:20:00Z',
       materialName: 'Steel',
       tonnage: 510
@@ -93,8 +98,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN128',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-03-30T16:05:00Z',
       materialName: 'Paper/board',
       tonnage: 15
@@ -109,8 +114,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN129',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-03-05T12:40:00Z',
       materialName: 'Glass Re-melt',
       tonnage: 220
@@ -125,8 +130,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN130',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-02-12T10:10:00Z',
       materialName: 'Aluminium',
       tonnage: 90
@@ -141,8 +146,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN132',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-04-02T13:00:00Z',
       materialName: 'Fibre',
       tonnage: 35
@@ -159,8 +164,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN456',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-06-15T10:30:00Z',
       materialName: 'Aluminium',
       tonnage: 125
@@ -175,8 +180,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: true,
       prnNumber: 'PERN458',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-04-01T09:30:00Z',
       materialName: 'Aluminium',
       tonnage: 15
@@ -191,8 +196,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN459',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-05-11T09:00:00Z',
       materialName: 'Paper/board',
       tonnage: 15
@@ -207,8 +212,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN460',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-04-22T11:30:00Z',
       materialName: 'Fibre',
       tonnage: 35
@@ -223,8 +228,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN461',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-04-09T14:15:00Z',
       materialName: 'Glass Other',
       tonnage: 75
@@ -239,8 +244,8 @@ export const PRNS = {
       accreditationNumber: 'ACC123',
       isExport: false,
       prnNumber: 'PRN462',
-      accreditationYear: '2026',
-      obligationYear: '2026',
+      accreditationYear: COMPLIANCE_YEAR,
+      obligationYear: COMPLIANCE_YEAR,
       issueDate: '2026-03-18T08:45:00Z',
       materialName: 'Glass Re-melt',
       tonnage: 220
