@@ -1,4 +1,4 @@
-import { getComplianceYear } from './prn-selection.js'
+import { getComplianceYear } from './journey-clock.js'
 
 // The API materials the bulk-accept journey selects one PRN of. Glass (shown
 // as Glass Other) is then removed again on the check-selection page.

@@ -2,10 +2,8 @@ import { expect, test } from '../fixtures/pages.fixture.js'
 import { skipUnlessPrnsConfigured } from '../utils/environment-features.js'
 import { openAuthenticatedProducerPrnsList } from '../utils/prns-list-navigation.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
-import {
-  findStandardSelectablePrnsByMaterial,
-  getComplianceYear
-} from '../utils/prn-selection.js'
+import { getComplianceYear } from '../utils/journey-clock.js'
+import { findStandardSelectablePrnsByMaterial } from '../utils/prn-selection.js'
 import { logJourney } from '../utils/journey-log.js'
 import { resetAwaitingPrns, seedAwaitingPrns } from '../utils/awaiting-prns.js'
 import { PAPER_GROUP_HEADING } from '../utils/check-selection.js'

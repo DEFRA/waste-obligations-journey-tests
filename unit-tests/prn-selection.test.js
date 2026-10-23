@@ -5,7 +5,6 @@ import {
   findPrnAcceptableInto,
   findStandardSelectablePrn,
   findStandardSelectablePrnsByMaterial,
-  getComplianceYear,
   noteType,
   PRN_ACCOUNTS,
   resolveAcceptanceYears
