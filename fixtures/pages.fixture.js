@@ -48,10 +48,10 @@ export const test = base.extend({
   prnsListPage: async ({ page }, use) => {
     await use(new PrnsListPage(page))
   },
-  PrnsMultipleSelectionConfirmationPage: async ({ page }, use) => {
+  prnsMultipleSelectionConfirmationPage: async ({ page }, use) => {
     await use(new PrnsMultipleSelectionConfirmationPage(page))
   },
-  PrnsMultipleSelectionSuccessPage: async ({ page }, use) => {
+  prnsMultipleSelectionSuccessPage: async ({ page }, use) => {
     await use(new PrnsMultipleSelectionSuccessPage(page))
   },
   prnPage: async ({ page }, use) => {
