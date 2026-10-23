@@ -21,7 +21,7 @@ if (
   !/^[0-9a-f-]{36}$/i.test(orgId ?? '')
 ) {
   process.stderr.write(
-    'Usage: node scripts/seed.mjs <seed|remove> <dp|cso> <organisationId>\n'
+    'Usage: node scripts/seed-prns.mjs <seed|remove> <dp|cso> <organisationId>\n'
   )
   process.exit(1)
 }
@@ -80,7 +80,7 @@ try {
   const detail = (err.stderr || err.stdout || err.message || '')
     .toString()
     .trim()
-  process.stderr.write(`local-awaiting-prns ${action} failed: ${detail}\n`)
+  process.stderr.write(`seed-prns ${action} failed: ${detail}\n`)
   process.exit(1)
 }
 

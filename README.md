@@ -168,11 +168,18 @@ The `@accept` blocks change data, so they run only when:
 - `ENVIRONMENT=local` (`process.env.ENVIRONMENT`), and
 - the entry point is CDP, not Packaging (`JOURNEY_ENTRY_POINT`).
 
+The helpers in `utils/awaiting-prns.js` seed and remove the awaiting PRNs in the
+local `EprPrnBackend` database only when `ENVIRONMENT=local` and `IS_CI` is not
+`true`. Each spec seeds in `beforeEach`, go-back blocks included, so the local
+fixture supplies a PRN per material. Elsewhere nothing is seeded, and a material
+with no awaiting PRN skips its go-back test. `IS_CI=true` is set by the GitHub
+journey workflow; leave it unset locally (see `.env.example`).
+
 `playwright.config.js` also sets `grepInvert: /@accept/` outside the `e2e` profile, so they never run under `accessibility` or `security`. The go-back blocks run in every profile.
 
 #### CI
 
-On CI the same `@accept` blocks run against the CI WireMock stack. The runner sets `WIREMOCK_ADMIN_URL` (port 9092 on the host), and each spec's `afterEach` calls `resetAcceptScenarios`. That resets the `journey-producer-bulk-accept` and `journey-compliance-scheme-prn-accept` scenarios, so retries and each browser project start clean. The CI stubs move the accepted tonnage for one paper/board PRN only (PRN128 for the producer and PRN459 for the compliance scheme). A run that accepts any other PRN won't match the stub. The stub doesn't check which PRN a status update names, so accepting a different PRN still moves the scenario; the obligation totals then count PRN128 or PRN459 as accepted.
+On CI the same `@accept` blocks run against the CI WireMock stack. The runner sets `WIREMOCK_ADMIN_URL` (port 9092 on the host), and each spec's `afterEach` calls `resetAwaitingPrns`. That resets the `journey-producer-bulk-accept` and `journey-compliance-scheme-prn-accept` scenarios, so retries and each browser project start clean. The CI stubs move the accepted tonnage for one paper/board PRN only (PRN128 for the producer and PRN459 for the compliance scheme). A run that accepts any other PRN won't match the stub. The stub doesn't check which PRN a status update names, so accepting a different PRN still moves the scenario; the obligation totals then count PRN128 or PRN459 as accepted.
 
 ### Accounts
 
