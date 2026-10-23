@@ -82,6 +82,36 @@ configure_scope() {
   fi
 }
 
+# The local CI stack serves only fixture data, but every response carries a fresh
+# random hex CSP nonce. A 32-character nonce can contain 13 digits that start with 4
+# and pass the Luhn check, which ZAP's PII Disclosure rule (10062) reports as a Visa
+# card number. That is a false positive that appears on a random run, not a leak.
+# The rule stays on for deployed environments, where real data is served.
+filter_local_pii_false_positives() {
+  if [ "${ENVIRONMENT:-}" != "local" ]; then
+    return 0
+  fi
+
+  context_id=$(curl --silent --fail --get \
+    --data-urlencode "contextName=epr-csoc" \
+    "${zap_base}/JSON/context/view/context/" | jq --raw-output '.context.id // empty')
+  if [ -z "$context_id" ]; then
+    echo "Failed to find the ZAP context for the PII Disclosure filter" >&2
+    return 1
+  fi
+
+  response=$(curl --silent --fail --get \
+    --data-urlencode "contextId=${context_id}" \
+    --data-urlencode "ruleId=10062" \
+    --data-urlencode "newLevel=-1" \
+    --data-urlencode "enabled=true" \
+    "${zap_base}/JSON/alertFilter/action/addAlertFilter/")
+  if ! zap_result_ok "$response"; then
+    echo "Failed to add the PII Disclosure false-positive filter to ZAP" >&2
+    return 1
+  fi
+}
+
 wait_for_passive_scan() {
   attempt=0
   while [ "$attempt" -lt 120 ]; do
@@ -130,6 +160,7 @@ docker run --detach --rm \
 wait_for_zap
 exclude_third_parties
 configure_scope
+filter_local_pii_false_positives
 
 test_exit=0
 HTTP_PROXY="$zap_base" HTTP_PROXY_BYPASS='<-loopback>' SKIP_AUTH_SETUP=1 PROFILE=security \
