@@ -62,8 +62,8 @@ export class PrnPage extends BasePage {
     )
   }
 
-  // An awaiting-acceptance PRN or PERN offers Accept (a link styled as a
-  // button) and a disabled Reject; nothing here is clicked.
+  // An awaiting-acceptance PRN or PERN offers Accept and Reject, both links
+  // styled as buttons. Nothing here is clicked.
   async expectLoadedForAwaitingPrn(prn) {
     const type = noteType(prn)
     await expect(this.heading).toBeVisible()
@@ -74,7 +74,7 @@ export class PrnPage extends BasePage {
     await expect(this.acceptButton(prn)).toBeVisible()
     const rejectButton = this.rejectButton(prn)
     await expect(rejectButton).toBeVisible()
-    await expect(rejectButton).toBeDisabled()
+    await expect(rejectButton).toBeEnabled()
   }
 
   // A smoke check of the accepted confirmation view: the success banner names
