@@ -9,8 +9,7 @@ import {
 } from '../utils/journey-entry-point.js'
 import { getJourneyYear } from '../utils/journey-year.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
-import { getComplianceYear } from '../utils/prn-selection.js'
-import { getJourneyNow } from '../utils/journey-clock.js'
+import { getComplianceYear, getJourneyNow } from '../utils/journey-clock.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const AUTH_DIR = path.join(__dirname, '..', 'playwright', '.auth')

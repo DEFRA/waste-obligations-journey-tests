@@ -1,5 +1,3 @@
-import { getComplianceYear } from './prn-selection.js'
-
 /**
  * The application clock for the scenario under test. A LOCAL time-shifted
  * stack runs the frontends on a shifted clock, so the journeys need it to know
@@ -24,6 +22,24 @@ export function getJourneyNow(env = process.env, realNow = () => new Date()) {
   }
 
   return shifted
+}
+
+// Built once. Acceptance years are resolved for every note on a list.
+const ukYearMonthFormat = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/London',
+  year: 'numeric',
+  month: 'numeric'
+})
+
+// Mirrors the frontend's compliance year: Feb–Jan in Europe/London, so
+// January belongs to the previous year. An omitted date is the scenario
+// clock, so a time-shifted run does not fall back to the machine date.
+export function getComplianceYear(date = getJourneyNow()) {
+  const parts = ukYearMonthFormat.formatToParts(date)
+  const year = Number(parts.find((part) => part.type === 'year').value)
+  const month = Number(parts.find((part) => part.type === 'month').value)
+
+  return month === 1 ? year - 1 : year
 }
 
 /**

@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { usesPackagingEntryPoint } from './journey-entry-point.js'
 import { canSubmitDeclarations } from './journey-clock.js'
 
@@ -70,6 +70,19 @@ function applyPrnsAvailability({ configured, pageShown }) {
 
 export function skipUnlessPrnsConfigured() {
   skipUnlessFeatureFlagEnabled(FEATURE_SHOW_PRNS)
+}
+
+// Local and the shared Docker action seed the notes a journey needs, so a
+// missing one fails there. Deployed targets are not guaranteed to have one,
+// so the caller skips. Kept out of the test body for
+// playwright/no-conditional-in-test.
+export function expectSeededOnLocal(value, description, env = process.env) {
+  if (env.ENVIRONMENT === 'local') {
+    expect(
+      value,
+      `The local journey fixture must contain ${description}.`
+    ).toBeDefined()
+  }
 }
 
 export function skipUnlessCsocEnabled() {
