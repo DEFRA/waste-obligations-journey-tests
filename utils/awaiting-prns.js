@@ -11,16 +11,18 @@ const SCRIPT = fileURLToPath(
 // CI reads them from WireMock - process.env.IS_CI.
 const isCi = ['true', true].includes(process.env.IS_CI)
 
-function runSeedScript(action, account) {
-  if (isCi) return
+// Seeding and removing rows only makes sense on the local stack. Deployed runs
+// (CDP Portal, Azure) have no sqledge container, so they must not reach docker.
+const isLocal = process.env.ENVIRONMENT === 'local'
 
+function runSeedScript(action, account) {
   execFileSync(process.execPath, [SCRIPT, action, account, getOrgId(account)], {
     stdio: 'inherit'
   })
 }
 
 export function seedAwaitingPrns(account) {
-  if (isCi) return
+  if (isCi || !isLocal) return
   runSeedScript('seed', account)
 }
 
@@ -48,7 +50,7 @@ export async function resetAwaitingPrns(account, request) {
         `WireMock scenario reset failed for ${scenario}: ${response.status()} ${await response.text()}`
       )
     }
-  } else {
+  } else if (isLocal) {
     runSeedScript('remove', account)
   }
 }
