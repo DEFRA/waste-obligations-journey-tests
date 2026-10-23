@@ -75,7 +75,7 @@ services:
   # Journey-owned fixtures replace the organisation API in this Docker stack.
   # Both application services read them from the shared WireMock instance.
   waste-organisations-wiremock-init:
-    image: node:22-alpine
+    image: node:22.23.4-alpine
     environment:
       WASTE_OBLIGATION_ORG_ID: ${WASTE_OBLIGATION_ORG_ID:?WASTE_OBLIGATION_ORG_ID must be set}
       WASTE_OBLIGATION_CSO_ORG_ID: ${WASTE_OBLIGATION_CSO_ORG_ID:?WASTE_OBLIGATION_CSO_ORG_ID must be set}

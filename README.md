@@ -19,7 +19,7 @@ End-to-end Playwright tests for the EPR waste obligations CSOC submission journe
 
 ### Requirements
 
-Node.js `>= 22.13.1` (matching `.nvmrc`). Use [nvm](https://github.com/creationix/nvm) to pick up the pinned version:
+Node.js `>= 22.23.4` (matching `.nvmrc`). Use [nvm](https://github.com/creationix/nvm) to pick up the pinned version:
 
 ```bash
 nvm use
