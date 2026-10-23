@@ -104,7 +104,8 @@ function buildHeaders(authHeader) {
   }
 }
 
-// Match the browser list's default first-page AwaitingAcceptance query.
+// Every awaiting-acceptance note, not the first page only. The browser list
+// filters this same set by year.
 export async function listAwaitingPrns(request, orgId) {
   return listPrns(request, orgId, 'AwaitingAcceptance')
 }
@@ -119,42 +120,120 @@ export async function listRejectedPrns(request, orgId) {
   return listPrns(request, orgId, 'Rejected')
 }
 
-async function listPrns(request, orgId, status) {
+const FETCH_PAGE_SIZE = 100
+
+function reportedPageSize(body) {
+  return Number.isInteger(body.pageSize) && body.pageSize > 0
+    ? body.pageSize
+    : null
+}
+
+// The API offsets a page by (page - 1) * the page size of that request.
+// Trust a smaller size only when the first page is full at that size.
+function pageSizeFromFirstResponse(body, requested) {
+  const reported = reportedPageSize(body)
+  const count = body.items.length
+
+  if (reported != null && reported < requested && count === reported) {
+    return reported
+  }
+
+  return requested
+}
+
+function appendUnseen(items, seenIds, pageItems) {
+  for (const item of pageItems) {
+    if (item?.id != null && seenIds.has(item.id)) {
+      continue
+    }
+    if (item?.id != null) {
+      seenIds.add(item.id)
+    }
+    items.push(item)
+  }
+}
+
+// One page at a time. The page count and page size stay on the first response,
+// and a repeated item is kept once, so a later page cannot end the walk or
+// shift the next offset. `readPage` returns `{ items, total, pageSize }`.
+async function readAllPages(readPage) {
+  const first = await readPage(1, FETCH_PAGE_SIZE)
+  const pageSize = pageSizeFromFirstResponse(first, FETCH_PAGE_SIZE)
+  const total = Number.isInteger(first.total) ? first.total : first.items.length
+  const pageCount = pageSize > 0 ? Math.ceil(total / pageSize) : 1
+  const items = []
+  const seenIds = new Set()
+
+  appendUnseen(items, seenIds, first.items)
+
+  for (let page = 2; page <= pageCount; page += 1) {
+    const body = await readPage(page, pageSize)
+    appendUnseen(items, seenIds, body.items)
+  }
+
+  return items
+}
+
+async function readJsonPage(request, path, itemsKey, query, description) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    params.set(key, String(value))
+  }
   const response = await request.get(
-    `${getBackendBaseUrl()}/organisations/${orgId}/prns?status=${status}`,
-    { headers: buildHeaders(await getAuthHeader()) }
+    `${getBackendBaseUrl()}${path}?${params}`,
+    {
+      headers: buildHeaders(await getAuthHeader())
+    }
   )
   if (!response.ok()) {
     throw new Error(
-      `GET organisation PRNs (status=${status}) failed: ${response.status()} ${await response.text()}`
+      `${description} failed: ${response.status()} ${await response.text()}`
     )
   }
   const body = await response.json()
-  if (!Array.isArray(body.prns)) {
+  if (!Array.isArray(body[itemsKey])) {
     throw new Error(
-      `GET organisation PRNs (status=${status}) returned unexpected shape: ${JSON.stringify(body).slice(0, 500)}`
+      `${description} returned unexpected shape: ${JSON.stringify(body).slice(0, 500)}`
     )
   }
-  return body.prns
+
+  return {
+    items: body[itemsKey],
+    total: body.total,
+    pageSize: body.pageSize
+  }
+}
+
+async function listAll(request, path, itemsKey, query, description) {
+  return readAllPages((page, pageSize) =>
+    readJsonPage(
+      request,
+      path,
+      itemsKey,
+      { ...query, page, pageSize },
+      description
+    )
+  )
+}
+
+async function listPrns(request, orgId, status) {
+  return listAll(
+    request,
+    `/organisations/${orgId}/prns`,
+    'prns',
+    { status },
+    `GET organisation PRNs (status=${status})`
+  )
 }
 
 export async function listDeclarations(request, orgId, obligationYear) {
-  const response = await request.get(
-    `${getBackendBaseUrl()}/organisations/${orgId}/compliance-declarations?obligationYear=${obligationYear}`,
-    { headers: buildHeaders(await getAuthHeader()) }
+  return listAll(
+    request,
+    `/organisations/${orgId}/compliance-declarations`,
+    'complianceDeclarations',
+    { obligationYear },
+    'GET compliance-declarations'
   )
-  if (!response.ok()) {
-    throw new Error(
-      `GET compliance-declarations failed: ${response.status()} ${await response.text()}`
-    )
-  }
-  const body = await response.json()
-  if (!Array.isArray(body.complianceDeclarations)) {
-    throw new Error(
-      `GET compliance-declarations returned unexpected shape: ${JSON.stringify(body).slice(0, 500)}`
-    )
-  }
-  return body.complianceDeclarations
 }
 
 export async function setDeclarationStatus(

@@ -1,6 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { canSubmitDeclarations, getJourneyNow } from '../utils/journey-clock.js'
+import {
+  canSubmitDeclarations,
+  getComplianceYear,
+  getJourneyNow
+} from '../utils/journey-clock.js'
 
 const realNow = () => new Date('2026-10-19T12:00:00Z')
 
@@ -30,6 +34,12 @@ test('a malformed JOURNEY_NOW is rejected', () => {
     () => getJourneyNow({ JOURNEY_NOW: 'soon' }, realNow),
     /JOURNEY_NOW/
   )
+})
+
+test('compliance year assigns January to the previous year', () => {
+  assert.equal(getComplianceYear(new Date('2027-01-31T12:00:00Z')), 2026)
+  assert.equal(getComplianceYear(new Date('2027-02-01T12:00:00Z')), 2027)
+  assert.equal(getComplianceYear(new Date('2026-12-31T12:00:00Z')), 2026)
 })
 
 test('declarations can be submitted while the scenario stays in the real compliance year', () => {
