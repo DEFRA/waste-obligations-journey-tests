@@ -42,6 +42,12 @@ const requirePrnData = process.env.ENVIRONMENT === 'local'
 const ACCEPT_MATERIAL = 'Paper'
 const ACCEPT_OBLIGATION_ROW = OBLIGATION_MATERIAL_LABELS.Paper
 
+// Troubleshooting: if these tests fail locally with "GET organisation PRNs
+// (status=AwaitingAcceptance) failed: 500", the API could not get an OAuth
+// token from the local WireMock. The usual cause is that a run of
+// waste-obligations' Api.IntegrationTests reset the WireMock mappings on
+// localhost:9090. Restart the stack's WireMock to reload its static mappings:
+//   docker restart epr-local-environment-wiremock-1
 // Local stack only: seed the awaiting PRNs before each test and remove them after.
 test.beforeEach(() => {
   seedAwaitingPrns('cso')
