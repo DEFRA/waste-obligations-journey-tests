@@ -172,7 +172,7 @@ The `@accept` blocks change data, so they run only when:
 
 #### CI
 
-On CI the same `@accept` blocks run against the CI WireMock stack. The runner sets `WIREMOCK_ADMIN_URL` (port 9092 on the host), and each spec's `afterEach` calls `resetAcceptScenarios`. That resets the `journey-producer-bulk-accept` and `journey-compliance-scheme-prn-accept` scenarios, so retries and each browser project start clean. The CI stubs move the accepted tonnage for one paper/board PRN only (PRN128 for the producer and PRN459 for the compliance scheme). A run that accepts any other PRN won't match the stub.
+On CI the same `@accept` blocks run against the CI WireMock stack. The runner sets `WIREMOCK_ADMIN_URL` (port 9092 on the host), and each spec's `afterEach` calls `resetAcceptScenarios`. That resets the `journey-producer-bulk-accept` and `journey-compliance-scheme-prn-accept` scenarios, so retries and each browser project start clean. The CI stubs move the accepted tonnage for one paper/board PRN only (PRN128 for the producer and PRN459 for the compliance scheme). A run that accepts any other PRN won't match the stub. The stub doesn't check which PRN a status update names, so accepting a different PRN still moves the scenario; the obligation totals then count PRN128 or PRN459 as accepted.
 
 ### Accounts
 
