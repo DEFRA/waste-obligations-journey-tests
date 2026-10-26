@@ -9,6 +9,5 @@ export function rejectedStatusMeaning(type) {
 
 export const REJECTED_STATUS_LABEL = 'Rejected'
 
-// Awaiting and accepted downloads end "as a PDF". The rejection banner ends
-// "as a PDF or HTML".
-export const DOWNLOAD_PDF_BUTTON_NAME = /^Download this .*as a pdf( or html)?$/i
+// Awaiting, accepted and rejected downloads all end "as a PDF".
+export const DOWNLOAD_PDF_BUTTON_NAME = /^Download this .*as a pdf$/i

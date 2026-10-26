@@ -33,7 +33,9 @@ test('the download control matches awaiting, accepted and rejection labels', () 
     'Download this awaiting acceptance PERN as a PDF',
     DOWNLOAD_PDF_BUTTON_NAME
   )
-  assert.match('Download this PRN as a PDF or HTML', DOWNLOAD_PDF_BUTTON_NAME)
-  assert.match('Download this PERN as a PDF or HTML', DOWNLOAD_PDF_BUTTON_NAME)
+  assert.doesNotMatch(
+    'Download this PRN as a PDF or HTML',
+    DOWNLOAD_PDF_BUTTON_NAME
+  )
   assert.doesNotMatch('Download this PRN', DOWNLOAD_PDF_BUTTON_NAME)
 })
