@@ -121,7 +121,7 @@ export class PrnPage extends BasePage {
 
   // Review of a rejected note: status, both follow-on buttons and the
   // download at the base of the page. No confirmation banner.
-  async expectRejectionConfirmation(prn) {
+  async expectRejectedPrnReview(prn) {
     await this.expectLoadedForRejectedPrn(prn)
     const year = prn.obligationYear
     await expect(

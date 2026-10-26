@@ -274,7 +274,7 @@ async function openRejectedPrn({ account, prnType, request, prnPage }) {
   )
 
   await prnPage.goto(account, prn)
-  await prnPage.expectRejectionConfirmation(prn)
+  await prnPage.expectRejectedPrnReview(prn)
 }
 
 test.describe('Accessibility testing — Rejected PRN view', () => {

@@ -42,7 +42,7 @@ for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
 
       await test.step(`open rejected ${prnType} ${prn.number}`, async () => {
         await prnPage.goto(account, prn)
-        await prnPage.expectRejectionConfirmation(prn)
+        await prnPage.expectRejectedPrnReview(prn)
       })
 
       await test.step(`accept or reject more PRNs and PERNs for ${year}`, async () => {
