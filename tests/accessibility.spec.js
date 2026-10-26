@@ -1,6 +1,10 @@
 import { test, expect } from '../fixtures/pages.fixture.js'
 import { TEST_USER_NAME } from '../data/csoc.data.js'
-import { getOrgId, listAcceptedPrns } from '../utils/waste-obligations-api.js'
+import {
+  getOrgId,
+  listAcceptedPrns,
+  listRejectedPrns
+} from '../utils/waste-obligations-api.js'
 import {
   findOnlySubmittedDeclaration,
   resetOrgDeclarations
@@ -245,6 +249,56 @@ test.describe('Accessibility testing — Accepted PRN view', () => {
         await test.step(`${label} > Accepted ${prnType} view`, async () => {
           await openAcceptedPrn({ account, prnType, page, request, prnPage })
           await analyseAccessibility(page, `${account}-prn-accepted-view`)
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
+    })
+  }
+})
+
+// Opens an already-rejected PRN or PERN. Nothing is rejected here.
+async function openRejectedPrn({ account, prnType, request, prnPage }) {
+  skipUnlessPrnsConfigured()
+  const prns = await listRejectedPrns(request, getOrgId(account))
+  const prn = prns.find(
+    (candidate) =>
+      noteType(candidate) === prnType && candidate.status === 'Rejected'
+  )
+  expectSeededOnLocal(prn, `a rejected ${prnType}`)
+  test.skip(
+    !prn,
+    `No rejected ${prnType} on this deployed environment; the rejected view was not scanned.`
+  )
+
+  await prnPage.goto(account, prn)
+  await prnPage.expectRejectionConfirmation(prn)
+}
+
+test.describe('Accessibility testing — Rejected PRN view', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('prn-rejected-view')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      test(`scan the rejected ${prnType} view`, async ({
+        page,
+        request,
+        prnPage
+      }) => {
+        await test.step(`${label} > Rejected ${prnType} view`, async () => {
+          await openRejectedPrn({ account, prnType, request, prnPage })
+          await analyseAccessibility(page, `${account}-prn-rejected-view`)
         })
 
         await test.step(`${label} > Assert no accessibility issues`, () => {
