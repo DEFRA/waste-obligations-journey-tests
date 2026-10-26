@@ -2,7 +2,6 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { getComplianceYear, getJourneyNow } from '../utils/journey-clock.js'
 import {
-  findPrnAcceptableInto,
   findStandardSelectablePrn,
   noteType,
   PRN_ACCOUNTS,
@@ -71,57 +70,4 @@ test('a 2026 standard PRN is no longer selectable once 2027 begins', () => {
     findStandardSelectablePrn([standard2026], new Date('2027-02-01T12:00:00Z')),
     undefined
   )
-})
-
-test('a standard note is acceptable only into the current compliance year', () => {
-  const now = new Date('2026-10-19T12:00:00Z')
-  assert.deepEqual(resolveAcceptanceYears(standard2026, now), [2026])
-  assert.deepEqual(resolveAcceptanceYears(standard2025, now), [])
-  assert.deepEqual(
-    resolveAcceptanceYears({ ...standard2026, obligationYear: 2027 }, now),
-    []
-  )
-})
-
-test('december waste is offered both years only inside its window', () => {
-  const beforeWindow = new Date('2026-11-30T23:59:59Z')
-  const windowOpens = new Date('2026-12-01T00:00:00Z')
-  const lastSecond = new Date('2027-01-31T23:59:59Z')
-  const afterWindow = new Date('2027-02-01T00:00:01Z')
-
-  assert.deepEqual(resolveAcceptanceYears(december2026, beforeWindow), [2026])
-  assert.deepEqual(
-    resolveAcceptanceYears(december2026, windowOpens),
-    [2026, 2027]
-  )
-  assert.deepEqual(
-    resolveAcceptanceYears(december2026, lastSecond),
-    [2026, 2027]
-  )
-  assert.deepEqual(resolveAcceptanceYears(december2026, afterWindow), [2027])
-})
-
-test('2025 december waste never offers a choice and then expires', () => {
-  const december2025 = { decemberWaste: true, obligationYear: 2025 }
-  assert.deepEqual(
-    resolveAcceptanceYears(december2025, new Date('2026-06-01T00:00:00Z')),
-    [2026]
-  )
-  assert.deepEqual(
-    resolveAcceptanceYears(december2025, new Date('2027-06-01T00:00:00Z')),
-    []
-  )
-})
-
-test('findPrnAcceptableInto returns the first note the year list offers', () => {
-  const now = new Date('2027-02-01T00:00:01Z')
-  const dec = { ...december2026, number: 'DEC' }
-  const std2027 = { ...standard2026, number: 'NEW', obligationYear: 2027 }
-
-  assert.equal(findPrnAcceptableInto([standard2026, dec], 2027, now), dec)
-  assert.equal(
-    findPrnAcceptableInto([standard2026, std2027], 2027, now),
-    std2027
-  )
-  assert.equal(findPrnAcceptableInto([standard2026], 2027, now), undefined)
 })

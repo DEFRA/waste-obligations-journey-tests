@@ -32,6 +32,29 @@ export function findStandardSelectablePrn(prns, date = getJourneyNow()) {
   )
 }
 
+// One standard selectable PRN for each of `materials` (API material names),
+// keyed by material. A material with no such PRN is left out.
+export function findStandardSelectablePrnsByMaterial(
+  prns,
+  materials,
+  date = new Date()
+) {
+  const found = {}
+
+  for (const material of materials) {
+    const prn = findStandardSelectablePrn(
+      prns.filter((candidate) => candidate.material === material),
+      date
+    )
+
+    if (prn) {
+      found[material] = prn
+    }
+  }
+
+  return found
+}
+
 // December waste's choice window: from 1 December of its year to 1 February
 // the year after, in UTC (UK is GMT in both months).
 const DECEMBER = 12
@@ -48,7 +71,7 @@ const NO_CHOICE_UNTIL_YEAR = 2026
  * @param {Date} [now]
  * @returns {number[]}
  */
-export function resolveAcceptanceYears(prn, now = getJourneyNow()) {
+export function resolveAcceptanceYears(prn, now = new Date()) {
   const prnYear = prn?.obligationYear
   const thisYear = getComplianceYear(now)
 
@@ -80,6 +103,6 @@ export function resolveAcceptanceYears(prn, now = getJourneyNow()) {
 }
 
 // The first awaiting note the list for `year` should offer at `now`.
-export function findPrnAcceptableInto(prns, year, now = getJourneyNow()) {
+export function findPrnAcceptableInto(prns, year, now = new Date()) {
   return prns.find((prn) => resolveAcceptanceYears(prn, now).includes(year))
 }

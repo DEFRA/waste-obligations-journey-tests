@@ -53,6 +53,10 @@ services:
       waste-organisations-wiremock-init:
         condition: service_completed_successfully
     image: sheyenrath/wiremock.net:latest
+    # Published for the journey runner, which resets the accept scenario through
+    # the admin API between runs (WIREMOCK_ADMIN_URL).
+    ports:
+      - "${WIREMOCK_HOST_PORT:-9092}:80"
     volumes:
       - ${CI_STACK_RUNTIME_DIR:?CI_STACK_RUNTIME_DIR must identify the generated CI stack directory}/wiremock:/app/__admin/mappings:ro
     command:

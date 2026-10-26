@@ -152,6 +152,35 @@ Active scans send attack payloads at the target environment — only enable agai
 
 **Local outside Docker:** `npm run test:local:security` does NOT start ZAP — it just runs the security spec as a plain headed Playwright run (useful for iterating on the journey itself). Use `npm run docker:test:local` whenever you need real ZAP coverage; the entrypoint inside the container does the orchestration.
 
+### Multi-select PRN journeys and local reset
+
+Two spec files cover the multi-select PRNs flow for the direct producer and the compliance scheme. Each has two describe blocks:
+
+| Spec                                                | Describe block                                         | What it does                                                                                                                                                                                                                |
+| --------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/prns-multiple-selection-journey-dp.spec.js`  | `Producer PRNs check selection go back (DP)`           | Selects paper/board, fibre and glass PRNs, removes the glass PRN, checks the remaining table and its total, goes back, and checks nothing is still selected on any list page. Accepts nothing, so it runs in every profile. |
+| `tests/prns-multiple-selection-journey-dp.spec.js`  | `Producer accepts a PRN … (DP) @accept`                | Reads the paper/board "Tonnage accepted" on manage obligations, accepts one paper/board PRN, checks the confirmation, then checks that the figure rose by the PRN's tonnage.                                                |
+| `tests/prns-multiple-selection-journey-cso.spec.js` | `Compliance scheme PRNs check selection go back (CSO)` | The same review-and-go-back journey, using the compliance scheme login.                                                                                                                                                     |
+| `tests/prns-multiple-selection-journey-cso.spec.js` | `Compliance scheme accepts a PRN … (CSO) @accept`      | The same accept-and-confirm journey for the compliance scheme.                                                                                                                                                              |
+
+The `@accept` blocks change data, so they run only when:
+
+- `ENVIRONMENT=local` (`process.env.ENVIRONMENT`), and
+- the entry point is CDP, not Packaging (`JOURNEY_ENTRY_POINT`).
+
+The helpers in `utils/awaiting-prns.js` seed and remove the awaiting PRNs in the
+local `EprPrnBackend` database only when `ENVIRONMENT=local` and `IS_CI` is not
+`true`. Each spec seeds in `beforeEach`, go-back blocks included, so the local
+fixture supplies a PRN per material. Elsewhere nothing is seeded, and a material
+with no awaiting PRN skips its go-back test. `IS_CI=true` is set by the GitHub
+journey workflow; leave it unset locally (see `.env.example`).
+
+`playwright.config.js` also sets `grepInvert: /@accept/` outside the `e2e` profile, so they never run under `accessibility` or `security`. The go-back blocks run in every profile.
+
+#### CI
+
+On CI the same `@accept` blocks run against the CI WireMock stack. The runner sets `WIREMOCK_ADMIN_URL` (port 9092 on the host), and each spec's `afterEach` calls `resetAwaitingPrns`. That resets the `journey-producer-bulk-accept` and `journey-compliance-scheme-prn-accept` scenarios, so retries and each browser project start clean. The CI stubs move the accepted tonnage for one paper/board PRN only (PRN128 for the producer and PRN459 for the compliance scheme). A run that accepts any other PRN won't match the stub. The stub doesn't check which PRN a status update names, so accepting a different PRN still moves the scenario; the obligation totals then count PRN128 or PRN459 as accepted.
+
 ### Accounts
 
 The suite covers two accounts in parallel — both run on every `npm run test:*` invocation, no env flag needed.

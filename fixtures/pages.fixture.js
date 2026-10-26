@@ -4,7 +4,8 @@ import { LandingPage } from '../pages/landing-page.js'
 import { ChooseYearPage } from '../pages/choose-year-page.js'
 import { ObligationsPage } from '../pages/obligations-page.js'
 import { PrnsListPage } from '../pages/prns-list-page.js'
-import { PrnsCheckSelectionPage } from '../pages/prns-check-selection-page.js'
+import { PrnsMultipleSelectionConfirmationPage } from '../pages/prns-multiple-selection-confirmation-page.js'
+import { PrnsMultipleSelectionSuccessPage } from '../pages/prns-multiple-selection-success-page.js'
 import { PrnPage } from '../pages/prn-page.js'
 import { CsocAboutPage } from '../pages/csoc-about-page.js'
 import { CsocSubmissionPage } from '../pages/csoc-submission-page.js'
@@ -47,8 +48,11 @@ export const test = base.extend({
   prnsListPage: async ({ page }, use) => {
     await use(new PrnsListPage(page))
   },
-  prnsCheckSelectionPage: async ({ page }, use) => {
-    await use(new PrnsCheckSelectionPage(page))
+  prnsMultipleSelectionConfirmationPage: async ({ page }, use) => {
+    await use(new PrnsMultipleSelectionConfirmationPage(page))
+  },
+  prnsMultipleSelectionSuccessPage: async ({ page }, use) => {
+    await use(new PrnsMultipleSelectionSuccessPage(page))
   },
   prnPage: async ({ page }, use) => {
     await use(new PrnPage(page))
