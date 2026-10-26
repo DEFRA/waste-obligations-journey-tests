@@ -6,7 +6,6 @@ import { noteType } from '../utils/prn-selection.js'
 import {
   DOWNLOAD_PDF_BUTTON_NAME,
   REJECTED_STATUS_LABEL,
-  rejectedConfirmationHeading,
   rejectedStatusMeaning
 } from '../utils/prn-confirmation.js'
 
@@ -98,26 +97,19 @@ export class PrnPage extends BasePage {
     )
   }
 
-  // A rejected note shows the green confirmation banner. The download control
-  // sits inside it. The PDF still says "Awaiting cancellation".
+  // A later visit to a rejected note has no confirmation banner. The banner
+  // is only shown immediately after rejecting. The PDF still says
+  // "Awaiting cancellation".
   async expectLoadedForRejectedPrn(prn) {
     const type = noteType(prn)
     await expect(this.heading).toBeVisible()
-    await expect(this.rejectionBannerHeading()).toHaveText(
-      rejectedConfirmationHeading(type)
-    )
+    await expect(this.page.locator('.govuk-notification-banner')).toHaveCount(0)
     await expect(this.page.getByText(rejectedStatusMeaning(type))).toBeVisible()
     // The PDF-only tag says "Awaiting cancellation". The screen tag is the one
     // inside .prn-hide-in-pdf.
     const status = this.page.locator('.prn-hide-in-pdf .govuk-tag')
     await expect(status).toHaveText(REJECTED_STATUS_LABEL)
     await expect(status).toHaveClass(/govuk-tag--red/)
-  }
-
-  rejectionBannerHeading() {
-    return this.page.locator(
-      '.govuk-notification-banner--success .govuk-notification-banner__heading'
-    )
   }
 
   obligationsProgressButton(year) {
@@ -127,7 +119,8 @@ export class PrnPage extends BasePage {
     })
   }
 
-  // Banner, status tag, both follow-on buttons and the download in the banner.
+  // Review of a rejected note: status, both follow-on buttons and the
+  // download at the base of the page. No confirmation banner.
   async expectRejectionConfirmation(prn) {
     await this.expectLoadedForRejectedPrn(prn)
     const year = prn.obligationYear
@@ -138,7 +131,7 @@ export class PrnPage extends BasePage {
       })
     ).toBeVisible()
     await expect(this.obligationsProgressButton(year)).toBeVisible()
-    await this.expectPdfControlInGreenBanner()
+    await this.expectPdfControlAtBase()
   }
 
   acceptButton(prn) {

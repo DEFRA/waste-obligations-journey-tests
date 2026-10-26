@@ -6,8 +6,8 @@ import {
 import { getOrgId, listRejectedPrns } from '../utils/waste-obligations-api.js'
 import { noteType, PRN_ACCOUNTS } from '../utils/prn-selection.js'
 
-// MO-469. Opens a note that is already rejected, checks the rejection
-// confirmation, and follows it on to the PRNs list. Nothing is rejected here:
+// MO-469. Opens a note that is already rejected, checks the review view
+// (no confirmation banner), and follows it on to the PRNs list. Nothing is rejected here:
 // the journey never changes PRN state. Clicking Yes, reject is covered by the
 // frontend integration journeys, which own an isolated WireMock scenario.
 // Each account opens a different type, so every run covers both the PRN and
