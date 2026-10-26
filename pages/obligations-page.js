@@ -154,4 +154,23 @@ export class ObligationsPage extends BasePage {
   async readObligationsTable() {
     return this.readGovukTable(this.materialObligationsTable)
   }
+
+  // The "Tonnage accepted" value of every row, keyed by its material name,
+  // across each table that has that column (the obligations table and the
+  // glass breakdown), on the CDP or the Azure obligations page.
+  async readAcceptedTonnages() {
+    const tables = this.page.locator('table').filter({
+      has: this.page.locator('thead th', { hasText: 'Tonnage accepted' })
+    })
+    const accepted = {}
+
+    for (const table of await tables.all()) {
+      for (const row of await this.readGovukTable(table)) {
+        const [material] = Object.values(row)
+        accepted[material] = row['Tonnage accepted']
+      }
+    }
+
+    return accepted
+  }
 }

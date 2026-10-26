@@ -84,6 +84,8 @@ export default defineConfig({
   // PROFILE selects which suite runs. Unset defaults to `e2e` (back-compat with
   // `npm test`); the CDP Portal injects PROFILE per run. Unknown values throw above.
   testIgnore: PROFILE_IGNORE[PROFILE],
+  // The accept journeys change data, so only the e2e profile runs them.
+  grepInvert: PROFILE === 'e2e' ? undefined : /@accept/,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
