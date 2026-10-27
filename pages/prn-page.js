@@ -3,13 +3,16 @@ import { BasePage } from './base-page.js'
 import { getPrnUrl } from '../utils/journey-entry-point.js'
 import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
 import { noteType } from '../utils/prn-selection.js'
+import {
+  DOWNLOAD_PDF_BUTTON_NAME,
+  REJECTED_STATUS_LABEL,
+  rejectedStatusMeaning
+} from '../utils/prn-confirmation.js'
 
+export { DOWNLOAD_PDF_BUTTON_NAME }
 export const CONFIRM_ACCEPT_BUTTON_NAME = 'Yes, accept'
+export const CONFIRM_REJECT_BUTTON_NAME = 'Yes, reject'
 export const DOWNLOAD_PDF_BUTTON_PREFIX = 'Download this'
-export const DOWNLOAD_PDF_BUTTON_NAME = new RegExp(
-  `^${DOWNLOAD_PDF_BUTTON_PREFIX} .*as a pdf$`,
-  'i'
-)
 
 export function acceptThisNoteName(prn) {
   return `Accept this ${noteType(prn)}`
@@ -26,7 +29,8 @@ export function labelsExcludedFromPdf(prn) {
     acceptThisNoteName(prn),
     rejectThisNoteName(prn),
     DOWNLOAD_PDF_BUTTON_PREFIX,
-    CONFIRM_ACCEPT_BUTTON_NAME
+    CONFIRM_ACCEPT_BUTTON_NAME,
+    CONFIRM_REJECT_BUTTON_NAME
   ]
 }
 
@@ -93,15 +97,41 @@ export class PrnPage extends BasePage {
     )
   }
 
-  // A rejected note shows the green banner. The download control sits inside it.
+  // A later visit to a rejected note has no confirmation banner. The banner
+  // is only shown immediately after rejecting. The PDF still says
+  // "Awaiting cancellation".
   async expectLoadedForRejectedPrn(prn) {
     const type = noteType(prn)
     await expect(this.heading).toBeVisible()
+    await expect(this.page.locator('.govuk-notification-banner')).toHaveCount(0)
+    await expect(this.page.getByText(rejectedStatusMeaning(type))).toBeVisible()
+    // The PDF-only tag says "Awaiting cancellation". The screen tag is the one
+    // inside .prn-hide-in-pdf.
+    const status = this.page.locator('.prn-hide-in-pdf .govuk-tag')
+    await expect(status).toHaveText(REJECTED_STATUS_LABEL)
+    await expect(status).toHaveClass(/govuk-tag--red/)
+  }
+
+  obligationsProgressButton(year) {
+    return this.page.getByRole('button', {
+      name: `View your ${year} recycling obligations progress`,
+      exact: true
+    })
+  }
+
+  // Review of a rejected note: status, both follow-on buttons and the
+  // download at the base of the page. No confirmation banner.
+  async expectRejectedPrnReview(prn) {
+    await this.expectLoadedForRejectedPrn(prn)
+    const year = prn.obligationYear
     await expect(
-      this.page.locator(
-        '.govuk-notification-banner--success .govuk-notification-banner__heading'
-      )
-    ).toHaveText(`${type} rejected.`)
+      this.page.getByRole('button', {
+        name: `Accept or reject more PRNs and PERNs for ${year}`,
+        exact: true
+      })
+    ).toBeVisible()
+    await expect(this.obligationsProgressButton(year)).toBeVisible()
+    await this.expectPdfControlAtBase()
   }
 
   acceptButton(prn) {

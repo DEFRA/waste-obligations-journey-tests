@@ -98,7 +98,7 @@ for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
       })
     })
 
-    test('rejected: the link is in the green banner and downloads <number>.pdf', async ({
+    test('rejected: the link is at the base of the page and downloads <number>.pdf', async ({
       request,
       prnPage
     }) => {
@@ -117,8 +117,8 @@ for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
         await prnPage.expectLoadedForRejectedPrn(prn)
       })
 
-      await test.step('the link is within the green banner', async () => {
-        await prnPage.expectPdfControlInGreenBanner()
+      await test.step('the link is at the base of the page', async () => {
+        await prnPage.expectPdfControlAtBase()
       })
 
       await test.step('it downloads a PDF named after the number', async () => {
