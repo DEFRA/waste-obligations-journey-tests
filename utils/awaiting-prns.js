@@ -1,7 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { getOrgId, listAwaitingPrns } from './waste-obligations-api.js'
-import { findStandardSelectablePrnsByMaterial } from './prn-selection.js'
+import { getOrgId } from './waste-obligations-api.js'
 
 const SCRIPT = fileURLToPath(
   new URL('../scripts/seed-prns.mjs', import.meta.url)
@@ -53,23 +52,4 @@ export async function resetAwaitingPrns(account, request) {
   } else if (isLocal) {
     runSeedScript('remove', account)
   }
-}
-
-// The PRNs a journey uses, keyed by API material: the run's own PRNs when there
-// is a run, otherwise the first standard current-year PRN of each material in
-// the awaiting list.
-export async function findJourneyPrns({ request, account, run, materials }) {
-  if (run) {
-    return Object.fromEntries(
-      materials.map((material) => [
-        material,
-        run.prns.find((prn) => prn.material === material)
-      ])
-    )
-  }
-
-  return findStandardSelectablePrnsByMaterial(
-    await listAwaitingPrns(request, getOrgId(account)),
-    materials
-  )
 }

@@ -1,12 +1,17 @@
-import { getComplianceYear } from '../utils/journey-clock.js'
+import {
+  getComplianceYear,
+  issueDateInComplianceYear
+} from '../utils/journey-clock.js'
 
 // Awaiting-acceptance PRNs seeded into the local stack's database before each DP and CSO
 // multi-selection test, and removed afterwards. Read by scripts/seed-prns.mjs.
+// They mirror the CI WireMock fixture in waste-obligations
+// (compose/journey-tests/helpers/journey-prns.mjs), so both stacks list the same notes.
 
 // The compliance year the specs use (getComplianceYear), so seeded PRNs match the year they select.
 const COMPLIANCE_YEAR = String(getComplianceYear())
 
-export const PRNS = {
+const FIXTURES = {
   dp: [
     {
       externalId: '0d2f531d-0213-494b-8c8b-4133051bd44f',
@@ -252,3 +257,24 @@ export const PRNS = {
     }
   ]
 }
+
+// Each issueDate above is a date in the 2026 reference window; the seeded note
+// is issued at the matching point of the current compliance year, never after now.
+export const PRNS = Object.fromEntries(
+  Object.entries(FIXTURES).map(([account, prns]) => [
+    account,
+    prns.map((prn) => ({
+      ...prn,
+      issueDate: issueDateInComplianceYear(prn.issueDate)
+    }))
+  ])
+)
+
+// The notes each account's accept journey (MO-471) selects and accepts: paper
+// and fibre (one tile), and the two glass materials (a tile each); the compliance
+// scheme's glass re-melt is swapped for an aluminium PERN to cover PERNs. The CI
+// WireMock status-update stub expects exactly these notes.
+export const ACCEPT_JOURNEY_PRN_NUMBERS = Object.freeze({
+  dp: Object.freeze(['PRN128', 'PRN132', 'PRN126', 'PRN129']),
+  cso: Object.freeze(['PRN459', 'PRN460', 'PRN461', 'PERN458'])
+})

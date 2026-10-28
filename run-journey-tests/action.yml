@@ -262,6 +262,10 @@ runs:
       shell: bash
       env:
         ENVIRONMENT: local
+        # The PRN journeys read the CI WireMock rather than seeding a database,
+        # and reset its accept scenarios through the published admin port.
+        IS_CI: 'true'
+        WIREMOCK_ADMIN_URL: http://localhost:9092/__admin
         JOURNEY_ENTRY_POINT: waste-obligations
         EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
@@ -285,6 +289,7 @@ runs:
       shell: bash
       env:
         ENVIRONMENT: local
+        IS_CI: 'true'
         JOURNEY_ENTRY_POINT: waste-obligations
         EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''
@@ -308,6 +313,7 @@ runs:
       shell: bash
       env:
         ENVIRONMENT: local
+        IS_CI: 'true'
         JOURNEY_ENTRY_POINT: waste-obligations
         EPR_BASE_URL: https://localhost:8015/manage-recycling-obligations/
         WASTE_OBLIGATIONS_API_BASE_URL: ''

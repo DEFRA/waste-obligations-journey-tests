@@ -1,11 +1,11 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
 
-// "Check your selection before accepting": reached from "Accept selected
-// PRNs and PERNs" on the list. One table per material, a Total row per
-// table, a "Remove from selection" button per PRN, a disabled Accept and a
-// "Go back" button. Nothing here accepts a PRN.
-export class PrnsMultipleSelectionConfirmationPage extends BasePage {
+// "Check your selection before accepting" (MO-470): reached from "Accept
+// selected PRNs and PERNs" on the list. One table per material, a Total row
+// per table, a "Remove from selection" button per PRN, then "Accept" (MO-471
+// AC1), which accepts every listed PRN, and "Go back".
+export class PrnsCheckSelectionPage extends BasePage {
   constructor(page) {
     super(page)
     this.heading = page.getByRole('heading', {
@@ -28,6 +28,15 @@ export class PrnsMultipleSelectionConfirmationPage extends BasePage {
 
   async expectLoaded() {
     await expect(this.heading).toBeVisible()
+  }
+
+  // MO-471 AC1: Accept is at the base of the page, below every selected PRN.
+  async expectAcceptBelowSelection() {
+    await expect(this.acceptButton).toBeVisible()
+    const lastTable = await this.tables.last().boundingBox()
+    const accept = await this.acceptButton.boundingBox()
+
+    expect(accept.y).toBeGreaterThanOrEqual(lastTable.y + lastTable.height)
   }
 
   table(heading) {

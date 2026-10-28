@@ -2,14 +2,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   acceptedHeading,
-  acceptedTonnageByMaterial,
   expectedAcceptedTiles,
-  findBulkAcceptPrns,
+  expectedObligationChanges,
   parseTonnage,
   tonnageText
 } from '../utils/bulk-accept.js'
-
-const OCTOBER_2026 = new Date('2026-10-15T12:00:00Z')
 
 function prn(number, material, overrides = {}) {
   return {
@@ -22,33 +19,6 @@ function prn(number, material, overrides = {}) {
   }
 }
 
-test('finds the first standard current-year PRN for each material', () => {
-  const prns = [
-    prn('PRN1', 'Paper', { decemberWaste: true }),
-    prn('PRN2', 'Paper'),
-    prn('PRN3', 'Fibre', { obligationYear: 2025 }),
-    prn('PRN4', 'Fibre'),
-    prn('PRN5', 'Glass'),
-    prn('PRN6', 'GlassRemelt'),
-    prn('PRN7', 'Paper')
-  ]
-
-  const found = findBulkAcceptPrns(prns, OCTOBER_2026)
-
-  assert.deepEqual(
-    Object.fromEntries(
-      Object.entries(found).map(([material, { number }]) => [material, number])
-    ),
-    { Paper: 'PRN2', Fibre: 'PRN4', Glass: 'PRN5', GlassRemelt: 'PRN6' }
-  )
-})
-
-test('leaves out a material with no selectable PRN', () => {
-  const found = findBulkAcceptPrns([prn('PRN1', 'Paper')], OCTOBER_2026)
-
-  assert.deepEqual(Object.keys(found), ['Paper'])
-})
-
 test('groups paper and fibre into one paper tile with their total tonnage', () => {
   const tiles = expectedAcceptedTiles([
     prn('PRN1', 'Paper', { tonnage: 15 }),
@@ -58,21 +28,60 @@ test('groups paper and fibre into one paper tile with their total tonnage', () =
 
   assert.deepEqual(tiles, [
     {
+      material: 'GlassRemelt',
+      label: 'Glass remelt',
+      tonnage: 220,
+      tonnageText: '220 tonnes',
+      description: 'accepted towards your recycling obligation for glass remelt'
+    },
+    {
       material: 'Paper',
       label: 'Paper, board or fibre-based composite material',
       tonnage: 50,
       tonnageText: '50 tonnes',
       description:
         'accepted towards your recycling obligation for paper, board or fibre-based composite material'
-    },
-    {
-      material: 'GlassRemelt',
-      label: 'Glass remelt',
-      tonnage: 220,
-      tonnageText: '220 tonnes',
-      description: 'accepted towards your recycling obligation for glass remelt'
     }
   ])
+})
+
+test('orders the tiles like the material filter, whatever the selection order', () => {
+  const tiles = expectedAcceptedTiles([
+    prn('PRN1', 'Paper'),
+    prn('PRN2', 'GlassRemelt'),
+    prn('PERN3', 'Aluminium'),
+    prn('PRN4', 'Glass')
+  ])
+
+  assert.deepEqual(
+    tiles.map((tile) => tile.material),
+    ['Aluminium', 'Glass', 'GlassRemelt', 'Paper']
+  )
+})
+
+test('moves each row, the Glass row and Totals by the accepted tonnage', () => {
+  assert.deepEqual(
+    expectedObligationChanges([
+      prn('PRN1', 'Paper', { tonnage: 15 }),
+      prn('PRN2', 'Fibre', { tonnage: 35 }),
+      prn('PRN3', 'Glass', { tonnage: 75 }),
+      prn('PRN4', 'GlassRemelt', { tonnage: 220 })
+    ]),
+    {
+      'Paper, board or fibre-based composite material': 50,
+      'Remaining glass': 75,
+      'Glass remelt': 220,
+      Glass: 295,
+      Totals: 345
+    }
+  )
+})
+
+test('a selection without glass leaves the Glass row out', () => {
+  assert.deepEqual(
+    expectedObligationChanges([prn('PERN1', 'Aluminium', { tonnage: 15 })]),
+    { Aluminium: 15, Totals: 15 }
+  )
 })
 
 test('uses tonne for exactly one tonne', () => {
@@ -88,17 +97,6 @@ test('words the confirmation heading for one or several PRNs', () => {
   assert.equal(
     acceptedHeading(1, 2026),
     'You’ve accepted 1 PRN or PERN towards your 2026 recycling obligations'
-  )
-})
-
-test('reads the accepted tonnage per material from the obligations API', () => {
-  assert.deepEqual(
-    acceptedTonnageByMaterial([
-      { material: 'Paper', tonnages: { accepted: 1 } },
-      { material: 'GlassRemelt', tonnages: { accepted: 0 } },
-      { material: 'Wood' }
-    ]),
-    { Paper: 1, GlassRemelt: 0, Wood: 0 }
   )
 })
 
