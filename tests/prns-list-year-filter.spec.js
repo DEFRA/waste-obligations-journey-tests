@@ -15,7 +15,6 @@ import {
   inDecemberWasteWindow
 } from '../utils/journey-clock.js'
 import {
-  canSeedPrns,
   removeYearFilterPrns,
   seedYearFilterPrns
 } from '../utils/awaiting-prns.js'
@@ -204,9 +203,10 @@ for (const { account, label, authFile } of ACCOUNTS) {
 
     test.beforeEach(() => {
       skipUnlessPrnsConfigured()
+      // Local seeds the notes into the database; CI's WireMock lists carry them. A deployed target has neither.
       test.skip(
-        !canSeedPrns,
-        'December waste notes are seeded into the local stack only; the CI WireMock lists have none'
+        !requireSeededData,
+        'December waste notes are only provided on LOCAL and CI'
       )
       seedYearFilterPrns(account)
     })

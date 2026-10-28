@@ -15,7 +15,7 @@ const isCi = ['true', true].includes(process.env.IS_CI)
 const isLocal = process.env.ENVIRONMENT === 'local'
 
 // Whether this run can put rows in the stack's database: only the local stack, and not CI's WireMock.
-export const canSeedPrns = isLocal && !isCi
+const canSeedPrns = isLocal && !isCi
 
 function runSeedScript(action, account, set = 'awaiting') {
   execFileSync(
