@@ -9,7 +9,17 @@ import {
 } from '../utils/journey-entry-point.js'
 import { getJourneyYear } from '../utils/journey-year.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
-import { getComplianceYear, getJourneyNow } from '../utils/journey-clock.js'
+import {
+  getComplianceYear,
+  getJourneyNow,
+  inDecemberWasteWindow
+} from '../utils/journey-clock.js'
+import {
+  canSeedPrns,
+  removeYearFilterPrns,
+  seedYearFilterPrns
+} from '../utils/awaiting-prns.js'
+import { YEAR_FILTER_PRNS } from '../data/prns.data.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const AUTH_DIR = path.join(__dirname, '..', 'playwright', '.auth')
@@ -179,6 +189,92 @@ for (const { account, label, authFile } of ACCOUNTS) {
         expect(summary).not.toBeNull()
         expect(summary.to).toBe(summary.total)
         expect(await prnsListPage.readPrnRows()).toHaveLength(1)
+      })
+    })
+  })
+
+  // MO-687: the count and the list disagreed on December waste notes, which can be accepted into two years.
+  test.describe(`December waste notes - ${label}`, () => {
+    test.use({ storageState: path.join(AUTH_DIR, authFile) })
+
+    const [currentYearNote, carriedOverNote] = YEAR_FILTER_PRNS[account]
+
+    const listUrl = (year) =>
+      frontendUrl(getPrnsListUrl(account, year), { pageSize: PAGE_SIZE })
+
+    test.beforeEach(() => {
+      skipUnlessPrnsConfigured()
+      test.skip(
+        !canSeedPrns,
+        'December waste notes are seeded into the local stack only; the CI WireMock lists have none'
+      )
+      seedYearFilterPrns(account)
+    })
+
+    test.afterEach(() => {
+      removeYearFilterPrns(account)
+    })
+
+    test(`MO-687 AC1: the obligations count equals the list total with December waste notes`, async ({
+      page,
+      prnsListPage,
+      obligationsPage
+    }) => {
+      for (const year of COUNT_YEARS) {
+        await test.step(`${year}: the count matches the list`, async () => {
+          await page.goto(frontendUrl(getObligationsUrl(account, year)), {
+            timeout: 60_000
+          })
+          const count = await obligationsPage.readAwaitingAcceptanceCount()
+          const total = await listedTotal({ page, prnsListPage }, listUrl(year))
+
+          expect(
+            count,
+            `The obligations page counts ${count} awaiting for ${year} but the list shows ${total}.`
+          ).toBe(total)
+        })
+      }
+    })
+
+    test(`MO-687 AC2: a December waste note is listed for each year it can be accepted into`, async ({
+      page,
+      prnsListPage
+    }) => {
+      test.skip(!nextYearSelectable, `${NEXT_YEAR} is not a selectable year`)
+
+      await test.step(`it is on the ${YEAR} list`, async () => {
+        expect(
+          await listedNumbers({ page, prnsListPage }, listUrl(YEAR))
+        ).toContain(currentYearNote.prnNumber)
+      })
+
+      await test.step(`it is on the ${NEXT_YEAR} list only from 1 December`, async () => {
+        const numbers = await listedNumbers(
+          { page, prnsListPage },
+          listUrl(NEXT_YEAR)
+        )
+        expect(numbers.includes(currentYearNote.prnNumber)).toBe(
+          inDecemberWasteWindow(YEAR)
+        )
+      })
+    })
+
+    test(`MO-687 AC2: a December waste note from last year is listed only for ${YEAR}`, async ({
+      page,
+      prnsListPage
+    }) => {
+      test.skip(!nextYearSelectable, `${NEXT_YEAR} is not a selectable year`)
+
+      await test.step(`it is on the ${YEAR} list`, async () => {
+        expect(
+          await listedNumbers({ page, prnsListPage }, listUrl(YEAR))
+        ).toContain(carriedOverNote.prnNumber)
+      })
+
+      await test.step(`it is not on the ${NEXT_YEAR} list`, async () => {
+        expect(
+          await listedNumbers({ page, prnsListPage }, listUrl(NEXT_YEAR))
+        ).not.toContain(carriedOverNote.prnNumber)
       })
     })
   })
