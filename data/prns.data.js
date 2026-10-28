@@ -297,7 +297,7 @@ const decemberWastePrn = (prnNumber, obligationYear, materialName) => ({
   obligationYear,
   issueDate: `${obligationYear}-12-10T10:00:00Z`,
   materialName,
-  tonnage: 5
+  tonnage: 100
 })
 
 export const YEAR_FILTER_PRNS = {
