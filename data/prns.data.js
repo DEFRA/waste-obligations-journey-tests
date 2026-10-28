@@ -278,3 +278,35 @@ export const ACCEPT_JOURNEY_PRN_NUMBERS = Object.freeze({
   dp: Object.freeze(['PRN128', 'PRN132', 'PRN126', 'PRN129']),
   cso: Object.freeze(['PRN459', 'PRN460', 'PRN461', 'PERN458'])
 })
+
+// December waste notes for the year-filter journeys (MO-687), seeded and removed by those specs only so the
+// other PRN journeys keep their lists. A note issued in December of its obligation year can be accepted into that
+// year or the next, depending on the date; the list and the obligations count must agree on both.
+const PREVIOUS_COMPLIANCE_YEAR = String(Number(COMPLIANCE_YEAR) - 1)
+
+const decemberWastePrn = (prnNumber, obligationYear, materialName) => ({
+  reprocessorExporterAgency: 'Environment Agency',
+  issuerNotes: 'Journey December waste fixture',
+  processToBeUsed: 'R3',
+  decemberWaste: true,
+  issuedByOrg: 'Journey Reprocessors Ltd',
+  accreditationNumber: 'ACC123',
+  isExport: false,
+  prnNumber,
+  accreditationYear: obligationYear,
+  obligationYear,
+  issueDate: `${obligationYear}-12-10T10:00:00Z`,
+  materialName,
+  tonnage: 5
+})
+
+export const YEAR_FILTER_PRNS = {
+  dp: [
+    decemberWastePrn('PRN870', COMPLIANCE_YEAR, 'Steel'),
+    decemberWastePrn('PRN871', PREVIOUS_COMPLIANCE_YEAR, 'Steel')
+  ],
+  cso: [
+    decemberWastePrn('PRN872', COMPLIANCE_YEAR, 'Steel'),
+    decemberWastePrn('PRN873', PREVIOUS_COMPLIANCE_YEAR, 'Steel')
+  ]
+}
