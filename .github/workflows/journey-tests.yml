@@ -73,6 +73,7 @@ jobs:
           waste-obligations-frontend: ${{ inputs.waste-obligations-frontend }}
           packaging-waste-proxy: ${{ inputs.packaging-waste-proxy }}
         env:
+          IS_CI: true
           EPR_USER_EMAIL: ${{ secrets.EPR_USER_EMAIL }}
           EPR_USER_PASSWORD: ${{ secrets.EPR_USER_PASSWORD }}
           EPR_CSO_USER_EMAIL: ${{ secrets.EPR_CSO_USER_EMAIL }}
