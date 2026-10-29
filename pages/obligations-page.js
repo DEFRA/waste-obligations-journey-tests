@@ -155,22 +155,32 @@ export class ObligationsPage extends BasePage {
     return this.readGovukTable(this.materialObligationsTable)
   }
 
-  // The "Tonnage accepted" value of every row, keyed by its material name,
-  // across each table that has that column (the obligations table and the
-  // glass breakdown), on the CDP or the Azure obligations page.
-  async readAcceptedTonnages() {
+  // The `column` value of every row, keyed by its material name (including
+  // "Glass" and "Totals"), across each table that has that column (the
+  // obligations table and the glass breakdown), on the CDP or the Azure
+  // obligations page. The glass breakdown has its own Totals row; the
+  // obligations table comes first, so its Totals is the one kept.
+  async readTonnageColumn(column) {
     const tables = this.page.locator('table').filter({
-      has: this.page.locator('thead th', { hasText: 'Tonnage accepted' })
+      has: this.page.locator('thead th', { hasText: column })
     })
-    const accepted = {}
+    const tonnages = {}
 
     for (const table of await tables.all()) {
       for (const row of await this.readGovukTable(table)) {
         const [material] = Object.values(row)
-        accepted[material] = row['Tonnage accepted']
+        tonnages[material] ??= row[column]
       }
     }
 
-    return accepted
+    return tonnages
+  }
+
+  async readAcceptedTonnages() {
+    return this.readTonnageColumn('Tonnage accepted')
+  }
+
+  async readAwaitingTonnages() {
+    return this.readTonnageColumn('Tonnage awaiting acceptance')
   }
 }

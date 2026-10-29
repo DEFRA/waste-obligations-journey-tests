@@ -3,6 +3,7 @@ import { TEST_USER_NAME } from '../data/csoc.data.js'
 import {
   getOrgId,
   listAcceptedPrns,
+  listAwaitingPrns,
   listRejectedPrns
 } from '../utils/waste-obligations-api.js'
 import {
@@ -15,7 +16,17 @@ import {
   skipUnlessCsocEnabled,
   skipUnlessPrnsConfigured
 } from '../utils/environment-features.js'
-import { noteType, PRN_ACCOUNTS } from '../utils/prn-selection.js'
+import {
+  findStandardSelectablePrnsByMaterial,
+  noteType,
+  PRN_ACCOUNTS
+} from '../utils/prn-selection.js'
+import { getComplianceYear } from '../utils/journey-clock.js'
+import {
+  openAuthenticatedCsoPrnsList,
+  openAuthenticatedProducerPrnsList
+} from '../utils/prns-list-navigation.js'
+import { resetAwaitingPrns, seedAwaitingPrns } from '../utils/awaiting-prns.js'
 import {
   initialiseAccessibilityChecking,
   analyseAccessibility,
@@ -299,6 +310,95 @@ test.describe('Accessibility testing — Rejected PRN view', () => {
         await test.step(`${label} > Rejected ${prnType} view`, async () => {
           await openRejectedPrn({ account, prnType, request, prnPage })
           await analyseAccessibility(page, `${account}-prn-rejected-view`)
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
+    })
+  }
+})
+
+const OPEN_PRNS_LIST = {
+  dp: openAuthenticatedProducerPrnsList,
+  cso: openAuthenticatedCsoPrnsList
+}
+
+// Opens "Check your selection before accepting" (MO-470, with MO-471's
+// Accept) for a paper and a glass other PRN, so it shows two tables. Nothing
+// is accepted here.
+async function openCheckSelection({
+  account,
+  page,
+  request,
+  prnsListPage,
+  prnsCheckSelectionPage
+}) {
+  skipUnlessPrnsConfigured()
+  const year = getComplianceYear()
+  const prns = findStandardSelectablePrnsByMaterial(
+    await listAwaitingPrns(request, getOrgId(account)),
+    ['Paper', 'Glass']
+  )
+  expectSeededOnLocal(
+    prns.Paper,
+    `a standard ${year} paper PRN awaiting acceptance`
+  )
+  expectSeededOnLocal(
+    prns.Glass,
+    `a standard ${year} glass other PRN awaiting acceptance`
+  )
+  test.skip(
+    !prns.Paper || !prns.Glass,
+    'No standard paper and glass other PRNs awaiting acceptance on this deployed environment; the review page was not scanned.'
+  )
+
+  await OPEN_PRNS_LIST[account]({ page, prnsListPage }, year)
+  await prnsListPage.selectPrn(prns.Paper.number)
+  await prnsListPage.selectPrn(prns.Glass.number)
+  await prnsListPage.clickAcceptSelected()
+  await prnsCheckSelectionPage.expectLoaded()
+}
+
+test.describe('Accessibility testing — Check selection before accepting', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('prns-check-selection')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, storageState } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      // Local stack only: seed the awaiting PRNs before the scan and remove them after.
+      test.beforeEach(() => {
+        seedAwaitingPrns(account)
+      })
+
+      test.afterEach(async ({ request }) => {
+        await resetAwaitingPrns(account, request)
+      })
+
+      test('MO-471 AC1 — scan the review page with its Accept button', async ({
+        page,
+        request,
+        prnsListPage,
+        prnsCheckSelectionPage
+      }) => {
+        await test.step(`${label} > Check selection before accepting`, async () => {
+          await openCheckSelection({
+            account,
+            page,
+            request,
+            prnsListPage,
+            prnsCheckSelectionPage
+          })
+          await analyseAccessibility(page, `${account}-prns-check-selection`)
         })
 
         await test.step(`${label} > Assert no accessibility issues`, () => {

@@ -1,17 +1,29 @@
 import { expect, test } from '../fixtures/pages.fixture.js'
 import { skipUnlessPrnsConfigured } from './environment-features.js'
-import { getOrgId, listAwaitingPrns } from './waste-obligations-api.js'
+import {
+  getOrgId,
+  listAcceptedPrns,
+  listAwaitingPrns
+} from './waste-obligations-api.js'
 import { getComplianceYear } from './journey-clock.js'
 import { findStandardSelectablePrnsByMaterial } from './prn-selection.js'
 import { logJourney } from './journey-log.js'
+import { reportSkippedSteps } from './skipped-steps.js'
 import { resetAwaitingPrns, seedAwaitingPrns } from './awaiting-prns.js'
 import { PAPER_GROUP_HEADING } from './check-selection.js'
 import { usesPackagingEntryPoint } from './journey-entry-point.js'
 import {
-  OBLIGATION_MATERIAL_LABELS,
   expectedAcceptedTiles,
+  expectedObligationChanges,
   parseTonnage
 } from './bulk-accept.js'
+import { ACCEPT_JOURNEY_PRN_NUMBERS } from '../data/prns.data.js'
+import {
+  analyseAccessibility,
+  assertNoAccessibilityIssues,
+  generateAccessibilityReports,
+  initialiseAccessibilityChecking
+} from '../tests/accessibility-checking.js'
 
 // Standard PRNs can only be multi-selected in the current compliance year.
 const YEAR = getComplianceYear()
@@ -28,15 +40,39 @@ const MATERIALS = ['Paper', 'Fibre', 'Glass']
 // guarantee that data.
 const requirePrnData = process.env.ENVIRONMENT === 'local'
 
-// The accept journey: the material accepted, and the name the obligations
-// table gives it.
-const ACCEPT_MATERIAL = 'Paper'
-const ACCEPT_OBLIGATION_ROW = OBLIGATION_MATERIAL_LABELS.Paper
+// The Azure Packaging search page the confirmation links to while CDP has no
+// search page of its own (agreed for MO-471 AC5 on 27 October 2026).
+const PACKAGING_SEARCH_PATH = '/report-data/view-awaiting-acceptance'
+const SEARCH_PAGE_HEADING = /^search prns and perns$/i
+
+// Every PRN number on every page of the list.
+async function readListedNumbers(prnsListPage) {
+  const numbers = (await prnsListPage.readPrnRows()).map((row) => row.number)
+
+  while (await prnsListPage.hasNextPage()) {
+    await prnsListPage.goToNextPage()
+    numbers.push(...(await prnsListPage.readPrnRows()).map((row) => row.number))
+  }
+
+  return numbers
+}
+
+async function readObligationsProgress(obligationsPage) {
+  const accepted = await obligationsPage.readAcceptedTonnages()
+  const awaiting = await obligationsPage.readAwaitingTonnages()
+
+  return {
+    accepted,
+    awaiting,
+    count: await obligationsPage.readAwaitingAcceptanceCount()
+  }
+}
 
 /**
  * Defines the multi-select PRN journeys for one account: a go-back test that
- * accepts nothing, and an @accept test that accepts one PRN. The DP and CSO
- * spec files call this with their own login, list and obligations routes.
+ * accepts nothing, and an @accept test that accepts several PRNs and PERNs.
+ * The DP and CSO spec files call this with their own login, list and
+ * obligations routes.
  *
  * @param {object} options
  * @param {'dp'|'cso'} options.account the account the seed and API lookups use
@@ -77,11 +113,11 @@ export function defineMultipleSelectionJourneys({
 
   test.describe(`${label} PRNs check selection go back (${tag})`, () => {
     // Nothing here accepts or rejects a PRN.
-    test('review a selection, remove one PRN, go back and find nothing selected', async ({
+    test('MO-470 — review a selection, remove one PRN, go back and find nothing selected', async ({
       page,
       request,
       prnsListPage,
-      prnsMultipleSelectionConfirmationPage
+      prnsCheckSelectionPage
     }) => {
       skipUnlessPrnsConfigured()
 
@@ -118,11 +154,11 @@ export function defineMultipleSelectionJourneys({
 
       await test.step('submit the selection for review', async () => {
         await prnsListPage.clickAcceptSelected()
-        await prnsMultipleSelectionConfirmationPage.expectLoaded()
+        await prnsCheckSelectionPage.expectLoaded()
       })
 
       await test.step('remove the glass other PRN and check it is no longer listed', async () => {
-        await prnsMultipleSelectionConfirmationPage.removePrn(removed.number)
+        await prnsCheckSelectionPage.removePrn(removed.number)
 
         await expect(
           page.getByRole('link', { name: removed.number, exact: true })
@@ -131,8 +167,7 @@ export function defineMultipleSelectionJourneys({
 
       await test.step('check paper/board and fibre share one table with their total', async () => {
         const paperAndFibre = [prns.Paper, prns.Fibre]
-        const tables =
-          await prnsMultipleSelectionConfirmationPage.readMaterialTables()
+        const tables = await prnsCheckSelectionPage.readMaterialTables()
 
         expect(tables.map((table) => table.heading)).toEqual([
           PAPER_GROUP_HEADING
@@ -147,7 +182,7 @@ export function defineMultipleSelectionJourneys({
       })
 
       await test.step('go back to the PRNs list', async () => {
-        await prnsMultipleSelectionConfirmationPage.clickGoBack()
+        await prnsCheckSelectionPage.clickGoBack()
         await prnsListPage.expectLoaded()
       })
 
@@ -166,7 +201,7 @@ export function defineMultipleSelectionJourneys({
     })
   })
 
-  test.describe(`${label} accepts a PRN and sees it on manage obligations (${tag}) @accept`, () => {
+  test.describe(`${label} accepts several PRNs and PERNs and sees them on manage obligations (${tag}) @accept`, () => {
     // Accepting changes data, so this runs only against the local stack, which
     // is reset between runs. A deployed target would accept real PRNs.
     test.skip(
@@ -178,83 +213,165 @@ export function defineMultipleSelectionJourneys({
       'Starts on the CDP manage-obligations page; the Azure entry point is not covered.'
     )
 
-    test('accept a PRN, confirm it, and check the tonnage accepted on manage obligations', async ({
+    test('MO-471 AC1–AC6 — accept a selection across materials, then check the confirmation, manage obligations and the list', async ({
       page,
       request,
       obligationsPage,
       prnsListPage,
-      prnsMultipleSelectionConfirmationPage,
-      prnsMultipleSelectionSuccessPage
+      prnsCheckSelectionPage,
+      prnsAcceptedSelectionPage
     }) => {
       skipUnlessPrnsConfigured()
 
-      const prn =
-        await test.step(`find a standard ${YEAR} PRN awaiting acceptance for ${ACCEPT_MATERIAL}`, async () => {
-          const found = findStandardSelectablePrnsByMaterial(
-            await listAwaitingPrns(request, getOrgId(account)),
-            [ACCEPT_MATERIAL]
-          )
+      const orgId = getOrgId(account)
+      const numbers = ACCEPT_JOURNEY_PRN_NUMBERS[account]
+
+      const prns =
+        await test.step(`find ${numbers.join(', ')} awaiting acceptance`, async () => {
+          const awaiting = await listAwaitingPrns(request, orgId)
           expect(
-            found[ACCEPT_MATERIAL],
-            `No standard ${YEAR} ${ACCEPT_MATERIAL} PRN awaiting acceptance.`
-          ).toBeDefined()
-          return found[ACCEPT_MATERIAL]
+            awaiting.map((prn) => prn.number),
+            'The journey fixture must list every PRN this journey accepts.'
+          ).toEqual(expect.arrayContaining(numbers))
+
+          return numbers.map((number) =>
+            awaiting.find((prn) => prn.number === number)
+          )
+        })
+      const changes = expectedObligationChanges(prns)
+
+      const before =
+        await test.step(`read manage obligations for ${YEAR} before accepting`, async () => {
+          await page.goto(obligationsPath(YEAR), { timeout: 60_000 })
+          await obligationsPage.expectLoadedForYear(YEAR)
+
+          const progress = await readObligationsProgress(obligationsPage)
+          for (const row of Object.keys(changes)) {
+            expect(
+              progress.accepted[row],
+              `The obligations table has no "${row}" row.`
+            ).toBeDefined()
+          }
+          logJourney(
+            test.info(),
+            `Before: accepted ${JSON.stringify(progress.accepted)}; awaiting ${JSON.stringify(progress.awaiting)}; count ${progress.count}`
+          )
+          return progress
         })
 
-      let tonnageBefore
-
-      await test.step('view the paper/board tonnage accepted on manage obligations', async () => {
-        await page.goto(obligationsPath(YEAR), { timeout: 60_000 })
-        await obligationsPage.expectLoadedForYear(YEAR)
-
-        const accepted = await obligationsPage.readAcceptedTonnages()
-        expect(
-          accepted[ACCEPT_OBLIGATION_ROW],
-          `The obligations table has no "${ACCEPT_OBLIGATION_ROW}" row.`
-        ).toBeDefined()
-        tonnageBefore = parseTonnage(accepted[ACCEPT_OBLIGATION_ROW])
-        logJourney(
-          test.info(),
-          `${ACCEPT_OBLIGATION_ROW}: ${tonnageBefore} tonnes accepted before accepting ${prn.number} (${prn.tonnage} tonnes)`
-        )
-      })
-
-      await test.step(`open the PRNs list, select ${prn.number} and accept`, async () => {
+      await test.step('select the PRNs and PERNs and review the selection', async () => {
         await openPrnsList({ page, prnsListPage }, YEAR)
-        await prnsListPage.selectPrn(prn.number)
+        for (const prn of prns) {
+          logJourney(test.info(), `Select ${prn.number} (${prn.material})`)
+          await prnsListPage.selectPrn(prn.number)
+        }
         await prnsListPage.clickAcceptSelected()
-        await prnsMultipleSelectionConfirmationPage.expectLoaded()
-        await prnsMultipleSelectionConfirmationPage.clickAccept()
+        await prnsCheckSelectionPage.expectLoaded()
       })
 
-      await test.step('check the confirmation shows the accepted PRN and its tonnage', async () => {
-        await prnsMultipleSelectionSuccessPage.expectLoaded(1, YEAR)
+      await test.step('AC1 — Accept is at the base of the review page', async () => {
+        await prnsCheckSelectionPage.expectAcceptBelowSelection()
+      })
 
-        const tiles = await prnsMultipleSelectionSuccessPage.readTiles()
-        expect(tiles).toHaveLength(1)
-        expect(tiles).toEqual(
-          expectedAcceptedTiles([prn]).map(({ tonnageText, description }) => ({
+      await test.step('AC2, AC4 — accept and see the confirmation for the number accepted and the year', async () => {
+        await prnsCheckSelectionPage.clickAccept()
+        await prnsAcceptedSelectionPage.expectLoaded(numbers.length, YEAR)
+      })
+
+      await test.step('AC3, AC4 — one tile per material with its total tonnage', async () => {
+        expect(await prnsAcceptedSelectionPage.readTiles()).toEqual(
+          expectedAcceptedTiles(prns).map(({ tonnageText, description }) => ({
             tonnageText,
             description
           }))
         )
       })
 
-      await test.step(`go back to manage obligations for ${YEAR} from the confirmation`, async () => {
-        await prnsMultipleSelectionSuccessPage.openObligationsProgress(YEAR)
-        await obligationsPage.expectLoadedForYear(YEAR)
+      await test.step('scan the confirmation for accessibility issues', async () => {
+        await initialiseAccessibilityChecking()
+        await analyseAccessibility(page, `${account}-prns-accepted-selection`)
+        generateAccessibilityReports(`${account}-prns-accepted-selection`)
+        assertNoAccessibilityIssues()
       })
 
-      await test.step('check the paper/board tonnage accepted has gone up by the PRN', async () => {
-        const accepted = await obligationsPage.readAcceptedTonnages()
-        const tonnageAfter = parseTonnage(accepted[ACCEPT_OBLIGATION_ROW])
+      const searchUrl =
+        await test.step('AC5 — the search link opens the search page with no filters', async () => {
+          const url = await prnsAcceptedSelectionPage.readSearchLinkUrl()
+          logJourney(test.info(), `Search PRNs and PERNs: ${url.href}`)
 
+          expect(url.pathname).toMatch(/\/view-awaiting-acceptance$/)
+          expect(url.search).toBe('')
+          return url
+        })
+
+      await test.step(`AC6 — the progress button opens manage obligations for ${YEAR}`, async () => {
+        await prnsAcceptedSelectionPage.openObligationsProgress(YEAR)
+        await obligationsPage.expectLoadedForYear(YEAR)
+        await expect(page).toHaveURL(
+          (url) => `${url.pathname}${url.search}` === obligationsPath(YEAR)
+        )
+      })
+
+      await test.step('AC2 — the tonnage moved from awaiting to accepted, and the count dropped', async () => {
+        const after = await readObligationsProgress(obligationsPage)
         logJourney(
           test.info(),
-          `${ACCEPT_OBLIGATION_ROW}: ${tonnageAfter} tonnes accepted after accepting ${prn.number}`
+          `After: accepted ${JSON.stringify(after.accepted)}; awaiting ${JSON.stringify(after.awaiting)}; count ${after.count}`
         )
-        expect(tonnageAfter).toBe(tonnageBefore + prn.tonnage)
+
+        for (const [row, tonnage] of Object.entries(changes)) {
+          expect(parseTonnage(after.accepted[row]), `${row} accepted`).toBe(
+            parseTonnage(before.accepted[row]) + tonnage
+          )
+          expect(parseTonnage(after.awaiting[row]), `${row} awaiting`).toBe(
+            parseTonnage(before.awaiting[row]) - tonnage
+          )
+        }
+        expect(after.count).toBe(before.count - numbers.length)
       })
+
+      await test.step('AC2 — the accepted PRNs and PERNs have left the list', async () => {
+        await openPrnsList({ page, prnsListPage }, YEAR)
+        const listed = await readListedNumbers(prnsListPage)
+
+        for (const number of numbers) {
+          expect(listed, `${number} is still listed`).not.toContain(number)
+        }
+      })
+
+      await test.step(`AC2 — each one reads back as accepted towards ${YEAR}`, async () => {
+        const accepted = await listAcceptedPrns(request, orgId)
+        const awaiting = await listAwaitingPrns(request, orgId)
+
+        for (const number of numbers) {
+          const prn = accepted.find((candidate) => candidate.number === number)
+          expect(prn, `${number} is not accepted`).toBeDefined()
+          expect(prn.obligationYear, `${number} obligation year`).toBe(YEAR)
+          expect(
+            awaiting.map((candidate) => candidate.number),
+            `${number} is still awaiting acceptance`
+          ).not.toContain(number)
+        }
+      })
+
+      // The link goes to the Azure Packaging search page. The CI stack has no
+      // Packaging app, so the frontend's Packaging URL points elsewhere there.
+      /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect -- entry-point routing: only a stack with the Packaging app can open its search page */
+      if (searchUrl.pathname === PACKAGING_SEARCH_PATH) {
+        await test.step('AC5 — follow the search link to the unfiltered Packaging search page', async () => {
+          await page.goto(searchUrl.href, { timeout: 60_000 })
+          await expect(
+            page.getByRole('heading', { name: SEARCH_PAGE_HEADING })
+          ).toBeVisible()
+          expect(new URL(page.url()).search).toBe('')
+        })
+      } else {
+        await reportSkippedSteps(
+          'AC5 — follow the search link to the Packaging search page',
+          `This stack has no Azure Packaging app: the link points at ${searchUrl.origin}${searchUrl.pathname}.`
+        )
+      }
+      /* eslint-enable playwright/no-conditional-in-test, playwright/no-conditional-expect */
     })
   })
 }

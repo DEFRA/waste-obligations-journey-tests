@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import {
   canSubmitDeclarations,
   getComplianceYear,
-  getJourneyNow
+  getJourneyNow,
+  issueDateInComplianceYear
 } from '../utils/journey-clock.js'
 
 const realNow = () => new Date('2026-10-19T12:00:00Z')
@@ -59,4 +60,28 @@ test('declarations cannot be submitted once the scenario moves into another comp
     canSubmitDeclarations({ JOURNEY_NOW: '2027-12-15T12:00:00Z' }, realNow),
     false
   )
+})
+
+test('fixture issue dates fall in the compliance year, before now, in their order', () => {
+  const now = new Date('2027-03-10T12:00:00Z')
+  const fixtures = [
+    '2026-02-12T10:10:00Z',
+    '2026-03-30T16:05:00Z',
+    '2026-06-15T10:30:00Z'
+  ]
+  const issued = fixtures.map((date) => issueDateInComplianceYear(date, now))
+
+  for (const date of issued) {
+    assert.ok(Date.parse(date) >= Date.parse('2027-02-01T00:00:00Z'), date)
+    assert.ok(Date.parse(date) < now.getTime(), date)
+  }
+  assert.deepEqual([...issued].sort(), issued)
+})
+
+test('in January, fixture issue dates stay in the previous compliance year', () => {
+  const now = new Date('2027-01-20T12:00:00Z')
+  const issued = issueDateInComplianceYear('2026-06-15T10:30:00Z', now)
+
+  assert.ok(issued.startsWith('2026-'), issued)
+  assert.ok(Date.parse(issued) < now.getTime(), issued)
 })

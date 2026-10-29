@@ -61,3 +61,24 @@ export function canSubmitDeclarations(
     getComplianceYear(realNow())
   )
 }
+
+// Fixture issue dates are written as dates in a 2026 reference window
+// (February to June). This spreads one over the compliance year of `now`, from
+// 1 February up to `now`, keeping the fixtures' order, so a seeded note is
+// issued in the year it is for and never after the date under test.
+const FIXTURE_WINDOW_START = Date.UTC(2026, 1, 1)
+const FIXTURE_WINDOW_END = Date.UTC(2026, 6, 1)
+
+export function issueDateInComplianceYear(
+  fixtureIssueDate,
+  now = getJourneyNow()
+) {
+  const year = getComplianceYear(now)
+  const start = Date.UTC(year, 1, 1)
+  const end = Math.min(now.getTime(), Date.UTC(year + 1, 1, 1))
+  const fraction =
+    (Date.parse(fixtureIssueDate) - FIXTURE_WINDOW_START) /
+    (FIXTURE_WINDOW_END - FIXTURE_WINDOW_START)
+
+  return new Date(start + fraction * (end - start)).toISOString()
+}

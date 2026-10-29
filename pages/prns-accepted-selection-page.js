@@ -3,12 +3,17 @@ import { BasePage } from './base-page.js'
 import { acceptedHeading } from '../utils/bulk-accept.js'
 
 // The confirmation after accepting a selection from the check-selection
-// page: a panel giving the number accepted and the year, one tile per
-// material with its tonnage, and a button to the obligations progress.
-export class PrnsMultipleSelectionSuccessPage extends BasePage {
+// page (MO-471): a panel giving the number accepted and the year, one tile per
+// material with its tonnage, a "Search PRNs and PERNs" link and a button to
+// the obligations progress.
+export class PrnsAcceptedSelectionPage extends BasePage {
   constructor(page) {
     super(page)
     this.tiles = page.getByTestId('accepted-selection-tiles').locator('li')
+    this.searchLink = page.getByRole('link', {
+      name: 'Search PRNs and PERNs',
+      exact: true
+    })
   }
 
   headingFor(count, year) {
@@ -38,6 +43,12 @@ export class PrnsMultipleSelectionSuccessPage extends BasePage {
         }
       })
     )
+  }
+
+  // The "Search PRNs and PERNs" link's target, resolved against the page.
+  async readSearchLinkUrl() {
+    await expect(this.searchLink).toBeVisible()
+    return new URL(await this.searchLink.getAttribute('href'), this.page.url())
   }
 
   // A link styled as a button.
