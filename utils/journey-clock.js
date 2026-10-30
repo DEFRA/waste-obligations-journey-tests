@@ -82,3 +82,18 @@ export function issueDateInComplianceYear(
 
   return new Date(start + fraction * (end - start)).toISOString()
 }
+
+/**
+ * Whether a December waste note from this obligation year can be accepted into
+ * either that year or the next: from 1 December to the end of January.
+ *
+ * @param {number} obligationYear
+ * @param {Date} [now]
+ * @returns {boolean}
+ */
+export function inDecemberWasteWindow(obligationYear, now = getJourneyNow()) {
+  const start = Date.UTC(obligationYear, 11, 1)
+  const end = Date.UTC(obligationYear + 1, 1, 1)
+
+  return now.getTime() >= start && now.getTime() < end
+}

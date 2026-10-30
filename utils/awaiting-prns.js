@@ -14,10 +14,26 @@ const isCi = ['true', true].includes(process.env.IS_CI)
 // (CDP Portal, Azure) have no sqledge container, so they must not reach docker.
 const isLocal = process.env.ENVIRONMENT === 'local'
 
-function runSeedScript(action, account) {
-  execFileSync(process.execPath, [SCRIPT, action, account, getOrgId(account)], {
-    stdio: 'inherit'
-  })
+// Whether this run can put rows in the stack's database: only the local stack, and not CI's WireMock.
+const canSeedPrns = isLocal && !isCi
+
+function runSeedScript(action, account, set = 'awaiting') {
+  execFileSync(
+    process.execPath,
+    [SCRIPT, action, account, getOrgId(account), set],
+    { stdio: 'inherit' }
+  )
+}
+
+// December waste notes for the year-filter journeys, kept apart from the awaiting set the other journeys use.
+export function seedYearFilterPrns(account) {
+  if (!canSeedPrns) return
+  runSeedScript('seed', account, 'year-filter')
+}
+
+export function removeYearFilterPrns(account) {
+  if (!canSeedPrns) return
+  runSeedScript('remove', account, 'year-filter')
 }
 
 export function seedAwaitingPrns(account) {
