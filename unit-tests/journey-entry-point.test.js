@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   describeCsocActionHref,
+  getObligationMaterialUrl,
   getObligationsUrl,
   getPrnUrl,
   getPrnsListUrl,
@@ -98,6 +99,14 @@ test('a single PRN URL is scoped to the account and keeps the proxy prefix', () 
     assert.equal(
       getObligationsUrl('cso', 2025).href,
       'https://proxy.example/manage-recycling-obligations/cso/scheme-id/obligations?year=2025'
+    )
+    assert.equal(
+      getObligationMaterialUrl('dp', 'aluminium', 2026).href,
+      'https://proxy.example/manage-recycling-obligations/producer/producer-id/obligations/aluminium?year=2026'
+    )
+    assert.equal(
+      getObligationMaterialUrl('cso', 'glass', 2025).href,
+      'https://proxy.example/manage-recycling-obligations/cso/scheme-id/obligations/glass?year=2025'
     )
     assert.throws(
       () => getPrnUrl('producer', 'prn-id', 2026),

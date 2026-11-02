@@ -151,6 +151,18 @@ export class ObligationsPage extends BasePage {
     return Number((await figure.textContent()).trim())
   }
 
+  // The CDP obligations page's link for a material (its name in the table).
+  async openMaterialCalculation(linkName) {
+    const link = this.page.getByRole('link', { name: linkName, exact: true })
+    await expect(link).toBeVisible()
+    await Promise.all([
+      this.page.waitForURL(/\/obligations\/[a-z]+\?/, {
+        waitUntil: 'domcontentloaded'
+      }),
+      link.click()
+    ])
+  }
+
   async readObligationsTable() {
     return this.readGovukTable(this.materialObligationsTable)
   }
