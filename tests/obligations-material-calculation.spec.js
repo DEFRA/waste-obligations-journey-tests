@@ -27,15 +27,23 @@ const ACCOUNTS = [
 // The link text on the obligations table, the material in the API, and the
 // name the calculation page gives the material in its heading.
 const MATERIALS = [
-  { api: 'Aluminium', link: 'Aluminium', name: 'aluminium' },
+  {
+    api: 'Aluminium',
+    link: 'Aluminium recycling obligation page',
+    name: 'aluminium'
+  },
   {
     api: 'Paper',
-    link: 'Paper, board or fibre-based composite material',
+    link: 'Paper, board or fibre-based composite material recycling obligation page',
     name: 'paper, board or fibre-based composite material'
   },
-  { api: 'Plastic', link: 'Plastic', name: 'plastic' },
-  { api: 'Steel', link: 'Steel', name: 'steel' },
-  { api: 'Wood', link: 'Wood', name: 'wood' }
+  {
+    api: 'Plastic',
+    link: 'Plastic recycling obligation page',
+    name: 'plastic'
+  },
+  { api: 'Steel', link: 'Steel recycling obligation page', name: 'steel' },
+  { api: 'Wood', link: 'Wood recycling obligation page', name: 'wood' }
 ]
 
 const tonnes = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 })
@@ -123,7 +131,9 @@ for (const { account, label, authFile } of ACCOUNTS) {
       await page.goto(obligationsUrl, { timeout: 60_000 })
       await obligationsPage.expectLoadedForYear(YEAR)
       await obligationsPage.dismissCookieBannerIfShown()
-      await obligationsPage.openMaterialCalculation('Remaining glass')
+      await obligationsPage.openMaterialCalculation(
+        'Remaining glass recycling obligation page'
+      )
 
       await materialCalculationPage.expectLoadedFor(YEAR, 'glass')
       await expect(materialCalculationPage.glassIntroduction).toBeVisible()
