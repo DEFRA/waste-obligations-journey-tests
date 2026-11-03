@@ -11,9 +11,9 @@ export class ObligationsPage extends BasePage {
   constructor(page) {
     super(page)
     this.path = '/report-data/manage-your-recycling-obligations'
-    this.heading = page.getByRole('heading', {
-      name: /manage your \d{4} recycling/i
-    })
+    // The page's one h1, found by what it is. Its text is asserted separately so
+    // a failure shows the text received, not just that an element was missing.
+    this.heading = page.getByRole('main').getByRole('heading', { level: 1 })
     this.submitCertificateButton = page.getByRole('button', {
       name: /submit your (certificate|statement)/i
     })
@@ -46,17 +46,13 @@ export class ObligationsPage extends BasePage {
   }
 
   async expectLoaded() {
-    await expect(this.heading).toBeVisible()
-  }
-
-  headingFor(year) {
-    return this.page.getByRole('heading', {
-      name: new RegExp(`manage your ${year} recycling`, 'i')
-    })
+    await expect(this.heading).toHaveText(/manage your \d{4} recycling/i)
   }
 
   async expectLoadedForYear(year) {
-    await expect(this.headingFor(year)).toBeVisible()
+    await expect(this.heading).toHaveText(
+      new RegExp(`manage your ${year} recycling`, 'i')
+    )
   }
 
   expectCsocActionHref(href) {
@@ -149,6 +145,18 @@ export class ObligationsPage extends BasePage {
       .locator('p.govuk-body-l')
     await expect(figure).toBeVisible()
     return Number((await figure.textContent()).trim())
+  }
+
+  // The CDP obligations page's link for a material (its name in the table).
+  async openMaterialCalculation(linkName) {
+    const link = this.page.getByRole('link', { name: linkName, exact: true })
+    await expect(link).toBeVisible()
+    await Promise.all([
+      this.page.waitForURL(/\/obligations\/[a-z]+\?/, {
+        waitUntil: 'domcontentloaded'
+      }),
+      link.click()
+    ])
   }
 
   async readObligationsTable() {

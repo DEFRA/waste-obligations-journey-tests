@@ -10,10 +10,16 @@ import {
   findOnlySubmittedDeclaration,
   resetOrgDeclarations
 } from '../utils/test-setup.js'
-import { usesPackagingEntryPoint } from '../utils/journey-entry-point.js'
+import {
+  getObligationMaterialUrl,
+  getWasteObligationsFrontendBaseUrl,
+  usesPackagingEntryPoint
+} from '../utils/journey-entry-point.js'
 import {
   expectSeededOnLocal,
+  FEATURE_MANAGE_OBLIGATIONS,
   skipUnlessCsocEnabled,
+  skipUnlessFeatureFlagEnabled,
   skipUnlessPrnsConfigured
 } from '../utils/environment-features.js'
 import {
@@ -405,6 +411,61 @@ test.describe('Accessibility testing — Check selection before accepting', () =
           assertNoAccessibilityIssues()
         })
       })
+    })
+  }
+})
+
+const MATERIAL_CALCULATION_PAGES = [
+  { slug: 'aluminium', name: 'aluminium' },
+  { slug: 'glass', name: 'glass' }
+]
+
+test.describe('Accessibility testing — Material calculation pages', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('material-calculation')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, storageState } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      test.beforeEach(() => {
+        skipUnlessFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)
+        test.skip(
+          usesPackagingEntryPoint(),
+          'The material calculation pages are reached from the CDP obligations page'
+        )
+      })
+
+      for (const { slug, name } of MATERIAL_CALCULATION_PAGES) {
+        test(`scan the ${name} calculation page`, async ({
+          page,
+          materialCalculationPage
+        }) => {
+          const year = getComplianceYear()
+
+          await test.step(`${label} > ${name} calculation page`, async () => {
+            await page.goto(
+              new URL(
+                getObligationMaterialUrl(account, slug, year).toString(),
+                getWasteObligationsFrontendBaseUrl()
+              ).toString(),
+              { timeout: 60_000 }
+            )
+            await materialCalculationPage.expectLoadedFor(year, name)
+            await analyseAccessibility(page, `${account}-${slug}-calculation`)
+          })
+
+          await test.step(`${label} > Assert no accessibility issues`, () => {
+            assertNoAccessibilityIssues()
+          })
+        })
+      }
     })
   }
 })

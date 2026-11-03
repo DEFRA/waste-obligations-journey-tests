@@ -211,6 +211,13 @@ export function getObligationsUrl(account, year) {
   return accountUrl(account, '/obligations', year)
 }
 
+// The page that explains how one material's obligation was calculated, for the
+// producer or the compliance scheme. material is the page's slug ('aluminium',
+// 'glass', 'paper', 'plastic', 'steel' or 'wood').
+export function getObligationMaterialUrl(account, material, year) {
+  return accountUrl(account, `/obligations/${material}`, year)
+}
+
 // The CDP PRNs destination is independent of any certificate navigation.
 export function getProducerPrnsUrl(year) {
   return getPrnsListUrl('dp', year)

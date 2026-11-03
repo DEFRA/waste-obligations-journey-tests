@@ -24,6 +24,7 @@ const PROFILE_IGNORE = {
   e2e: ['**/accessibility.spec.js', '**/security.spec.js'],
   accessibility: [
     '**/csoc-submission*.spec.js',
+    '**/obligations-material-calculation.spec.js',
     '**/obligations-choose-year-dp.spec.js',
     '**/prns-list-journey-dp.spec.js',
     '**/prn-accepted-view.spec.js',
