@@ -58,15 +58,20 @@ function writtenExample(obligation) {
 }
 
 // A material with no reported tonnage has no written example, so the page shows
-// none; otherwise it shows the formula and the worked figures.
-async function expectWrittenExample(page, obligation) {
-  const reported = obligation?.tonnages?.material ?? 0
-  const count = Number(reported > 0)
+// none; otherwise it shows the formula and the worked figures. The lines found on
+// the page are compared with the lines expected, so a mismatch shows both.
+async function expectWrittenExample(materialCalculationPage, obligation) {
+  const shown = (obligation?.tonnages?.material ?? 0) > 0
+  const lines = ['X x Y = Z', writtenExample(obligation)]
 
-  await expect(page.getByText('X x Y = Z')).toHaveCount(count)
-  await expect(
-    page.getByText(writtenExample(obligation), { exact: false })
-  ).toHaveCount(count)
+  await materialCalculationPage.expectCalculationShown(shown)
+  await expect
+    .poll(async () => {
+      const text = await materialCalculationPage.main.innerText()
+
+      return lines.filter((line) => text.includes(line))
+    })
+    .toEqual(shown ? lines : [])
 }
 
 for (const { account, label, authFile } of ACCOUNTS) {
@@ -106,7 +111,7 @@ for (const { account, label, authFile } of ACCOUNTS) {
           await obligationsPage.openMaterialCalculation(material.link)
           await materialCalculationPage.expectLoadedFor(YEAR, material.name)
           await expectWrittenExample(
-            page,
+            materialCalculationPage,
             obligations.find((o) => o.material === material.api)
           )
         })
@@ -136,13 +141,7 @@ for (const { account, label, authFile } of ACCOUNTS) {
       )
 
       await materialCalculationPage.expectLoadedFor(YEAR, 'glass')
-      await expect(materialCalculationPage.glassIntroduction).toBeVisible()
-      await expect(
-        page.getByRole('heading', { name: 'Glass re-melt obligation' })
-      ).toBeVisible()
-      await expect(
-        page.getByRole('heading', { name: 'Remaining glass obligation' })
-      ).toBeVisible()
+      await materialCalculationPage.expectGlassBreakdown()
     })
   })
 }
