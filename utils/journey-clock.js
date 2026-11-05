@@ -53,6 +53,12 @@ export function isFutureYearWindow(date = getJourneyNow()) {
   return month === 12 || month === 1
 }
 
+// The latest year the CDP pages accept: the current compliance year, plus next
+// year while it can be chosen (December and January).
+export function getMaxSelectableYear(date = getJourneyNow()) {
+  return getComplianceYear(date) + (isFutureYearWindow(date) ? 1 : 0)
+}
+
 /**
  * Whether the waste-obligations API (which always runs on the real date) can
  * take a compliance declaration for the scenario's compliance year. It only

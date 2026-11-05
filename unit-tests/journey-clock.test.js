@@ -4,6 +4,7 @@ import {
   canSubmitDeclarations,
   getComplianceYear,
   getJourneyNow,
+  getMaxSelectableYear,
   isFutureYearWindow,
   issueDateInComplianceYear
 } from '../utils/journey-clock.js'
@@ -104,4 +105,12 @@ test('the window follows the scenario clock when no date is given', () => {
     if (before === undefined) delete process.env.JOURNEY_NOW
     else process.env.JOURNEY_NOW = before
   }
+})
+
+test('the latest selectable year is next year only in December and January', () => {
+  assert.equal(getMaxSelectableYear(new Date('2026-11-05T12:00:00Z')), 2026)
+  assert.equal(getMaxSelectableYear(new Date('2026-12-15T12:00:00Z')), 2027)
+  assert.equal(getMaxSelectableYear(new Date('2027-01-15T12:00:00Z')), 2027)
+  assert.equal(getMaxSelectableYear(new Date('2027-02-01T12:00:00Z')), 2027)
+  assert.equal(getMaxSelectableYear(new Date('2027-11-05T12:00:00Z')), 2027)
 })
