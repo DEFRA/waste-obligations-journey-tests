@@ -1,10 +1,10 @@
 // Seeds or removes the awaiting-acceptance PRNs listed in data/prns.data.js in the local
 // EprPrnBackend database, through the sqledge container. Local stack only: CI reads PRNs from WireMock.
 //
-// Usage: node scripts/seed-prns.mjs <seed|remove> <dp|cso> <organisationId>
+// Usage: node scripts/seed-prns.mjs <seed|remove> <dp|cso> <organisationId> [awaiting|year-filter]
 
 import { execFileSync } from 'node:child_process'
-import { PRNS as fixtures } from '../data/prns.data.js'
+import { PRNS, YEAR_FILTER_PRNS } from '../data/prns.data.js'
 
 const CONTAINER = 'epr-local-environment-sqledge-1'
 const SQLCMD =
@@ -13,7 +13,9 @@ const SEED_COMMENT = 'journey-tests-seed'
 const SEED_CREATED_BY = 'journey-tests-seed'
 const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000'
 
-const [action, account, orgId] = process.argv.slice(2)
+const FIXTURE_SETS = { awaiting: PRNS, 'year-filter': YEAR_FILTER_PRNS }
+const [action, account, orgId, setName = 'awaiting'] = process.argv.slice(2)
+const fixtures = FIXTURE_SETS[setName] ?? {}
 
 if (
   !['seed', 'remove'].includes(action) ||
@@ -21,7 +23,7 @@ if (
   !/^[0-9a-f-]{36}$/i.test(orgId ?? '')
 ) {
   process.stderr.write(
-    'Usage: node scripts/seed-prns.mjs <seed|remove> <dp|cso> <organisationId>\n'
+    'Usage: node scripts/seed-prns.mjs <seed|remove> <dp|cso> <organisationId> [awaiting|year-filter]\n'
   )
   process.exit(1)
 }
