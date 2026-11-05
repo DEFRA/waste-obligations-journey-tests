@@ -3,6 +3,7 @@ import { logJourney, logJourneyStart } from '../utils/journey-log.js'
 import { LandingPage } from '../pages/landing-page.js'
 import { ChooseYearPage } from '../pages/choose-year-page.js'
 import { ObligationsPage } from '../pages/obligations-page.js'
+import { ComplianceRecordPage } from '../pages/compliance-record-page.js'
 import { MaterialCalculationPage } from '../pages/material-calculation-page.js'
 import { PrnsListPage } from '../pages/prns-list-page.js'
 import { PrnsCheckSelectionPage } from '../pages/prns-check-selection-page.js'
@@ -45,6 +46,9 @@ export const test = base.extend({
   },
   obligationsPage: async ({ page }, use) => {
     await use(new ObligationsPage(page))
+  },
+  complianceRecordPage: async ({ page }, use) => {
+    await use(new ComplianceRecordPage(page))
   },
   materialCalculationPage: async ({ page }, use) => {
     await use(new MaterialCalculationPage(page))

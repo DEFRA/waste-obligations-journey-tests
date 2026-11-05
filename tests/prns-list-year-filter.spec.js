@@ -9,7 +9,7 @@ import {
 } from '../utils/journey-entry-point.js'
 import { getJourneyYear } from '../utils/journey-year.js'
 import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
-import { getComplianceYear, getJourneyNow } from '../utils/journey-clock.js'
+import { getJourneyNow, getMaxSelectableYear } from '../utils/journey-clock.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const AUTH_DIR = path.join(__dirname, '..', 'playwright', '.auth')
@@ -18,8 +18,9 @@ const YEAR = getJourneyYear()
 const NEXT_YEAR = YEAR + 1
 const PAGE_SIZE = 100
 
-// The list's year switcher accepts the current compliance year plus one.
-const nextYearSelectable = NEXT_YEAR <= getComplianceYear(getJourneyNow()) + 1
+// The list's year switcher accepts the current compliance year, plus next year
+// only in December and January.
+const nextYearSelectable = NEXT_YEAR <= getMaxSelectableYear(getJourneyNow())
 const COUNT_YEARS = nextYearSelectable ? [YEAR, NEXT_YEAR] : [YEAR]
 
 // ENVIRONMENT=local seeds the notes these checks rely on; a deployed target
