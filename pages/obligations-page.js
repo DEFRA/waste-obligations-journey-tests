@@ -98,6 +98,25 @@ export class ObligationsPage extends BasePage {
     await expect(this.viewCertificateButton).toHaveCount(0)
   }
 
+  // A year with no data yet: the obligations are not calculated, and there is
+  // no certificate or statement card to submit.
+  async expectNotCalculatedContent(year) {
+    await expect(this.page.getByRole('main')).toContainText(
+      `Your ${year} recycling obligations have not been calculated yet.`
+    )
+    await expect(this.page.getByRole('main')).toContainText(
+      `you submit your packaging data for ${year - 1}`
+    )
+    await expect(this.submitCertificateButton).toHaveCount(0)
+    await expect(this.viewCertificateButton).toHaveCount(0)
+  }
+
+  async expectNoNotCalculatedContent() {
+    await expect(this.page.getByRole('main')).not.toContainText(
+      'have not been calculated yet.'
+    )
+  }
+
   async expectViewCardVisible() {
     await expect(this.viewCertificateButton).toBeVisible()
     await expect(this.submitCertificateButton).toHaveCount(0)

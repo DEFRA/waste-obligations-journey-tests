@@ -42,6 +42,17 @@ export function getComplianceYear(date = getJourneyNow()) {
   return month === 1 ? year - 1 : year
 }
 
+// Next year can be chosen only in December and January (UK time), as in the
+// Packaging service. An omitted date is the scenario clock.
+export function isFutureYearWindow(date = getJourneyNow()) {
+  const month = Number(
+    ukYearMonthFormat.formatToParts(date).find((part) => part.type === 'month')
+      .value
+  )
+
+  return month === 12 || month === 1
+}
+
 /**
  * Whether the waste-obligations API (which always runs on the real date) can
  * take a compliance declaration for the scenario's compliance year. It only

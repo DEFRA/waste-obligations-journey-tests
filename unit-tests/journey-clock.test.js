@@ -4,6 +4,7 @@ import {
   canSubmitDeclarations,
   getComplianceYear,
   getJourneyNow,
+  isFutureYearWindow,
   issueDateInComplianceYear
 } from '../utils/journey-clock.js'
 
@@ -84,4 +85,23 @@ test('in January, fixture issue dates stay in the previous compliance year', () 
 
   assert.ok(issued.startsWith('2026-'), issued)
   assert.ok(Date.parse(issued) < now.getTime(), issued)
+})
+
+test('next year can be chosen in December and January only', () => {
+  assert.equal(isFutureYearWindow(new Date('2026-11-30T23:00:00Z')), false)
+  assert.equal(isFutureYearWindow(new Date('2026-12-01T00:00:00Z')), true)
+  assert.equal(isFutureYearWindow(new Date('2027-01-31T12:00:00Z')), true)
+  assert.equal(isFutureYearWindow(new Date('2027-02-01T00:00:00Z')), false)
+})
+
+test('the window follows the scenario clock when no date is given', () => {
+  const before = process.env.JOURNEY_NOW
+
+  process.env.JOURNEY_NOW = '2026-12-15T12:00:00Z'
+  try {
+    assert.equal(isFutureYearWindow(), true)
+  } finally {
+    if (before === undefined) delete process.env.JOURNEY_NOW
+    else process.env.JOURNEY_NOW = before
+  }
 })
