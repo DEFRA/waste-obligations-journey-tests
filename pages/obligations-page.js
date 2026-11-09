@@ -111,6 +111,49 @@ export class ObligationsPage extends BasePage {
     await expect(this.viewCertificateButton).toHaveCount(0)
   }
 
+  // AC1 of MO-475: a year with no POM data shows "No data yet" against every
+  // material and Totals. The obligation and outstanding tonnages cannot be worked
+  // out yet (a dash, or "Not available yet"); the awaiting and accepted tonnages are whole
+  // numbers that PRNs already issued for the year can make more than 0.
+  async expectNoDataTable() {
+    const table = this.page.getByRole('table', {
+      name: 'Your recycling obligations progress'
+    })
+    await expect(table).toBeVisible()
+    const rows = await this.readGovukTable(table)
+
+    expect(rows.length).toBeGreaterThan(0)
+    for (const row of rows) {
+      const [material, toMeet, awaiting, accepted, outstanding, status] =
+        Object.values(row)
+
+      expect(
+        { toMeet, awaiting, accepted, outstanding, status },
+        material
+      ).toMatchObject({
+        toMeet: expect.stringMatching(/^(-|Not available yet)$/),
+        awaiting: expect.stringMatching(/^\d[\d,]*$/),
+        accepted: expect.stringMatching(/^\d[\d,]*$/),
+        outstanding: expect.stringMatching(/^(-|Not available yet)$/),
+        status: 'No data yet'
+      })
+    }
+  }
+
+  // The year-dependent content of the page: the deadline text, the "What to do
+  // next" heading and the accept or reject link.
+  async expectYearContent(year, copy) {
+    await expect(this.page.getByRole('main')).toContainText(
+      copy.deadline(year + 1)
+    )
+    await expect(
+      this.page.getByRole('heading', { name: copy.reviewHeading(year) })
+    ).toBeVisible()
+    await expect(
+      this.page.getByRole('link', { name: copy.acceptRejectLink(year) })
+    ).toBeVisible()
+  }
+
   async expectNoNotCalculatedContent() {
     await expect(this.page.getByRole('main')).not.toContainText(
       'have not been calculated yet.'

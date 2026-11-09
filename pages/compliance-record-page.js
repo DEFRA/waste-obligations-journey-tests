@@ -35,4 +35,39 @@ export class ComplianceRecordPage extends BasePage {
   async expectRegulatorContact() {
     await expect(this.regulatorEmailLink).toBeVisible()
   }
+
+  downloadLink(year) {
+    return this.main.getByRole('link', {
+      name: `Download a list of your PRNs and PERNs for ${year} (CSV)`
+    })
+  }
+
+  // What is wrong with the download response, or an empty list. An
+  // organisation with no PRNs for the year gets the empty page, not a file.
+  async findDownloadProblems(response, year) {
+    const contentType = response.headers()['content-type'] ?? ''
+    const disposition = response.headers()['content-disposition'] ?? ''
+    const body = await response.text()
+    const [header] = body.split('\r\n')
+
+    if (!contentType.includes('text/csv')) {
+      return body.includes(
+        `You have no PRNs or PERNs issued to your ${year} recycling obligations.`
+      )
+        ? []
+        : [`neither a CSV nor the empty page was returned (${contentType})`]
+    }
+
+    return [
+      disposition.includes(`attachment; filename="PRNDetail_${year}.csv"`)
+        ? null
+        : `Content-Disposition was "${disposition}"`,
+      header.startsWith('PRN or PERN number,')
+        ? null
+        : `header row was "${header}"`,
+      header.split(',').includes('Obligation year')
+        ? null
+        : `no Obligation year column in "${header}"`
+    ].filter(Boolean)
+  }
 }
