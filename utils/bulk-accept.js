@@ -4,8 +4,8 @@ export function obligationMaterial(material) {
   return material === 'Fibre' ? 'Paper' : material
 }
 
-// How the obligations table names each obligation material. The confirmation
-// tiles use the same names in lower case.
+// How the confirmation's tiles name each obligation material (in lower case in
+// their description).
 export const OBLIGATION_MATERIAL_LABELS = Object.freeze({
   Aluminium: 'Aluminium',
   Glass: 'Remaining glass',
@@ -14,6 +14,13 @@ export const OBLIGATION_MATERIAL_LABELS = Object.freeze({
   Plastic: 'Plastic',
   Steel: 'Steel',
   Wood: 'Wood'
+})
+
+// How the Manage obligations table names each material's row. It spells glass
+// re-melt with a hyphen, which the confirmation's tiles do not.
+export const OBLIGATION_TABLE_ROW_LABELS = Object.freeze({
+  ...OBLIGATION_MATERIAL_LABELS,
+  GlassRemelt: 'Glass re-melt'
 })
 
 // The rows of the obligations table that add up both glass materials, and
@@ -86,7 +93,7 @@ export function expectedObligationChanges(prns) {
   }
 
   for (const [material, tonnage] of totalsByObligationMaterial(prns)) {
-    add(OBLIGATION_MATERIAL_LABELS[material], tonnage)
+    add(OBLIGATION_TABLE_ROW_LABELS[material], tonnage)
     if (material === 'Glass' || material === 'GlassRemelt') {
       add(GLASS_ROW, tonnage)
     }
