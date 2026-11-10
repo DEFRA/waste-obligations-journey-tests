@@ -25,3 +25,28 @@ export async function submitB2CCredentialsIfNeeded(page, email, password) {
     await submitB2CCredentials(page, email, password)
   }
 }
+
+// Sign in from the start page the entry point redirects to. The real B2C shows
+// an email and password form (or the app's error page with a "Sign in" link);
+// the LOCAL stack's mock B2C lists the seeded users instead, one "Sign in"
+// button each, in a cell with the user's email.
+export async function signInThroughB2C(page, email, password) {
+  const mockUser = page
+    .getByRole('cell')
+    .filter({ hasText: email })
+    .getByRole('button', { name: /^sign in$/i })
+
+  await page
+    .getByLabel(/email/i)
+    .or(page.getByRole('link', { name: /sign in/i }))
+    .or(mockUser)
+    .first()
+    .waitFor({ timeout: 60_000 })
+
+  if (await mockUser.isVisible()) {
+    await mockUser.click()
+    return
+  }
+
+  await submitB2CCredentials(page, email, password)
+}

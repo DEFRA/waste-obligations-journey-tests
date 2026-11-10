@@ -2,6 +2,7 @@ import { test as setup, expect } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { requireEnv } from '../utils/env.js'
+import { signInThroughB2C } from '../utils/login.js'
 import {
   getJourneyStartPath,
   usesPackagingEntryPoint
@@ -26,24 +27,7 @@ setup('authenticate', async ({ page }) => {
 
   await page.goto(getJourneyStartPath('dp'), { timeout: 60_000 })
 
-  // The B2C flow can resolve in two ways:
-  //   - straight to the login form on b2clogin.com
-  //   - back to /report-data/error (e.g. UX004) requiring a "Sign in" click
-  // Wait for either, then branch on URL.
-  await page
-    .getByLabel(/email/i)
-    .or(page.getByRole('link', { name: /sign in/i }))
-    .first()
-    .waitFor({ timeout: 60_000 })
-
-  // eslint-disable-next-line playwright/no-conditional-in-test -- B2C sometimes routes via the app's error page
-  if (page.url().includes('error')) {
-    await page.getByRole('link', { name: /sign in/i }).click()
-  }
-
-  await page.getByLabel(/email/i).fill(email)
-  await page.getByLabel(/password/i).fill(password)
-  await page.getByRole('button', { name: /sign in|continue|next/i }).click()
+  await signInThroughB2C(page, email, password)
 
   await expect(
     page.getByRole('heading', { name: LANDING_HEADING })
