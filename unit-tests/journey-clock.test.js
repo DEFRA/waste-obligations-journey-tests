@@ -6,7 +6,8 @@ import {
   getJourneyNow,
   getMaxSelectableYear,
   isFutureYearWindow,
-  issueDateInComplianceYear
+  issueDateInComplianceYear,
+  inDecemberWasteWindow
 } from '../utils/journey-clock.js'
 
 const realNow = () => new Date('2026-10-19T12:00:00Z')
@@ -113,4 +114,24 @@ test('the latest selectable year is next year only in December and January', () 
   assert.equal(getMaxSelectableYear(new Date('2027-01-15T12:00:00Z')), 2027)
   assert.equal(getMaxSelectableYear(new Date('2027-02-01T12:00:00Z')), 2027)
   assert.equal(getMaxSelectableYear(new Date('2027-11-05T12:00:00Z')), 2027)
+})
+
+test('the December waste window runs from 1 December to the end of January', () => {
+  const at = (iso) => new Date(iso)
+
+  assert.equal(inDecemberWasteWindow(2026, at('2026-11-30T23:59:59Z')), false)
+  assert.equal(inDecemberWasteWindow(2026, at('2026-12-01T00:00:00Z')), true)
+  assert.equal(inDecemberWasteWindow(2026, at('2026-12-15T12:00:00Z')), true)
+  assert.equal(inDecemberWasteWindow(2026, at('2027-01-31T23:59:59Z')), true)
+  assert.equal(inDecemberWasteWindow(2026, at('2027-02-01T00:00:00Z')), false)
+})
+
+test('the December waste window defaults to the scenario clock', () => {
+  assert.equal(
+    inDecemberWasteWindow(
+      2026,
+      getJourneyNow({ JOURNEY_NOW: '2026-12-15T09:00:00Z' })
+    ),
+    true
+  )
 })
