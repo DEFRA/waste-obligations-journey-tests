@@ -124,12 +124,21 @@ runs:
       if: steps.service-refs.outputs.waste-obligations != '' || steps.service-refs.outputs.waste-obligations-frontend != '' || steps.service-refs.outputs.packaging-waste-proxy != ''
       shell: bash
       run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Build selected service images in parallel" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
         set -euo pipefail
+        timed_command() (
+          label=$1
+          shift
+          SECONDS=0
+          trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "$label" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
+          "$@"
+        )
         build_pids=()
         build_names=()
 
         if [ -n "$WASTE_OBLIGATIONS_REF" ]; then
-          docker buildx build \
+          timed_command "Build backend image" docker buildx build \
             --cache-from type=gha,scope=waste-obligations \
             --cache-to type=gha,mode=max,scope=waste-obligations \
             --load \
@@ -140,7 +149,7 @@ runs:
         fi
 
         if [ -n "$WASTE_OBLIGATIONS_FRONTEND_REF" ]; then
-          docker buildx build \
+          timed_command "Build frontend image" docker buildx build \
             --cache-from type=gha,scope=waste-obligations-frontend \
             --cache-to type=gha,mode=max,scope=waste-obligations-frontend \
             --load \
@@ -152,7 +161,7 @@ runs:
         fi
 
         if [ -n "$PACKAGING_WASTE_PROXY_REF" ]; then
-          docker buildx build \
+          timed_command "Build proxy image" docker buildx build \
             --cache-from type=gha,scope=packaging-waste-proxy \
             --cache-to type=gha,mode=max,scope=packaging-waste-proxy \
             --load \
@@ -180,12 +189,18 @@ runs:
     - name: Install journey-test dependencies
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
-      run: npm ci
+      run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Install journey-test dependencies" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
+        npm ci
 
     - name: Check journey helpers
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
-      run: npm run test:unit
+      run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Check journey helpers" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
+        npm run test:unit
 
     - name: Cache Playwright browsers
       uses: actions/cache@v6
@@ -197,6 +212,8 @@ runs:
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
       run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Prepare dedicated CI stack" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
         set -euo pipefail
         : "${WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET:?WASTE_OBLIGATIONS_FRONTEND_B2C_CLIENT_SECRET must be set}"
         : "${GOVUK_NOTIFY_API_KEY:?GOVUK_NOTIFY_API_KEY must be set}"
@@ -216,6 +233,8 @@ runs:
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
       run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Validate dedicated CI stack configuration" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
         docker compose \
           -f ci/compose.yml \
           -f "$WASTE_OBLIGATIONS_SOURCE_DIR/compose/journey-tests.compose.yml" \
@@ -226,8 +245,17 @@ runs:
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
       run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Install Playwright Chromium while starting dedicated CI stack" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
         set -euo pipefail
-        docker compose \
+        timed_command() (
+          label=$1
+          shift
+          SECONDS=0
+          trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "$label" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
+          "$@"
+        )
+        timed_command "Start journey stack" docker compose \
           --project-name waste-obligations-journey-tests \
           -f ci/compose.yml \
           -f "$WASTE_OBLIGATIONS_SOURCE_DIR/compose/journey-tests.compose.yml" \
@@ -236,7 +264,7 @@ runs:
         stack_pid=$!
 
         browser_status=0
-        npx playwright install --with-deps chromium || browser_status=$?
+        timed_command "Install Playwright Chromium" npx playwright install --with-deps chromium || browser_status=$?
 
         stack_status=0
         wait "$stack_pid" || stack_status=$?
@@ -254,6 +282,8 @@ runs:
     - name: Confirm local services are reachable
       shell: bash
       run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Confirm local services are reachable" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
         curl --fail --retry 12 --retry-delay 5 http://localhost:8007/health
         curl --fail --insecure --retry 12 --retry-delay 5 https://localhost:8015/health
 
@@ -282,7 +312,10 @@ runs:
         FEATURE_SHOW_PRNS_ON_CDP: 'true'
         FEATURE_MANAGE_OBLIGATIONS: 'true'
         FEATURE_ANALYTICS: 'true'
-      run: PROFILE=e2e npx playwright test --project=${{ inputs.project }} --output=test-results/e2e
+      run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Run e2e journeys" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
+        PROFILE=e2e npx playwright test --project=${{ inputs.project }} --output=test-results/e2e
 
     - name: Run accessibility journeys
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
@@ -306,7 +339,10 @@ runs:
         FEATURE_SHOW_PRNS_ON_CDP: 'true'
         FEATURE_MANAGE_OBLIGATIONS: 'true'
         FEATURE_ANALYTICS: 'true'
-      run: PROFILE=accessibility npx playwright test --project=${{ inputs.project }} --output=test-results/accessibility
+      run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Run accessibility journeys" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
+        PROFILE=accessibility npx playwright test --project=${{ inputs.project }} --output=test-results/accessibility
 
     - name: Run security journeys
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
@@ -330,19 +366,27 @@ runs:
         FEATURE_SHOW_PRNS_ON_CDP: 'true'
         FEATURE_MANAGE_OBLIGATIONS: 'true'
         FEATURE_ANALYTICS: 'true'
-      run: ./ci/run-security-profile.sh ${{ inputs.project }}
+      run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Run security journeys" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
+        ./ci/run-security-profile.sh ${{ inputs.project }}
 
     - name: Generate Allure report
       if: always()
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
-      run: npm run report
+      run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Generate Allure report" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
+        npm run report
 
     - name: Collect dedicated CI stack logs
       if: always()
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
       run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Collect dedicated CI stack logs" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
         docker compose \
           --project-name waste-obligations-journey-tests \
           -f ci/compose.yml \
@@ -369,6 +413,8 @@ runs:
       working-directory: ${{ env.JOURNEY_TESTS_PATH }}
       shell: bash
       run: |
+        SECONDS=0
+        trap 'status=$?; printf -- "- Journey timing: %s: %ss (exit %s)\n" "Stop dedicated CI stack" "$SECONDS" "$status" >> "$GITHUB_STEP_SUMMARY" || true; exit "$status"' EXIT
         docker compose \
           --project-name waste-obligations-journey-tests \
           -f ci/compose.yml \
