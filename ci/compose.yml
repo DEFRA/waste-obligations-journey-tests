@@ -220,6 +220,7 @@ services:
       AWS_EMF_ENABLED: "false"
       PORT: 8085
       ReverseProxy__Clusters__ManageRecyclingObligations__Destinations__Primary__Address: http://waste-obligations-frontend:3000/
+      ReverseProxy__Clusters__WasteSubmitRegPackaging__Destinations__Primary__Address: http://wiremock:80/
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8085/health"]
       interval: 2s
