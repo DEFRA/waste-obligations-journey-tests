@@ -46,16 +46,22 @@ A check after the push (for example in CI) is too late.
 
 Settings → Advanced Security → Secret Protection → Custom patterns → **New pattern**:
 
-| Field          | Value                                                                           |
-| -------------- | ------------------------------------------------------------------------------- |
-| Pattern name   | `Hardcoded password value`                                                      |
-| Secret format  | `[^"'\s$<{]{6,}`                                                                |
-| Before secret  | `([Pp]assword\|PASSWORD\|[Pp]asswd\|PASSWD\|[Pp]wd\|PWD)["']?\s*[:=]\s*["']`    |
-| After secret   | `["']`                                                                          |
-| Must not match | `^(REDACTED\|[Cc]hangeme\|[Ee]xample\|[Pp]laceholder\|x{3,})$` and `-password$` |
+| Field          | Value                                                                                                                                           |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pattern name   | `Hardcoded password value`                                                                                                                      |
+| Secret format  | `[^"'\s]{6,}`                                                                                                                                   |
+| Before secret  | `([Pp]assword\|PASSWORD\|[Pp]asswd\|PASSWD\|[Pp]wd\|PWD)["']?\s*[:=]\s*["']`                                                                    |
+| After secret   | `["']`                                                                                                                                          |
+| Must not match | `^\$\{[^}]*\}$`, `^\{\{[^}]*\}\}$`, `^<[^>]*>$`, `^(REDACTED\|[Cc]hangeme\|[Ee]xample\|[Pp]laceholder\|x{3,}\|\*{3,})$` and `^[a-z]+-password$` |
 
-Test it against `password: 'example123'` (should match) and `password: 'REDACTED'` (should not), save it, then turn on
-**push protection** for the pattern.
+Each "must not match" expression is checked against the whole value, so a placeholder or template is allowed but a
+password that only contains `$`, `xxx` or `example` is not. Test the pattern before saving it:
+
+- should match: `password: 'example123'` <!-- gitleaks:allow -->
+- should match: `password: 'hello$hello'` <!-- gitleaks:allow -->
+- should not match: `password: 'REDACTED'` and `password: '${PASSWORD}'`
+
+Save it, then turn on **push protection** for the pattern.
 
 ### Setup
 
