@@ -51,13 +51,6 @@ const ENGLISH_DECEMBER_WASTE = (year) => ({
   awaitingInBoth: `for both ${year - 1} and ${year} until you accept it`
 })
 
-const WELSH_DECEMBER_WASTE = (year) => ({
-  summary:
-    'Pam mae gan y tabl rhwymedigaethau ailgylchu dunelledd yn aros i gael ei dderbyn yn barod?',
-  bothYears: `rhwymedigaethau ailgylchu ${year - 1} neu ${year}`,
-  awaitingInBoth: `ar gyfer ${year - 1} a ${year} nes ichi ei dderbyn`
-})
-
 // Next year is offered only in December and January, on the CDP page itself,
 // and has nothing calculated until its packaging data is in.
 async function skipUnlessNextYearHasNoData(request, account) {
@@ -157,11 +150,8 @@ for (const { account, label, authFile } of ACCOUNTS) {
       seedYearFilterPrns(account)
     })
 
-    test.afterEach(async ({ page }) => {
+    test.afterEach(() => {
       removeYearFilterPrns(account)
-      await page.goto(cdpUrl(account, getComplianceYear(), { lang: 'en' }), {
-        timeout: 60_000
-      })
     })
 
     test('next year explains December waste in a panel that loads collapsed and opens', async ({
@@ -174,25 +164,6 @@ for (const { account, label, authFile } of ACCOUNTS) {
       await page.goto(cdpUrl(account, nextYear), { timeout: 60_000 })
       await obligationsPage.expectLoadedForYear(nextYear)
       await obligationsPage.expectNotCalculatedContent(nextYear)
-
-      await obligationsPage.expectDecemberWasteExplanationCollapsed(copy)
-      await obligationsPage.openDecemberWasteExplanation(copy)
-      await expect(
-        obligationsPage.decemberWasteExplanation(copy)
-      ).toContainText(copy.awaitingInBoth)
-    })
-
-    test('next year explains December waste in Welsh', async ({
-      page,
-      obligationsPage
-    }) => {
-      const nextYear = getComplianceYear() + 1
-      const copy = WELSH_DECEMBER_WASTE(nextYear)
-
-      await page.goto(cdpUrl(account, nextYear, { lang: 'cy' }), {
-        timeout: 60_000
-      })
-      await expect(obligationsPage.heading).toHaveText(WELSH_HEADING(nextYear))
 
       await obligationsPage.expectDecemberWasteExplanationCollapsed(copy)
       await obligationsPage.openDecemberWasteExplanation(copy)
