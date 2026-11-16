@@ -147,11 +147,12 @@ for (const { account, label, authFile } of ACCOUNTS) {
 
     test.beforeEach(async ({ request }) => {
       await skipUnlessNextYearHasNoData(request, account)
-      // Local seeds an awaiting December waste note for this year; a deployed
-      // target can't guarantee one.
+      // An awaiting December waste note for this year: LOCAL seeds it into the
+      // database, and CI's WireMock (also ENVIRONMENT=local) lists it for next
+      // year. A deployed target can't guarantee one.
       skipUnlessEnabled(
         process.env.ENVIRONMENT === 'local',
-        'The awaiting December waste note is seeded only on LOCAL'
+        'The awaiting December waste note is provided only on LOCAL and CI'
       )
       seedYearFilterPrns(account)
     })
