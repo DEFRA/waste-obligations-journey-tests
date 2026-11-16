@@ -1,8 +1,17 @@
-# Secret scan of the staged changes (skipped with a warning when gitleaks isn't installed: brew install gitleaks).
-if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks protect --staged --no-banner --config .gitleaks.toml || exit 1
+# Secret scan of the staged changes, before anything can be pushed: in a public repo a pushed secret is already
+# exposed, so this has to run here, not in CI. Requires gitleaks (brew install gitleaks); the commit fails without
+# it. SKIP_GITLEAKS=1 skips the scan for one commit, deliberately.
+if [ "${SKIP_GITLEAKS:-}" = "1" ]; then
+  echo "pre-commit: SKIP_GITLEAKS=1 - secret scan skipped for this commit" >&2
+elif command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner --redact --config .gitleaks.toml || {
+    echo "pre-commit: gitleaks found a possible secret in the staged changes - remove it before committing" >&2
+    exit 1
+  }
 else
-  echo "pre-commit: gitleaks not installed - skipping the secret scan (brew install gitleaks)" >&2
+  echo "pre-commit: gitleaks is not installed, so the secret scan can't run. Install it (brew install gitleaks)," >&2
+  echo "or set SKIP_GITLEAKS=1 to commit without the scan." >&2
+  exit 1
 fi
 
 npm run git:pre-commit-hook
