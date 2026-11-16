@@ -16,6 +16,10 @@ import {
   isFutureYearWindow
 } from '../utils/journey-clock.js'
 import { getOrgId, readObligations } from '../utils/waste-obligations-api.js'
+import {
+  removeYearFilterPrns,
+  seedYearFilterPrns
+} from '../utils/awaiting-prns.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const AUTH_DIR = path.join(__dirname, '..', 'playwright', '.auth')
@@ -40,6 +44,45 @@ const WELSH = {
 const WELSH_HEADING = (year) =>
   new RegExp(`rhwymedigaethau ailgylchu ar gyfer ${year}`, 'i')
 
+const ENGLISH_DECEMBER_WASTE = (year) => ({
+  summary:
+    'Why does the recycling obligations table already have tonnage awaiting acceptance?',
+  bothYears: `can be accepted towards either your ${year - 1} or ${year} recycling obligations`,
+  awaitingInBoth: `for both ${year - 1} and ${year} until you accept it`
+})
+
+const WELSH_DECEMBER_WASTE = (year) => ({
+  summary:
+    'Pam mae gan y tabl rhwymedigaethau ailgylchu dunelledd yn aros i gael ei dderbyn yn barod?',
+  bothYears: `rhwymedigaethau ailgylchu ${year - 1} neu ${year}`,
+  awaitingInBoth: `ar gyfer ${year - 1} a ${year} nes ichi ei dderbyn`
+})
+
+// Next year is offered only in December and January, on the CDP page itself,
+// and has nothing calculated until its packaging data is in.
+async function skipUnlessNextYearHasNoData(request, account) {
+  skipUnlessFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)
+  skipUnlessEnabled(
+    !usesPackagingEntryPoint(),
+    'The future year is opened on the CDP obligations page directly'
+  )
+  skipUnlessEnabled(
+    isFutureYearWindow(),
+    'Next year can be chosen only in December and January: run with the frontend clock and JOURNEY_NOW set to a date in that window'
+  )
+
+  const nextYear = getComplianceYear() + 1
+  const obligations = await readObligations(
+    request,
+    getOrgId(account),
+    nextYear
+  )
+  skipUnlessEnabled(
+    obligations.every((o) => o.status === 'NoDataYet'),
+    `The organisation already has data for ${nextYear}`
+  )
+}
+
 function cdpUrl(account, year, extra = {}) {
   const url = new URL(
     getObligationsUrl(account, year).toString(),
@@ -56,26 +99,7 @@ for (const { account, label, authFile } of ACCOUNTS) {
     test.use({ storageState: path.join(AUTH_DIR, authFile) })
 
     test.beforeEach(async ({ request }) => {
-      skipUnlessFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)
-      skipUnlessEnabled(
-        !usesPackagingEntryPoint(),
-        'The future year is opened on the CDP obligations page directly'
-      )
-      skipUnlessEnabled(
-        isFutureYearWindow(),
-        'Next year can be chosen only in December and January: run with the frontend clock and JOURNEY_NOW set to a date in that window'
-      )
-
-      const nextYear = getComplianceYear() + 1
-      const obligations = await readObligations(
-        request,
-        getOrgId(account),
-        nextYear
-      )
-      skipUnlessEnabled(
-        obligations.every((o) => o.status === 'NoDataYet'),
-        `The organisation already has data for ${nextYear}`
-      )
+      await skipUnlessNextYearHasNoData(request, account)
     })
 
     // The frontend keeps the chosen language in the session, and every test
@@ -115,6 +139,65 @@ for (const { account, label, authFile } of ACCOUNTS) {
       await expect(page.getByRole('main')).not.toContainText(
         'recycling obligations have not been calculated yet'
       )
+    })
+  })
+
+  test.describe(`December waste explanation for a future year - ${label}`, () => {
+    test.use({ storageState: path.join(AUTH_DIR, authFile) })
+
+    test.beforeEach(async ({ request }) => {
+      await skipUnlessNextYearHasNoData(request, account)
+      // Local seeds an awaiting December waste note for this year; a deployed
+      // target can't guarantee one.
+      skipUnlessEnabled(
+        process.env.ENVIRONMENT === 'local',
+        'The awaiting December waste note is seeded only on LOCAL'
+      )
+      seedYearFilterPrns(account)
+    })
+
+    test.afterEach(async ({ page }) => {
+      removeYearFilterPrns(account)
+      await page.goto(cdpUrl(account, getComplianceYear(), { lang: 'en' }), {
+        timeout: 60_000
+      })
+    })
+
+    test('next year explains December waste in a panel that loads collapsed and opens', async ({
+      page,
+      obligationsPage
+    }) => {
+      const nextYear = getComplianceYear() + 1
+      const copy = ENGLISH_DECEMBER_WASTE(nextYear)
+
+      await page.goto(cdpUrl(account, nextYear), { timeout: 60_000 })
+      await obligationsPage.expectLoadedForYear(nextYear)
+      await obligationsPage.expectNotCalculatedContent(nextYear)
+
+      await obligationsPage.expectDecemberWasteExplanationCollapsed(copy)
+      await obligationsPage.openDecemberWasteExplanation(copy)
+      await expect(
+        obligationsPage.decemberWasteExplanation(copy)
+      ).toContainText(copy.awaitingInBoth)
+    })
+
+    test('next year explains December waste in Welsh', async ({
+      page,
+      obligationsPage
+    }) => {
+      const nextYear = getComplianceYear() + 1
+      const copy = WELSH_DECEMBER_WASTE(nextYear)
+
+      await page.goto(cdpUrl(account, nextYear, { lang: 'cy' }), {
+        timeout: 60_000
+      })
+      await expect(obligationsPage.heading).toHaveText(WELSH_HEADING(nextYear))
+
+      await obligationsPage.expectDecemberWasteExplanationCollapsed(copy)
+      await obligationsPage.openDecemberWasteExplanation(copy)
+      await expect(
+        obligationsPage.decemberWasteExplanation(copy)
+      ).toContainText(copy.awaitingInBoth)
     })
   })
 

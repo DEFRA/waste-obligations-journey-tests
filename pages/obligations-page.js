@@ -154,6 +154,32 @@ export class ObligationsPage extends BasePage {
     ).toBeVisible()
   }
 
+  // Next year's page explains, in a details panel below the not-calculated
+  // content, why tonnage is already awaiting acceptance: a December waste note
+  // that can go to either year counts as awaiting in both.
+  decemberWasteExplanation(copy) {
+    return this.page
+      .getByRole('main')
+      .locator('details')
+      .filter({ has: this.page.getByText(copy.summary, { exact: true }) })
+  }
+
+  async expectDecemberWasteExplanationCollapsed(copy) {
+    const details = this.decemberWasteExplanation(copy)
+
+    await expect(details).toHaveCount(1)
+    await expect(details).not.toHaveAttribute('open')
+    await expect(details.getByText(copy.bothYears)).toBeHidden()
+  }
+
+  async openDecemberWasteExplanation(copy) {
+    const details = this.decemberWasteExplanation(copy)
+
+    await details.getByText(copy.summary, { exact: true }).click()
+    await expect(details).toHaveAttribute('open')
+    await expect(details.getByText(copy.bothYears)).toBeVisible()
+  }
+
   async expectNoNotCalculatedContent() {
     await expect(this.page.getByRole('main')).not.toContainText(
       'have not been calculated yet.'
