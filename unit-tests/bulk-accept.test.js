@@ -70,7 +70,7 @@ test('moves each row, the Glass row and Totals by the accepted tonnage', () => {
     {
       'Paper, board or fibre-based composite material': 50,
       'Remaining glass': 75,
-      'Glass remelt': 220,
+      'Glass re-melt': 220,
       Glass: 295,
       Totals: 345
     }
