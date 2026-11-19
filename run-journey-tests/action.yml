@@ -401,12 +401,12 @@ runs:
         name: waste-obligations-journeys-${{ inputs.project }}
         path: |
           ${{ env.JOURNEY_TESTS_PATH }}/test-results/
-          ${{ env.JOURNEY_TESTS_PATH }}/allure-results/
           ${{ env.JOURNEY_TESTS_PATH }}/allure-report/
           ${{ env.JOURNEY_TESTS_PATH }}/reports/
           ${{ env.JOURNEY_TESTS_PATH }}/security-report/
           ${{ env.JOURNEY_TESTS_PATH }}/docker-compose.log
         if-no-files-found: warn
+        retention-days: 7
 
     - name: Stop dedicated CI stack
       if: always()
