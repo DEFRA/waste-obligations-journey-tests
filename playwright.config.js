@@ -104,9 +104,12 @@ export default defineConfig({
     headless: true,
     baseURL,
     ignoreHTTPSErrors: true,
-    trace: 'on',
+    // Keep traces and videos only for failed tests: recording every passing
+    // test made each run's artefacts several hundred MB. The local config
+    // (playwright.local.config.js) still records everything for evidence.
+    trace: 'retain-on-failure',
     screenshot: { mode: 'only-on-failure', fullPage: true },
-    video: 'on',
+    video: 'retain-on-failure',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     viewport: { width: 1280, height: 720 },
@@ -118,8 +121,7 @@ export default defineConfig({
     {
       name: 'setup',
       testDir: './auth',
-      testMatch: /.*\.setup\.js/,
-      use: { video: 'on' }
+      testMatch: /.*\.setup\.js/
     },
     {
       name: 'chrome-mac',
