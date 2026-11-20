@@ -279,6 +279,13 @@ export const ACCEPT_JOURNEY_PRN_NUMBERS = Object.freeze({
   cso: Object.freeze(['PRN459', 'PRN460', 'PRN461', 'PERN458'])
 })
 
+// The seeded note each account's reject journey rejects. None is one the accept
+// journey selects, so the two journeys never change the same note.
+export const REJECT_JOURNEY_PRN_NUMBERS = Object.freeze({
+  dp: 'PRN123',
+  cso: 'PRN456'
+})
+
 // December waste notes for the year-filter journeys (MO-687), seeded and removed by those specs only so the
 // other PRN journeys keep their lists. A note issued in December of its obligation year can be accepted into that
 // year or the next, depending on the date; the list and the obligations count must agree on both.

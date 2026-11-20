@@ -3,15 +3,26 @@ import {
   expectSeededOnLocal,
   skipUnlessPrnsConfigured
 } from '../utils/environment-features.js'
-import { getOrgId, listAwaitingPrns } from '../utils/waste-obligations-api.js'
+import {
+  getOrgId,
+  listAwaitingPrns,
+  listRejectedPrns
+} from '../utils/waste-obligations-api.js'
 import { noteType, PRN_ACCOUNTS } from '../utils/prn-selection.js'
-import { resetAwaitingPrns, seedAwaitingPrns } from '../utils/awaiting-prns.js'
+import {
+  resetAwaitingPrns,
+  seedAwaitingPrns,
+  seedsOwnPrns
+} from '../utils/awaiting-prns.js'
+import { REJECT_JOURNEY_PRN_NUMBERS } from '../data/prns.data.js'
 
-// Opens an awaiting note, asks to reject it, and answers "No, go back", so the
-// journey never changes PRN state. Answering "Yes, reject" is covered by the
-// frontend integration journeys, which own an isolated WireMock scenario.
-// Each account opens a different type, so every run covers both the PRN and
-// the PERN wording.
+// Opens an awaiting note and asks to reject it. The first journey answers
+// "No, go back", so it never changes PRN state and runs everywhere. The second
+// answers "Yes" and rejects a note, so it runs only where this run seeds its
+// own notes and removes them afterwards (the local stack); elsewhere the
+// frontend integration journeys cover it with an isolated WireMock scenario.
+// Each account opens a different type, so the "No" journey covers both the PRN
+// and the PERN wording.
 for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
   test.describe(`Reject ${prnType} question (${label})`, () => {
     test.use({ storageState })
@@ -70,6 +81,40 @@ for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
       await test.step(`the ${prnType} is still awaiting acceptance`, async () => {
         const awaiting = await listAwaitingPrns(request, getOrgId(account))
         expect(awaiting.map((candidate) => candidate.id)).toContain(prn.id)
+      })
+    })
+
+    test('rejects a seeded note after Yes, reject and shows the confirmation', async ({
+      request,
+      prnPage,
+      prnConfirmRejectPage
+    }) => {
+      skipUnlessPrnsConfigured()
+      test.skip(
+        !seedsOwnPrns(),
+        'Rejecting changes PRN data, so it runs only where the run seeds and removes its own notes.'
+      )
+
+      const number = REJECT_JOURNEY_PRN_NUMBERS[account]
+
+      const prn = await test.step(`read seeded note ${number}`, async () => {
+        const prns = await listAwaitingPrns(request, getOrgId(account))
+        return prns.find((candidate) => candidate.number === number)
+      })
+
+      expectSeededOnLocal(prn, `the seeded note ${number}`)
+
+      await test.step(`reject ${number} through Yes, reject and Continue`, async () => {
+        await prnPage.goto(account, prn)
+        await prnPage.rejectButton(prn).click()
+        await prnConfirmRejectPage.expectLoaded(prn)
+        await prnConfirmRejectPage.reject(prn)
+        await prnConfirmRejectPage.expectRejectionConfirmation(prn)
+      })
+
+      await test.step(`${number} is now rejected`, async () => {
+        const rejected = await listRejectedPrns(request, getOrgId(account))
+        expect(rejected.map((candidate) => candidate.id)).toContain(prn.id)
       })
     })
   })
