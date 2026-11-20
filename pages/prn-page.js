@@ -3,6 +3,7 @@ import { BasePage } from './base-page.js'
 import { getPrnUrl } from '../utils/journey-entry-point.js'
 import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
 import { noteType } from '../utils/prn-selection.js'
+import { confirmRejectOptionName } from './prn-confirm-reject-page.js'
 import {
   DOWNLOAD_PDF_BUTTON_NAME,
   REJECTED_STATUS_LABEL,
@@ -11,7 +12,6 @@ import {
 
 export { DOWNLOAD_PDF_BUTTON_NAME }
 export const CONFIRM_ACCEPT_BUTTON_NAME = 'Yes, accept'
-export const CONFIRM_REJECT_BUTTON_NAME = 'Yes, reject'
 export const DOWNLOAD_PDF_BUTTON_PREFIX = 'Download this'
 
 export function acceptThisNoteName(prn) {
@@ -22,15 +22,16 @@ export function rejectThisNoteName(prn) {
   return `Reject this ${noteType(prn)}`
 }
 
-// The action buttons and the download control. The download prefix covers the
-// awaiting and accepted wordings, which share one locator.
+// The action buttons, the reject question's yes option and the download
+// control. The download prefix covers the awaiting and accepted wordings,
+// which share one locator.
 export function labelsExcludedFromPdf(prn) {
   return [
     acceptThisNoteName(prn),
     rejectThisNoteName(prn),
     DOWNLOAD_PDF_BUTTON_PREFIX,
     CONFIRM_ACCEPT_BUTTON_NAME,
-    CONFIRM_REJECT_BUTTON_NAME
+    confirmRejectOptionName(prn)
   ]
 }
 
