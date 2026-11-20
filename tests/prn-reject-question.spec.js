@@ -46,7 +46,12 @@ for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
 
       const prn = await test.step(`read an awaiting ${prnType}`, async () => {
         const prns = await listAwaitingPrns(request, getOrgId(account))
-        return prns.find((candidate) => noteType(candidate) === prnType)
+        // Not the note the reject journey rejects, which may run alongside.
+        return prns.find(
+          (candidate) =>
+            noteType(candidate) === prnType &&
+            candidate.number !== REJECT_JOURNEY_PRN_NUMBERS[account]
+        )
       })
 
       expectSeededOnLocal(prn, `an awaiting ${prnType}`)

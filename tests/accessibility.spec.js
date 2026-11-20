@@ -33,6 +33,7 @@ import {
   openAuthenticatedProducerPrnsList
 } from '../utils/prns-list-navigation.js'
 import { resetAwaitingPrns, seedAwaitingPrns } from '../utils/awaiting-prns.js'
+import { REJECT_JOURNEY_PRN_NUMBERS } from '../data/prns.data.js'
 import {
   initialiseAccessibilityChecking,
   analyseAccessibility,
@@ -337,7 +338,12 @@ async function openRejectQuestion({
 }) {
   skipUnlessPrnsConfigured()
   const prns = await listAwaitingPrns(request, getOrgId(account))
-  const prn = prns.find((candidate) => noteType(candidate) === prnType)
+  // Not the note the reject journey rejects, which may run alongside.
+  const prn = prns.find(
+    (candidate) =>
+      noteType(candidate) === prnType &&
+      candidate.number !== REJECT_JOURNEY_PRN_NUMBERS[account]
+  )
   expectSeededOnLocal(prn, `an awaiting ${prnType}`)
   test.skip(
     !prn,
