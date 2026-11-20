@@ -33,6 +33,7 @@ import {
   openAuthenticatedProducerPrnsList
 } from '../utils/prns-list-navigation.js'
 import { resetAwaitingPrns, seedAwaitingPrns } from '../utils/awaiting-prns.js'
+import { REJECT_JOURNEY_PRN_NUMBERS } from '../data/prns.data.js'
 import {
   initialiseAccessibilityChecking,
   analyseAccessibility,
@@ -316,6 +317,91 @@ test.describe('Accessibility testing — Rejected PRN view', () => {
         await test.step(`${label} > Rejected ${prnType} view`, async () => {
           await openRejectedPrn({ account, prnType, request, prnPage })
           await analyseAccessibility(page, `${account}-prn-rejected-view`)
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
+    })
+  }
+})
+
+// Opens "Are you sure you want to reject this PRN?" from an awaiting note.
+// Nothing is rejected here.
+async function openRejectQuestion({
+  account,
+  prnType,
+  request,
+  prnPage,
+  prnConfirmRejectPage
+}) {
+  skipUnlessPrnsConfigured()
+  const prns = await listAwaitingPrns(request, getOrgId(account))
+  // Not the note the reject journey rejects, which may run alongside.
+  const prn = prns.find(
+    (candidate) =>
+      noteType(candidate) === prnType &&
+      candidate.number !== REJECT_JOURNEY_PRN_NUMBERS[account]
+  )
+  expectSeededOnLocal(prn, `an awaiting ${prnType}`)
+  test.skip(
+    !prn,
+    `No ${prnType} awaiting acceptance on this deployed environment; the reject question was not scanned.`
+  )
+
+  await prnPage.goto(account, prn)
+  await prnPage.rejectButton(prn).click()
+  await prnConfirmRejectPage.expectLoaded(prn)
+}
+
+test.describe('Accessibility testing — Reject PRN question', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('prn-confirm-reject')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      // Local stack only: seed the awaiting notes before the scan and remove them after.
+      test.beforeEach(() => {
+        seedAwaitingPrns(account)
+      })
+
+      test.afterEach(async ({ request }) => {
+        await resetAwaitingPrns(account, request)
+      })
+
+      test(`scan the reject ${prnType} question and its error`, async ({
+        page,
+        request,
+        prnPage,
+        prnConfirmRejectPage
+      }) => {
+        await test.step(`${label} > Reject ${prnType} question`, async () => {
+          await openRejectQuestion({
+            account,
+            prnType,
+            request,
+            prnPage,
+            prnConfirmRejectPage
+          })
+          await analyseAccessibility(page, `${account}-prn-confirm-reject`)
+        })
+
+        await test.step(`${label} > Reject ${prnType} question with no answer`, async () => {
+          await prnConfirmRejectPage.continueWithoutChoosing()
+          await prnConfirmRejectPage.expectChooseOptionError()
+          await analyseAccessibility(
+            page,
+            `${account}-prn-confirm-reject-error`
+          )
         })
 
         await test.step(`${label} > Assert no accessibility issues`, () => {

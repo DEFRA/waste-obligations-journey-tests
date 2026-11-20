@@ -36,6 +36,11 @@ export function removeYearFilterPrns(account) {
   runSeedScript('remove', account, 'year-filter')
 }
 
+// Whether this run seeds and removes its own PRN rows, so a journey may change a seeded note's status.
+export function seedsOwnPrns() {
+  return canSeedPrns
+}
+
 export function seedAwaitingPrns(account) {
   if (isCi || !isLocal) return
   runSeedScript('seed', account)
