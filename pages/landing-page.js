@@ -2,7 +2,8 @@ import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
 import {
   FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS,
-  isFeatureFlagEnabled
+  isFeatureFlagEnabled,
+  usesShowPrnsOnCdp
 } from '../utils/environment-features.js'
 import {
   getJourneyStartPath,
@@ -55,6 +56,13 @@ export class LandingPage extends BasePage {
       )
     }
     await this.manageRecyclingObligationsLink.click()
+    // With PRNs on CDP the tile opens the EPR Next Gen Choose a year page for the
+    // organisation or scheme; otherwise the Packaging one.
+    await expect(this.page).toHaveURL(
+      usesShowPrnsOnCdp()
+        ? /\/(producer|cso)\/[0-9a-f-]{36}\/obligations\/choose-year(\?|$)/
+        : /\/report-data\/choose-your-recycling-obligations-year(\?|$)/
+    )
   }
 
   // Follows FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS. A missing tile is a failure,

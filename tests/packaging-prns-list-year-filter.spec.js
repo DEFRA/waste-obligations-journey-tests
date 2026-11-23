@@ -37,9 +37,7 @@ async function chooseYear(page, year) {
 // The year other than YEAR that the page will apply: the next year once it is
 // selectable (the December window), otherwise the year before.
 async function chooseOtherYear(page) {
-  for (const candidate of [NEXT_YEAR, PREVIOUS_YEAR].filter(
-    hasObligationsPage
-  )) {
+  for (const candidate of [NEXT_YEAR, PREVIOUS_YEAR]) {
     if ((await chooseYear(page, candidate)) === candidate) {
       return candidate
     }
