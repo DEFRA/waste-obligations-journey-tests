@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { requireEnv } from './env.js'
-import { submitB2CCredentials } from './login.js'
+import { signInThroughB2C } from './login.js'
 import {
   getCsoPrnsUrl,
   getProducerPrnsUrl,
@@ -40,7 +40,7 @@ export async function openProducerPrnsList({ page, prnsListPage }, year) {
   })
 
   await test.step('sign in as the producer', async () => {
-    await submitB2CCredentials(
+    await signInThroughB2C(
       page,
       requireEnv('EPR_USER_EMAIL'),
       requireEnv('EPR_USER_PASSWORD')

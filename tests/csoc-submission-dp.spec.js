@@ -89,10 +89,18 @@ test.describe('CSOC lifecycle journey (DP)', () => {
       return findSubmittedDeclarationId()
     }
 
+    // Through the account home tile and the year choice, as a user goes, so the
+    // page shows this journey's year whichever service the tile opens.
+    const openObligationsForYear = async () => {
+      await landingPage.goto(ACCOUNT)
+      await landingPage.expectLoaded()
+      await landingPage.openObligations(chooseYearPage, obligationsPage, year)
+    }
+
     const viewCsocViaUi = async (declarationId) => {
       // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
-        await obligationsPage.goto(ACCOUNT)
+        await openObligationsForYear()
         await obligationsPage.openCertificateHub()
       } else {
         await csocViewPage.goto(ACCOUNT, declarationId)
@@ -126,7 +134,7 @@ test.describe('CSOC lifecycle journey (DP)', () => {
     await test.step('Scenario 4: obligations page shows resubmit; audit reflects Cancelled with reason', async () => {
       // eslint-disable-next-line playwright/no-conditional-in-test -- entry point: Packaging sign-in or direct CDP route differently
       if (usesPackagingEntryPoint()) {
-        await obligationsPage.goto(ACCOUNT)
+        await openObligationsForYear()
         await obligationsPage.expectResubmitCardVisible()
       } else {
         await landingPage.goto(ACCOUNT)

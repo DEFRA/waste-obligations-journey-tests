@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/pages.fixture.js'
 import { requireEnv } from '../utils/env.js'
 import {
-  submitB2CCredentials,
+  signInThroughB2C,
   submitB2CCredentialsIfNeeded
 } from '../utils/login.js'
 import {
@@ -93,7 +93,7 @@ test.describe('Compliance scheme PRNs list (CSO)', () => {
     }
 
     await test.step('sign in as the compliance scheme', async () => {
-      await submitB2CCredentials(
+      await signInThroughB2C(
         page,
         requireEnv('EPR_CSO_USER_EMAIL'),
         requireEnv('EPR_CSO_USER_PASSWORD')

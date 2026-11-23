@@ -1,7 +1,7 @@
 import { test } from '../fixtures/pages.fixture.js'
 import { TEST_USER_NAME } from '../data/csoc.data.js'
 import { requireEnv } from '../utils/env.js'
-import { submitB2CCredentials } from '../utils/login.js'
+import { signInThroughB2C } from '../utils/login.js'
 import {
   getJourneyStartPath,
   usesPackagingEntryPoint
@@ -45,7 +45,7 @@ test.describe('Manage recycling obligations - certificate for a year (DP)', () =
 
     await test.step('open the entry point and sign in as the producer', async () => {
       await page.goto(getJourneyStartPath(ACCOUNT, YEAR), { timeout: 60_000 })
-      await submitB2CCredentials(
+      await signInThroughB2C(
         page,
         requireEnv('EPR_USER_EMAIL'),
         requireEnv('EPR_USER_PASSWORD')
