@@ -56,8 +56,11 @@ export class LandingPage extends BasePage {
       )
     }
     await this.manageRecyclingObligationsLink.click()
-    // With PRNs on CDP the tile opens the EPR Next Gen Choose a year page for the
-    // organisation or scheme; otherwise the Packaging one.
+  }
+
+  // With PRNs on CDP the tile opens the EPR Next Gen Choose a year page for the
+  // organisation or scheme; otherwise the Packaging one.
+  async expectChooseYearOpened() {
     await expect(this.page).toHaveURL(
       usesShowPrnsOnCdp()
         ? /\/(producer|cso)\/[0-9a-f-]{36}\/obligations\/choose-year(\?|$)/
@@ -70,6 +73,7 @@ export class LandingPage extends BasePage {
   async openObligations(chooseYearPage, obligationsPage, year) {
     if (isFeatureFlagEnabled(FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS)) {
       await this.goToChooseYear()
+      await this.expectChooseYearOpened()
       await chooseYearPage.expectLoaded()
       await chooseYearPage.selectYear(year)
       await chooseYearPage.clickContinue()

@@ -105,6 +105,7 @@ test.describe('Compliance scheme PRNs list (CSO)', () => {
       if (usesMultiYearObligations()) {
         await test.step('open year selection from Azure account home', async () => {
           await landingPage.goToChooseYear()
+          await landingPage.expectChooseYearOpened()
           await chooseYearPage.expectLoaded()
         })
 

@@ -84,6 +84,10 @@ test.describe('Packaging PRNs list is filtered by year (DP)', () => {
   test('the obligations count equals the list total for the year', async ({
     page
   }) => {
+    test.skip(
+      YEARS_WITH_OBLIGATIONS.length === 0,
+      `No year to compare: ${PREVIOUS_YEAR} and ${YEAR} show the certificate of compliance record`
+    )
     for (const year of YEARS_WITH_OBLIGATIONS) {
       await test.step(`${year}: the count matches the list`, async () => {
         expect(await chooseYear(page, year)).toBe(year)
