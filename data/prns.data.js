@@ -317,3 +317,27 @@ export const YEAR_FILTER_PRNS = {
     decemberWastePrn('PRN873', PREVIOUS_COMPLIANCE_YEAR, 'Steel')
   ]
 }
+
+// One rejected note per account for the rejected-view and PDF journeys, seeded and removed by those specs only so
+// the other PRN journeys keep their lists. The compliance scheme's is a PERN, so both note types are covered.
+const rejectedNote = (prnNumber, isExport, materialName) => ({
+  status: 'rejected',
+  reprocessorExporterAgency: 'Environment Agency',
+  issuerNotes: 'Journey rejected note fixture',
+  processToBeUsed: 'R3',
+  decemberWaste: false,
+  issuedByOrg: 'Journey Reprocessors Ltd',
+  accreditationNumber: 'ACC123',
+  isExport,
+  prnNumber,
+  accreditationYear: COMPLIANCE_YEAR,
+  obligationYear: COMPLIANCE_YEAR,
+  issueDate: issueDateInComplianceYear('2026-04-01T09:30:00Z'),
+  materialName,
+  tonnage: 40
+})
+
+export const REJECTED_PRNS = {
+  dp: [rejectedNote('PRN880', false, 'Plastic')],
+  cso: [rejectedNote('PERN881', true, 'Aluminium')]
+}

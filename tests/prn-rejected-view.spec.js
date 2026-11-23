@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/pages.fixture.js'
+import { removeRejectedPrns, seedRejectedPrns } from '../utils/awaiting-prns.js'
 import {
   expectSeededOnLocal,
   skipUnlessPrnsConfigured
@@ -15,6 +16,11 @@ import { noteType, PRN_ACCOUNTS } from '../utils/prn-selection.js'
 for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
   test.describe(`Rejected ${prnType} view (${label}) MO-469`, () => {
     test.use({ storageState })
+
+    // The rejected note is seeded on LOCAL and removed after; elsewhere one is read from the environment.
+    test.beforeAll(() => seedRejectedPrns(account))
+
+    test.afterAll(() => removeRejectedPrns(account))
 
     test('opens a rejected note and goes on to the PRNs list', async ({
       page,
