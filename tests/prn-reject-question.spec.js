@@ -90,6 +90,7 @@ for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
     })
 
     test('rejects a seeded note after Yes, reject and shows the confirmation', async ({
+      page,
       request,
       prnPage,
       prnConfirmRejectPage
@@ -114,6 +115,12 @@ for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
         await prnPage.rejectButton(prn).click()
         await prnConfirmRejectPage.expectLoaded(prn)
         await prnConfirmRejectPage.reject(prn)
+        await expect(page).toHaveURL(
+          (url) =>
+            url.pathname.endsWith(`/prns/${prn.id}`) &&
+            url.searchParams.get('year') === String(prn.obligationYear) &&
+            url.searchParams.get('confirmed') === '1'
+        )
         await prnConfirmRejectPage.expectRejectionConfirmation(prn)
       })
 
