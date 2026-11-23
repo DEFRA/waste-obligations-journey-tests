@@ -9,6 +9,7 @@ import { PrnsListPage } from '../pages/prns-list-page.js'
 import { PrnsCheckSelectionPage } from '../pages/prns-check-selection-page.js'
 import { PrnsAcceptedSelectionPage } from '../pages/prns-accepted-selection-page.js'
 import { PrnPage } from '../pages/prn-page.js'
+import { PrnConfirmRejectPage } from '../pages/prn-confirm-reject-page.js'
 import { CsocAboutPage } from '../pages/csoc-about-page.js'
 import { CsocSubmissionPage } from '../pages/csoc-submission-page.js'
 import { CsocCertificateHubPage } from '../pages/csoc-certificate-hub-page.js'
@@ -64,6 +65,9 @@ export const test = base.extend({
   },
   prnPage: async ({ page }, use) => {
     await use(new PrnPage(page))
+  },
+  prnConfirmRejectPage: async ({ page }, use) => {
+    await use(new PrnConfirmRejectPage(page))
   },
   csocAboutPage: async ({ page }, use) => {
     await use(new CsocAboutPage(page))
