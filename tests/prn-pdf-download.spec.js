@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/pages.fixture.js'
+import { removeRejectedPrns, seedRejectedPrns } from '../utils/awaiting-prns.js'
 import {
   expectSeededOnLocal,
   skipUnlessPrnsConfigured
@@ -39,6 +40,11 @@ function expectPrnPdf(download, prn, options = {}) {
 for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
   test.describe(`PRN PDF download: ${prnType} (${label})`, () => {
     test.use({ storageState })
+
+    // The rejected note is seeded on LOCAL and removed after; elsewhere one is read from the environment.
+    test.beforeAll(() => seedRejectedPrns(account))
+
+    test.afterAll(() => removeRejectedPrns(account))
 
     test('awaiting acceptance: the link is at the base of the page and downloads <number>.pdf', async ({
       request,

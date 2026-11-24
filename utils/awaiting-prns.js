@@ -36,6 +36,17 @@ export function removeYearFilterPrns(account) {
   runSeedScript('remove', account, 'year-filter')
 }
 
+// A rejected note per account for the rejected-view and PDF journeys, kept apart from the awaiting set.
+export function seedRejectedPrns(account) {
+  if (!canSeedPrns) return
+  runSeedScript('seed', account, 'rejected')
+}
+
+export function removeRejectedPrns(account) {
+  if (!canSeedPrns) return
+  runSeedScript('remove', account, 'rejected')
+}
+
 // Whether this run seeds and removes its own PRN rows, so a journey may change a seeded note's status.
 export function seedsOwnPrns() {
   return canSeedPrns

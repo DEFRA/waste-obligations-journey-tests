@@ -20,6 +20,12 @@ const YEAR = getJourneyYear()
 const PREVIOUS_YEAR = YEAR - 1
 const NEXT_YEAR = YEAR + 1
 
+// 2025 and earlier have no obligations: Manage obligations shows the
+// certificate of compliance record instead, with no awaiting count to compare.
+const LAST_COMPLIANCE_RECORD_YEAR = 2025
+const hasObligationsPage = (year) => year > LAST_COMPLIANCE_RECORD_YEAR
+const YEARS_WITH_OBLIGATIONS = [PREVIOUS_YEAR, YEAR].filter(hasObligationsPage)
+
 // Choosing a year on Manage obligations sets the year the list uses. Returns
 // the year the page actually applied, which differs when it isn't selectable.
 async function chooseYear(page, year) {
@@ -78,7 +84,11 @@ test.describe('Packaging PRNs list is filtered by year (DP)', () => {
   test('the obligations count equals the list total for the year', async ({
     page
   }) => {
-    for (const year of [PREVIOUS_YEAR, YEAR]) {
+    test.skip(
+      YEARS_WITH_OBLIGATIONS.length === 0,
+      `No year to compare: ${PREVIOUS_YEAR} and ${YEAR} show the certificate of compliance record`
+    )
+    for (const year of YEARS_WITH_OBLIGATIONS) {
       await test.step(`${year}: the count matches the list`, async () => {
         expect(await chooseYear(page, year)).toBe(year)
         const count = await readAwaitingCount(page)

@@ -26,12 +26,17 @@ export class ObligationsPage extends BasePage {
     this.acceptRejectPrnsLink = page.getByRole('link', {
       name: /accept or reject prns and perns/i
     })
-    // Filter by a cell's data-header attribute rather than `getByRole('columnheader')`:
-    // the responsive-table CSS hides <thead> on mobile, removing th columnheader roles.
+    // The Azure page labels its cells with a data-header attribute (its
+    // responsive-table CSS hides <thead> on mobile, removing the columnheader
+    // roles); the CDP page has a plain <thead>. Match either.
     this.materialObligationsTable = page
       .locator('table.govuk-table')
       .filter({
-        has: page.locator('td[data-header="Recycling obligations to meet"]')
+        has: page.locator('td[data-header="Recycling obligations to meet"]').or(
+          page.locator('thead th', {
+            hasText: 'Recycling obligations to meet'
+          })
+        )
       })
       .first()
   }

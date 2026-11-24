@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/pages.fixture.js'
 import { requireEnv } from '../utils/env.js'
 import {
-  submitB2CCredentials,
+  signInThroughB2C,
   submitB2CCredentialsIfNeeded
 } from '../utils/login.js'
 import {
@@ -100,7 +100,7 @@ test.describe('Producer PRNs list (DP)', () => {
     }
 
     await test.step('sign in as the producer', async () => {
-      await submitB2CCredentials(
+      await signInThroughB2C(
         page,
         requireEnv('EPR_USER_EMAIL'),
         requireEnv('EPR_USER_PASSWORD')
@@ -112,6 +112,7 @@ test.describe('Producer PRNs list (DP)', () => {
       if (usesMultiYearObligations()) {
         await test.step('open year selection from Azure account home', async () => {
           await landingPage.goToChooseYear()
+          await landingPage.expectChooseYearOpened()
           await chooseYearPage.expectLoaded()
         })
 

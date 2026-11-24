@@ -1,10 +1,10 @@
-// Seeds or removes the awaiting-acceptance PRNs listed in data/prns.data.js in the local
+// Seeds or removes the PRNs listed in data/prns.data.js (awaiting acceptance unless a fixture says rejected) in the local
 // EprPrnBackend database, through the sqledge container. Local stack only: CI reads PRNs from WireMock.
 //
-// Usage: node scripts/seed-prns.mjs <seed|remove> <dp|cso> <organisationId> [awaiting|year-filter]
+// Usage: node scripts/seed-prns.mjs <seed|remove> <dp|cso> <organisationId> [awaiting|year-filter|rejected]
 
 import { execFileSync } from 'node:child_process'
-import { PRNS, YEAR_FILTER_PRNS } from '../data/prns.data.js'
+import { PRNS, REJECTED_PRNS, YEAR_FILTER_PRNS } from '../data/prns.data.js'
 
 const CONTAINER = 'epr-local-environment-sqledge-1'
 const SQLCMD =
@@ -13,7 +13,14 @@ const SEED_COMMENT = 'journey-tests-seed'
 const SEED_CREATED_BY = 'journey-tests-seed'
 const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000'
 
-const FIXTURE_SETS = { awaiting: PRNS, 'year-filter': YEAR_FILTER_PRNS }
+const FIXTURE_SETS = {
+  awaiting: PRNS,
+  'year-filter': YEAR_FILTER_PRNS,
+  rejected: REJECTED_PRNS
+}
+
+// PrnStatus ids in EprPrnBackend.
+const STATUS_IDS = { awaiting: 4, rejected: 2 }
 const [action, account, orgId, setName = 'awaiting'] = process.argv.slice(2)
 const fixtures = FIXTURE_SETS[setName] ?? {}
 
@@ -23,7 +30,7 @@ if (
   !/^[0-9a-f-]{36}$/i.test(orgId ?? '')
 ) {
   process.stderr.write(
-    'Usage: node scripts/seed-prns.mjs <seed|remove> <dp|cso> <organisationId> [awaiting|year-filter]\n'
+    'Usage: node scripts/seed-prns.mjs <seed|remove> <dp|cso> <organisationId> [awaiting|year-filter|rejected]\n'
   )
   process.exit(1)
 }
@@ -39,20 +46,21 @@ const deleteSql = `DELETE h FROM PrnStatusHistory h JOIN Prn p ON p.Id = h.PrnId
 DELETE FROM Prn WHERE OrganisationId = '${orgId}' AND PrnNumber IN (${numberList});`
 
 const insertSql = prns
+  .map((prn) => ({ prn, statusId: STATUS_IDS[prn.status ?? 'awaiting'] }))
   .map(
-    (prn) => `
+    ({ prn, statusId }) => `
 INSERT INTO Prn (ExternalId, PrnNumber, OrganisationId, OrganisationName, ProducerAgency, ReprocessorExporterAgency,
   PrnStatusId, TonnageValue, MaterialName, IssuerNotes, IssuerReference, PrnSignatory, PrnSignatoryPosition, Signature,
   IssueDate, ProcessToBeUsed, DecemberWaste, StatusUpdatedOn, IssuedByOrg, AccreditationNumber, ReprocessingSite,
   AccreditationYear, ObligationYear, PackagingProducer, CreatedBy, CreatedOn, LastUpdatedBy, LastUpdatedDate, IsExport, SourceSystemId)
 SELECT ${orDefault(prn.externalId, 'NEWID()')}, ${sqlString(prn.prnNumber)}, OrganisationId, OrganisationName, ProducerAgency, ${orDefault(prn.reprocessorExporterAgency, 'ReprocessorExporterAgency')},
-  4, ${Number(prn.tonnage)}, ${sqlString(prn.materialName)}, ${orDefault(prn.issuerNotes, sqlString(`Seeded by ${SEED_COMMENT}`))}, IssuerReference,
+  ${statusId}, ${Number(prn.tonnage)}, ${sqlString(prn.materialName)}, ${orDefault(prn.issuerNotes, sqlString(`Seeded by ${SEED_COMMENT}`))}, IssuerReference,
   PrnSignatory, PrnSignatoryPosition, Signature, ${sqlString(prn.issueDate)}, ${orDefault(prn.processToBeUsed, 'ProcessToBeUsed')}, ${orDefault(prn.decemberWaste, isDecemberWaste(prn.issueDate) ? '1' : '0')},
-  NULL, ${orDefault(prn.issuedByOrg, 'IssuedByOrg')}, ${orDefault(prn.accreditationNumber, 'AccreditationNumber')}, ReprocessingSite, ${sqlString(prn.accreditationYear)}, ${sqlString(prn.obligationYear)},
+  ${statusId === STATUS_IDS.awaiting ? 'NULL' : 'SYSUTCDATETIME()'}, ${orDefault(prn.issuedByOrg, 'IssuedByOrg')}, ${orDefault(prn.accreditationNumber, 'AccreditationNumber')}, ReprocessingSite, ${sqlString(prn.accreditationYear)}, ${sqlString(prn.obligationYear)},
   PackagingProducer, ${sqlString(SEED_CREATED_BY)}, SYSUTCDATETIME(), LastUpdatedBy, SYSUTCDATETIME(), ${orDefault(prn.isExport, '0')}, SourceSystemId
 FROM Prn WHERE Id = @template;
 INSERT INTO PrnStatusHistory (CreatedOn, CreatedByUser, CreatedByOrganisationId, PrnStatusIdFk, PrnIdFk, Comment, ObligationYear)
-SELECT SYSUTCDATETIME(), '${SYSTEM_USER_ID}', OrganisationId, 4, Id, ${sqlString(SEED_COMMENT)}, ObligationYear
+SELECT SYSUTCDATETIME(), '${SYSTEM_USER_ID}', OrganisationId, ${statusId}, Id, ${sqlString(SEED_COMMENT)}, ObligationYear
 FROM Prn WHERE PrnNumber = ${sqlString(prn.prnNumber)} AND OrganisationId = '${orgId}';`
   )
   .join('\n')
