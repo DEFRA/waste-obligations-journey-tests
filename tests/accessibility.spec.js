@@ -98,10 +98,7 @@ async function openAcceptedPrn({ account, prnType, page, request, prnPage }) {
   )
 
   await prnPage.goto(account, prn)
-  await expect(prnPage.heading).toBeVisible()
-  await expect(
-    page.locator('.govuk-notification-banner--success')
-  ).toBeVisible()
+  await prnPage.expectLoadedForAcceptedPrn(prn)
 }
 
 test.describe('Accessibility testing — CSOC journey', () => {
