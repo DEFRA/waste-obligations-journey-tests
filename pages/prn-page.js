@@ -82,20 +82,22 @@ export class PrnPage extends BasePage {
     await expect(rejectButton).toBeEnabled()
   }
 
-  // A smoke check of the accepted confirmation view: the success banner names
-  // the note's type and the year it counts towards, both from real data. The
-  // banner's other wording, the Status tag, the inset and which buttons show
-  // are covered by waste-obligations-frontend's route tests.
+  // A later visit to an accepted note: no confirmation banner (it is only shown
+  // immediately after accepting), the Accepted status and the year the note
+  // counts towards, from real data. The rest of the view is covered by
+  // waste-obligations-frontend's route tests.
   async expectLoadedForAcceptedPrn(prn) {
-    const type = noteType(prn)
     await expect(this.heading).toBeVisible()
+    await expect(this.page.locator('.govuk-notification-banner')).toHaveCount(0)
+    const status = this.page.locator('#status .govuk-tag')
+    await expect(status).toHaveText('Accepted')
+    await expect(status).toHaveClass(/govuk-tag--green/)
     await expect(
-      this.page.locator(
-        '.govuk-notification-banner--success .govuk-notification-banner__heading'
+      this.page.getByText(
+        `Accepted towards ${prn.obligationYear} recycling obligations`,
+        { exact: true }
       )
-    ).toHaveText(
-      `You accepted this ${type} towards your ${prn.obligationYear} recycling obligations`
-    )
+    ).toBeVisible()
   }
 
   // A later visit to a rejected note has no confirmation banner. The banner
