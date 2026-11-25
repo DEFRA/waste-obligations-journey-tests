@@ -92,4 +92,23 @@ export class PrnsCheckSelectionPage extends BasePage {
   async clickGoBack() {
     await this.goBackButton.click()
   }
+
+  // Removes every PRN from the selection. Removing the last one returns to
+  // the list.
+  async removeAll() {
+    const numbers = await this.page
+      .getByRole('button', { name: /^Remove from selection / })
+      .evaluateAll((buttons) =>
+        buttons.map((button) =>
+          button.textContent
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/^Remove from selection /, '')
+        )
+      )
+
+    for (const number of numbers) {
+      await this.removePrn(number)
+    }
+  }
 }
