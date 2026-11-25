@@ -13,6 +13,7 @@ import {
 } from '../utils/journey-entry-point.js'
 import { getJourneyYear } from '../utils/journey-year.js'
 import { getOrgId, readObligations } from '../utils/waste-obligations-api.js'
+import { materialTarget } from '../data/material-targets.data.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const AUTH_DIR = path.join(__dirname, '..', 'playwright', '.auth')
@@ -46,23 +47,38 @@ const MATERIALS = [
   { api: 'Wood', link: 'Wood recycling obligation page', name: 'wood' }
 ]
 
-const tonnes = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 })
+const number = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 })
 
-// The written example the page gives for a material, from what the API holds.
-function writtenExample(obligation) {
+// An amount as the page writes it: "1 tonne", otherwise "600 tonnes".
+function tonnes(amount) {
+  return `${number.format(amount)} ${amount === 1 ? 'tonne' : 'tonnes'}`
+}
+
+// The target line and the written example the page gives for a material. The
+// reported and obligated tonnages come from the API; the target is the one the
+// regulations set for the year, which the page shows whatever the API holds.
+function writtenExample(material, obligation) {
   const reported = obligation?.tonnages?.material ?? 0
-  const percent = Math.round((obligation?.recyclingTarget ?? 0) * 100)
   const obligated = obligation?.tonnages?.obligated ?? 0
+  const target = materialTarget(material.api, YEAR)
 
-  return `${tonnes.format(reported)} tonnes x ${percent}% = ${tonnes.format(obligated)} tonnes.`
+  return [
+    `Y is ${target}% (recycling target for ${material.name} set by the 2024 regulations)`,
+    `${tonnes(reported)} x ${target}% = ${tonnes(obligated)}.`
+  ]
 }
 
 // A material with no reported tonnage has no written example, so the page shows
-// none; otherwise it shows the formula and the worked figures. The lines found on
-// the page are compared with the lines expected, so a mismatch shows both.
-async function expectWrittenExample(materialCalculationPage, obligation) {
+// none; otherwise it shows the formula, the year's target and the worked figures.
+// The lines found on the page are compared with the lines expected, so a mismatch
+// shows both.
+async function expectWrittenExample(
+  materialCalculationPage,
+  material,
+  obligation
+) {
   const shown = (obligation?.tonnages?.material ?? 0) > 0
-  const lines = ['X x Y = Z', writtenExample(obligation)]
+  const lines = ['X x Y = Z', ...writtenExample(material, obligation)]
 
   await materialCalculationPage.expectCalculationShown(shown)
   await expect
@@ -112,6 +128,7 @@ for (const { account, label, authFile } of ACCOUNTS) {
           await materialCalculationPage.expectLoadedFor(YEAR, material.name)
           await expectWrittenExample(
             materialCalculationPage,
+            material,
             obligations.find((o) => o.material === material.api)
           )
         })
@@ -123,7 +140,7 @@ for (const { account, label, authFile } of ACCOUNTS) {
       }
     })
 
-    test('glass opens the glass calculation with its breakdown', async ({
+    test("glass opens the glass calculation with its breakdown and the year's targets", async ({
       page,
       obligationsPage,
       materialCalculationPage
@@ -142,6 +159,12 @@ for (const { account, label, authFile } of ACCOUNTS) {
 
       await materialCalculationPage.expectLoadedFor(YEAR, 'glass')
       await materialCalculationPage.expectGlassBreakdown()
+      await expect(materialCalculationPage.main).toContainText(
+        `Y is ${materialTarget('Glass', YEAR)}% (recycling target for glass set by the 2024 regulations)`
+      )
+      await expect(materialCalculationPage.main).toContainText(
+        `T is ${materialTarget('GlassRemelt', YEAR)}% (recycling target for glass re-melt set by the 2024 regulations)`
+      )
     })
   })
 }
