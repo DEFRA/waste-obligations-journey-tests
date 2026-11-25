@@ -163,6 +163,18 @@ export class PrnPage extends BasePage {
     )
   }
 
+  // The PRN page straight after accepting: the confirmation banner for the
+  // year the note was accepted towards.
+  async expectAcceptedConfirmation(prn, year) {
+    await expect(
+      this.page.locator(
+        '.govuk-notification-banner--success .govuk-notification-banner__heading'
+      )
+    ).toHaveText(
+      `You accepted this ${noteType(prn)} towards your ${year} recycling obligations`
+    )
+  }
+
   // The follow-on to the PRNs list for the year the note counts towards.
   async acceptOrRejectMore(year) {
     const button = this.page.getByRole('button', {

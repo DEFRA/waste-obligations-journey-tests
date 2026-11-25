@@ -12,6 +12,7 @@ import {
 } from '../utils/test-setup.js'
 import {
   getObligationMaterialUrl,
+  getObligationsUrl,
   getWasteObligationsFrontendBaseUrl,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
@@ -23,16 +24,24 @@ import {
   skipUnlessPrnsConfigured
 } from '../utils/environment-features.js'
 import {
+  findStandardSelectablePrn,
   findStandardSelectablePrnsByMaterial,
   noteType,
-  PRN_ACCOUNTS
+  PRN_ACCOUNTS,
+  resolveAcceptanceYears
 } from '../utils/prn-selection.js'
-import { getComplianceYear } from '../utils/journey-clock.js'
+import { getComplianceYear, getJourneyNow } from '../utils/journey-clock.js'
 import {
   openAuthenticatedCsoPrnsList,
   openAuthenticatedProducerPrnsList
 } from '../utils/prns-list-navigation.js'
-import { resetAwaitingPrns, seedAwaitingPrns } from '../utils/awaiting-prns.js'
+import {
+  removeYearFilterPrns,
+  resetAwaitingPrns,
+  seedAwaitingPrns,
+  seedsOwnPrns,
+  seedYearFilterPrns
+} from '../utils/awaiting-prns.js'
 import { REJECT_JOURNEY_PRN_NUMBERS } from '../data/prns.data.js'
 import {
   initialiseAccessibilityChecking,
@@ -498,6 +507,16 @@ test.describe('Accessibility testing — Check selection before accepting', () =
   }
 })
 
+// The CDP obligations pages are scanned on the CDP frontend directly, with
+// Manage obligations on.
+function skipUnlessCdpObligations() {
+  skipUnlessFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)
+  test.skip(
+    usesPackagingEntryPoint(),
+    'The CDP obligations pages are scanned on the CDP frontend directly'
+  )
+}
+
 const MATERIAL_CALCULATION_PAGES = [
   { slug: 'aluminium', name: 'aluminium' },
   { slug: 'glass', name: 'glass' }
@@ -518,11 +537,7 @@ test.describe('Accessibility testing — Material calculation pages', () => {
       test.use({ storageState })
 
       test.beforeEach(() => {
-        skipUnlessFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)
-        test.skip(
-          usesPackagingEntryPoint(),
-          'The material calculation pages are reached from the CDP obligations page'
-        )
+        skipUnlessCdpObligations()
       })
 
       for (const { slug, name } of MATERIAL_CALCULATION_PAGES) {
@@ -549,6 +564,359 @@ test.describe('Accessibility testing — Material calculation pages', () => {
           })
         })
       }
+    })
+  }
+})
+
+// 2025's obligations were met outside the service, so its year opens the
+// compliance record instead of Manage obligations.
+const COMPLIANCE_RECORD_YEAR = 2025
+
+test.describe('Accessibility testing — Choose a year and Manage obligations', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('manage-obligations')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, storageState } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      test.beforeEach(() => {
+        skipUnlessCdpObligations()
+      })
+
+      test('scan Choose a year and its error, Manage obligations and the compliance record', async ({
+        page,
+        chooseYearPage,
+        obligationsPage,
+        complianceRecordPage
+      }) => {
+        const year = getComplianceYear()
+
+        await test.step(`${label} > Choose a year`, async () => {
+          await chooseYearPage.goto(account)
+          await chooseYearPage.expectLoaded()
+          await analyseAccessibility(page, `${account}-choose-year`)
+        })
+
+        await test.step(`${label} > Choose a year with no year chosen`, async () => {
+          await chooseYearPage.clickContinue()
+          await chooseYearPage.expectSelectYearError()
+          await analyseAccessibility(page, `${account}-choose-year-error`)
+        })
+
+        await test.step(`${label} > Manage your ${year} recycling obligations`, async () => {
+          await page.goto(getObligationsUrl(account, year).href, {
+            timeout: 60_000
+          })
+          await obligationsPage.expectLoadedForYear(year)
+          await analyseAccessibility(page, `${account}-manage-obligations`)
+        })
+
+        await test.step(`${label} > ${COMPLIANCE_RECORD_YEAR} compliance record`, async () => {
+          await page.goto(
+            getObligationsUrl(account, COMPLIANCE_RECORD_YEAR).href,
+            { timeout: 60_000 }
+          )
+          await complianceRecordPage.expectLoadedFor(
+            COMPLIANCE_RECORD_YEAR,
+            account
+          )
+          await analyseAccessibility(page, `${account}-compliance-record`)
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
+    })
+  }
+})
+
+test.describe('Accessibility testing — PRNs list', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('prns-list')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, storageState } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      // Local stack only: seed the awaiting notes before the scan and remove them after.
+      test.beforeEach(() => {
+        seedAwaitingPrns(account)
+      })
+
+      test.afterEach(async ({ request }) => {
+        await resetAwaitingPrns(account, request)
+      })
+
+      test('scan the PRNs list', async ({ page, prnsListPage }) => {
+        skipUnlessPrnsConfigured()
+
+        await test.step(`${label} > PRNs list`, async () => {
+          await OPEN_PRNS_LIST[account](
+            { page, prnsListPage },
+            getComplianceYear()
+          )
+          await analyseAccessibility(page, `${account}-prns-list`)
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
+
+      // Accept selected is offered only when a note can be selected.
+      test('scan the PRNs list error when nothing is selected', async ({
+        page,
+        request,
+        prnsListPage
+      }) => {
+        skipUnlessPrnsConfigured()
+        const year = getComplianceYear()
+        const prn = findStandardSelectablePrn(
+          await listAwaitingPrns(request, getOrgId(account))
+        )
+        expectSeededOnLocal(prn, `a standard ${year} note awaiting acceptance`)
+        test.skip(
+          !prn,
+          'No standard note awaiting acceptance on this deployed environment, so Accept selected is not offered; the error was not scanned.'
+        )
+
+        await test.step(`${label} > PRNs list with nothing selected`, async () => {
+          await OPEN_PRNS_LIST[account]({ page, prnsListPage }, year)
+          await prnsListPage.expectNoPrnSelected()
+          await prnsListPage.clickAcceptSelected()
+          await prnsListPage.expectSelectOneOrMoreError()
+          await analyseAccessibility(page, `${account}-prns-list-error`)
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
+    })
+  }
+})
+
+// A standard note of the type awaiting acceptance, other than the one the
+// reject journey rejects.
+async function findAwaitingNote({ account, prnType, request }) {
+  const prns = await listAwaitingPrns(request, getOrgId(account))
+
+  return findStandardSelectablePrn(
+    prns.filter(
+      (candidate) =>
+        noteType(candidate) === prnType &&
+        candidate.number !== REJECT_JOURNEY_PRN_NUMBERS[account]
+    )
+  )
+}
+
+test.describe('Accessibility testing — Awaiting PRN and accept question', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('prn-awaiting')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      // Local stack only: seed the awaiting notes before the scan and remove them after.
+      test.beforeEach(() => {
+        seedAwaitingPrns(account)
+      })
+
+      test.afterEach(async ({ request }) => {
+        await resetAwaitingPrns(account, request)
+      })
+
+      // Nothing is accepted: the scan stops at the question.
+      test(`scan the awaiting ${prnType} and the accept question`, async ({
+        page,
+        request,
+        prnPage,
+        prnConfirmAcceptPage
+      }) => {
+        skipUnlessPrnsConfigured()
+        const prn = await findAwaitingNote({ account, prnType, request })
+        expectSeededOnLocal(prn, `a standard ${prnType} awaiting acceptance`)
+        test.skip(
+          !prn,
+          `No standard ${prnType} awaiting acceptance on this deployed environment; the pages were not scanned.`
+        )
+
+        await test.step(`${label} > ${prnType} awaiting acceptance`, async () => {
+          await prnPage.goto(account, prn)
+          await prnPage.expectLoadedForAwaitingPrn(prn)
+          await analyseAccessibility(page, `${account}-prn-awaiting`)
+        })
+
+        await test.step(`${label} > Accept ${prnType} question`, async () => {
+          await prnPage.acceptButton(prn).click()
+          await prnConfirmAcceptPage.expectLoaded(prn)
+          await analyseAccessibility(page, `${account}-prn-confirm-accept`)
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
+    })
+  }
+})
+
+test.describe('Accessibility testing — Choose a year to accept', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('prn-choose-year')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, storageState } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      // Local stack only: seed the December waste notes before the scan and remove them after.
+      test.beforeEach(() => {
+        seedYearFilterPrns(account)
+      })
+
+      test.afterEach(() => {
+        removeYearFilterPrns(account)
+      })
+
+      // Nothing is accepted: the scan stops at the year question.
+      test('scan the year question and its error', async ({
+        page,
+        request,
+        prnPage,
+        prnChooseYearPage
+      }) => {
+        skipUnlessPrnsConfigured()
+        const now = getJourneyNow()
+        const prn = (await listAwaitingPrns(request, getOrgId(account))).find(
+          (candidate) =>
+            candidate.decemberWaste &&
+            resolveAcceptanceYears(candidate, now).length > 1
+        )
+        test.skip(
+          !prn,
+          'The year is chosen only for December waste from 1 December to 31 January; no note awaiting acceptance can count towards two years at this date.'
+        )
+
+        await test.step(`${label} > Which year to accept ${prn.number} towards`, async () => {
+          await prnPage.goto(account, prn)
+          await prnPage.acceptButton(prn).click()
+          await prnChooseYearPage.expectLoaded(prn)
+          await analyseAccessibility(page, `${account}-prn-choose-year`)
+        })
+
+        await test.step(`${label} > Year question with no year chosen`, async () => {
+          await prnChooseYearPage.continueWithoutChoosing()
+          await prnChooseYearPage.expectSelectYearError()
+          await analyseAccessibility(page, `${account}-prn-choose-year-error`)
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
+    })
+  }
+})
+
+test.describe('Accessibility testing — Accepted and rejected confirmations (changes data)', () => {
+  test.beforeAll(async () => {
+    await initialiseAccessibilityChecking()
+  })
+
+  test.afterAll(async () => {
+    generateAccessibilityReports('prn-confirmations')
+    generateAccessibilityReportIndex()
+  })
+
+  for (const { account, label, storageState } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      // Local stack only: seed the awaiting notes before the scan and remove them after,
+      // which also undoes the accept and the reject.
+      test.beforeEach(() => {
+        seedAwaitingPrns(account)
+      })
+
+      test.afterEach(async ({ request }) => {
+        await resetAwaitingPrns(account, request)
+      })
+
+      test('accept one note and reject another, and scan both confirmations', async ({
+        page,
+        request,
+        prnPage,
+        prnConfirmRejectPage
+      }) => {
+        skipUnlessPrnsConfigured()
+        test.skip(
+          !seedsOwnPrns(),
+          'Accepting and rejecting change PRN data, so they run only where the run seeds and removes its own notes.'
+        )
+        const awaiting = await listAwaitingPrns(request, getOrgId(account))
+        const toAccept = findStandardSelectablePrn(awaiting)
+        const toReject = findStandardSelectablePrn(
+          awaiting.filter((candidate) => candidate.id !== toAccept?.id)
+        )
+        expectSeededOnLocal(toAccept, 'a standard note to accept')
+        expectSeededOnLocal(toReject, 'a second standard note to reject')
+
+        await test.step(`${label} > Accept ${toAccept.number} and see the confirmation`, async () => {
+          await prnPage.goto(account, toAccept)
+          await prnPage.accept(toAccept)
+          await prnPage.expectAcceptedConfirmation(
+            toAccept,
+            toAccept.obligationYear
+          )
+          await analyseAccessibility(
+            page,
+            `${account}-prn-accepted-confirmation`
+          )
+        })
+
+        await test.step(`${label} > Reject ${toReject.number} and see the confirmation`, async () => {
+          await prnPage.goto(account, toReject)
+          await prnPage.rejectButton(toReject).click()
+          await prnConfirmRejectPage.expectLoaded(toReject)
+          await prnConfirmRejectPage.reject(toReject)
+          await prnConfirmRejectPage.expectRejectionConfirmation(toReject)
+          await analyseAccessibility(
+            page,
+            `${account}-prn-rejected-confirmation`
+          )
+        })
+
+        await test.step(`${label} > Assert no accessibility issues`, () => {
+          assertNoAccessibilityIssues()
+        })
+      })
     })
   }
 })
