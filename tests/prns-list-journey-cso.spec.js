@@ -136,7 +136,7 @@ test.describe('Compliance scheme PRNs list (CSO)', () => {
           'FEATURE_SHOW_PRNS_ON_CDP is false for this environment; entered the PRNs page directly for ' +
             YEAR
         )
-        await page.goto(prnsUrl.toString(), { timeout: 60_000 })
+        await prnsListPage.goto(prnsUrl.toString())
       }
 
       await skipUnlessPrnsSignInOffered(page)
