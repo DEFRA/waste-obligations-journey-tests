@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test'
 import { BasePage } from './base-page.js'
 import { listMaterialText } from '../utils/prn-material.js'
+import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
 
 export async function selectAndWaitForNavigation(
   page,
@@ -63,6 +64,13 @@ export class PrnsListPage extends BasePage {
     this.materialSelect = page.locator('#filter')
     this.clearAllLink = page.locator('#clearSortFilter')
     this.nextPageLink = page.locator('.govuk-pagination__next a')
+  }
+
+  // Opens the list from another service's page. Without a proxy session the
+  // goto bounces through B2C sign-in, which crashes Playwright's WebKit backend.
+  async goto(url) {
+    await ensureProxySessionForWebKit(this.page, url)
+    await this.page.goto(url, { timeout: 60_000 })
   }
 
   async hasNextPage() {

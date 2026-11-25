@@ -210,6 +210,10 @@ export class ObligationsPage extends BasePage {
       'FEATURE_SHOW_PRNS_ON_CDP is enabled but the Azure link still points at Packaging PRNs'
     ).toMatch(/\/prns(\?|$)/)
     expect(href).not.toContain('view-awaiting-acceptance-alt')
+    await ensureProxySessionForWebKit(
+      this.page,
+      new URL(href, this.page.url()).href
+    )
     await Promise.all([
       this.page.waitForURL(/\/prns(\?|$)/, { waitUntil: 'domcontentloaded' }),
       link.click()
