@@ -246,9 +246,16 @@ export class PrnsListPage extends BasePage {
   }
 
   async selectPrn(number) {
-    await this.#whileSaving(() =>
-      this.page.getByRole('checkbox', { name: `Select ${number}` }).check()
-    )
+    const checkbox = this.page.getByRole('checkbox', {
+      name: `Select ${number}`
+    })
+
+    // Already ticked: checking it changes nothing, so nothing is saved.
+    if (await checkbox.isChecked()) {
+      return
+    }
+
+    await this.#whileSaving(() => checkbox.check())
   }
 
   // The PRN numbers ticked on this page of the list.

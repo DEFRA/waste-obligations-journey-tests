@@ -255,6 +255,8 @@ export function defineMultipleSelectionJourneys({
 
       async function expectListAsLeft() {
         await prnsListPage.expectLoaded()
+        // Going back opens the first list page: no page number in the address.
+        expect(new URL(page.url()).searchParams.get('page')).toBeNull()
         expect(await prnsListPage.readSortAndFilter()).toEqual(sortAndFilter)
         expect(await prnsListPage.readSelectedNumbers()).toEqual([paper.number])
       }

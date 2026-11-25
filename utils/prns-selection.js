@@ -1,4 +1,4 @@
-import { test } from '../fixtures/pages.fixture.js'
+import { expect, test } from '../fixtures/pages.fixture.js'
 
 // The PRNs list keeps the user's ticks in their session until they accept
 // them, including notes ticked on other list pages. Journeys share one signed-in
@@ -25,6 +25,15 @@ export async function clearPrnsSelection(
     if (response.status() >= 300 && response.status() < 400) {
       await prnsCheckSelectionPage.expectLoaded()
       await prnsCheckSelectionPage.removeAll()
+    } else {
+      // Nothing was selected: the list shows its "select one or more" error.
+      await expect(
+        page
+          .getByText(
+            'To accept multiple PRNs or PERNs select one or more using the check boxes'
+          )
+          .first()
+      ).toBeVisible()
     }
 
     await openPrnsList({ page, prnsListPage }, year)
