@@ -14,6 +14,7 @@ export const FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS =
   'FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS'
 export const FEATURE_ANALYTICS = 'FEATURE_ANALYTICS'
 export const FEATURE_SHOW_PRNS_ON_CDP = 'FEATURE_SHOW_PRNS_ON_CDP'
+export const FEATURE_OBLIGATIONS_TILE_ON_CDP = 'FEATURE_OBLIGATIONS_TILE_ON_CDP'
 export const FEATURE_MANAGE_OBLIGATIONS = 'FEATURE_MANAGE_OBLIGATIONS'
 
 export function skipUnlessEnabled(enabled, reason) {
@@ -158,6 +159,17 @@ export function usesMultiYearObligations() {
 export function usesShowPrnsOnCdp() {
   return (
     usesPackagingEntryPoint() && isFeatureFlagEnabled(FEATURE_SHOW_PRNS_ON_CDP)
+  )
+}
+
+// The Azure 'Manage recycling obligations' tile opens the CDP Choose a year
+// page only with ShowPrnsOnCdp, a Packaging build that has that change and its
+// WasteObligationsBaseAddress set. So it is set apart from the PRNs link, which
+// can open the CDP list while the tile still opens the Azure page.
+export function usesObligationsTileOnCdp() {
+  return (
+    usesPackagingEntryPoint() &&
+    isFeatureFlagEnabled(FEATURE_OBLIGATIONS_TILE_ON_CDP)
   )
 }
 

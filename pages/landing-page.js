@@ -3,7 +3,7 @@ import { BasePage } from './base-page.js'
 import {
   FEATURE_SHOW_MULTI_YEAR_OBLIGATIONS,
   isFeatureFlagEnabled,
-  usesShowPrnsOnCdp
+  usesObligationsTileOnCdp
 } from '../utils/environment-features.js'
 import {
   getJourneyStartPath,
@@ -58,11 +58,11 @@ export class LandingPage extends BasePage {
     await this.manageRecyclingObligationsLink.click()
   }
 
-  // With PRNs on CDP the tile opens the EPR Next Gen Choose a year page for the
-  // organisation or scheme; otherwise the Packaging one.
+  // With FEATURE_OBLIGATIONS_TILE_ON_CDP the tile opens the EPR Next Gen Choose
+  // a year page for the organisation or scheme; otherwise the Packaging one.
   async expectChooseYearOpened() {
     await expect(this.page).toHaveURL(
-      usesShowPrnsOnCdp()
+      usesObligationsTileOnCdp()
         ? /\/(producer|cso)\/[0-9a-f-]{36}\/obligations\/choose-year(\?|$)/
         : /\/report-data\/choose-your-recycling-obligations-year(\?|$)/
     )
