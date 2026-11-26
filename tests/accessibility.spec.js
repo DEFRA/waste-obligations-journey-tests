@@ -31,6 +31,7 @@ import {
   resolveAcceptanceYears
 } from '../utils/prn-selection.js'
 import { getComplianceYear, getJourneyNow } from '../utils/journey-clock.js'
+import { clearPrnsSelection } from '../utils/prns-selection.js'
 import {
   openAuthenticatedCsoPrnsList,
   openAuthenticatedProducerPrnsList
@@ -681,7 +682,8 @@ test.describe('Accessibility testing — PRNs list', () => {
       test('scan the PRNs list error when nothing is selected', async ({
         page,
         request,
-        prnsListPage
+        prnsListPage,
+        prnsCheckSelectionPage
       }) => {
         skipUnlessPrnsConfigured()
         const year = getComplianceYear()
@@ -696,6 +698,12 @@ test.describe('Accessibility testing — PRNs list', () => {
 
         await test.step(`${label} > PRNs list with nothing selected`, async () => {
           await OPEN_PRNS_LIST[account]({ page, prnsListPage }, year)
+          // The list keeps ticks left by an earlier journey in this session.
+          await clearPrnsSelection(
+            { page, prnsListPage, prnsCheckSelectionPage },
+            OPEN_PRNS_LIST[account],
+            year
+          )
           await prnsListPage.expectNoPrnSelected()
           await prnsListPage.clickAcceptSelected()
           await prnsListPage.expectSelectOneOrMoreError()

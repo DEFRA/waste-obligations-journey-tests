@@ -11,6 +11,8 @@ import { logJourney } from './journey-log.js'
 import { reportSkippedSteps } from './skipped-steps.js'
 import { resetAwaitingPrns, seedAwaitingPrns } from './awaiting-prns.js'
 import { PAPER_GROUP_HEADING } from './check-selection.js'
+import { clearPrnsSelection } from './prns-selection.js'
+import { MATERIAL_FILTER_LABELS } from './prn-material.js'
 import { usesPackagingEntryPoint } from './journey-entry-point.js'
 import {
   expectedAcceptedTiles,
@@ -113,7 +115,7 @@ export function defineMultipleSelectionJourneys({
 
   test.describe(`${label} PRNs check selection go back (${tag})`, () => {
     // Nothing here accepts or rejects a PRN.
-    test('MO-470 — review a selection, remove one PRN, go back and find nothing selected', async ({
+    test('MO-470, MO-808 — review a selection, remove one PRN, go back and find the rest still selected', async ({
       page,
       request,
       prnsListPage,
@@ -144,6 +146,11 @@ export function defineMultipleSelectionJourneys({
       const removed = prns.Glass
 
       await openPrnsList({ page, prnsListPage }, YEAR)
+      await clearPrnsSelection(
+        { page, prnsListPage, prnsCheckSelectionPage },
+        openPrnsList,
+        YEAR
+      )
 
       await test.step('select a paper/board, a fibre and a glass other PRN', async () => {
         for (const prn of selected) {
@@ -186,17 +193,86 @@ export function defineMultipleSelectionJourneys({
         await prnsListPage.expectLoaded()
       })
 
-      await test.step('check no PRN is selected on any page of the list', async () => {
+      await test.step('check paper/board and fibre are still selected, and nothing else, on every page of the list', async () => {
+        const selectedNumbers = await prnsListPage.readSelectedNumbers()
         let pageNumber = 1
-        await prnsListPage.expectNoPrnSelected()
 
         while (await prnsListPage.hasNextPage()) {
           await prnsListPage.goToNextPage()
           pageNumber++
-          await prnsListPage.expectNoPrnSelected()
+          selectedNumbers.push(...(await prnsListPage.readSelectedNumbers()))
         }
 
         logJourney(test.info(), `Checked ${pageNumber} list page(s)`)
+        expect(selectedNumbers.sort()).toEqual(
+          [prns.Paper.number, prns.Fibre.number].sort()
+        )
+      })
+    })
+
+    test('MO-808 — the back link keeps the ticks, sorting and filter of the list', async ({
+      page,
+      request,
+      prnsListPage,
+      prnPage,
+      prnsCheckSelectionPage
+    }) => {
+      skipUnlessPrnsConfigured()
+
+      const { Paper: paper } =
+        await test.step('find a paper/board PRN awaiting acceptance', async () =>
+          findStandardSelectablePrnsByMaterial(
+            await listAwaitingPrns(request, getOrgId(account)),
+            ['Paper']
+          ))
+
+      /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+      if (!paper) {
+        const reason = `No standard ${YEAR} paper/board PRN awaiting acceptance`
+        expect(
+          requirePrnData,
+          `The local journey fixture must contain one. ${reason}`
+        ).toBe(false)
+        test.skip(true, reason)
+      }
+      /* eslint-enable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+
+      const sortAndFilter = { sort: 'TonnageDescending', material: 'Paper' }
+
+      await openPrnsList({ page, prnsListPage }, YEAR)
+      await clearPrnsSelection(
+        { page, prnsListPage, prnsCheckSelectionPage },
+        openPrnsList,
+        YEAR
+      )
+
+      await test.step('sort by tonnage, filter to paper/board and tick a PRN', async () => {
+        await prnsListPage.selectSort('Tonnage: (heaviest first)')
+        await prnsListPage.selectMaterial(MATERIAL_FILTER_LABELS.Paper)
+        logJourney(test.info(), `Select ${paper.number} (${paper.material})`)
+        await prnsListPage.selectPrn(paper.number)
+      })
+
+      async function expectListAsLeft() {
+        await prnsListPage.expectLoaded()
+        // Going back opens the first list page: no page number in the address.
+        expect(new URL(page.url()).searchParams.get('page')).toBeNull()
+        expect(await prnsListPage.readSortAndFilter()).toEqual(sortAndFilter)
+        expect(await prnsListPage.readSelectedNumbers()).toEqual([paper.number])
+      }
+
+      await test.step('open the PRN, click the back link and find the list as it was left', async () => {
+        await prnsListPage.openPrn(paper)
+        await prnPage.expectLoadedForAwaitingPrn(paper)
+        await prnPage.clickBackLink()
+        await expectListAsLeft()
+      })
+
+      await test.step('review the selection, click the back link and find the list as it was left', async () => {
+        await prnsListPage.clickAcceptSelected()
+        await prnsCheckSelectionPage.expectLoaded()
+        await prnsCheckSelectionPage.clickBackLink()
+        await expectListAsLeft()
       })
     })
   })
@@ -259,8 +335,14 @@ export function defineMultipleSelectionJourneys({
           return progress
         })
 
+      await openPrnsList({ page, prnsListPage }, YEAR)
+      await clearPrnsSelection(
+        { page, prnsListPage, prnsCheckSelectionPage },
+        openPrnsList,
+        YEAR
+      )
+
       await test.step('select the PRNs and PERNs and review the selection', async () => {
-        await openPrnsList({ page, prnsListPage }, YEAR)
         for (const prn of prns) {
           logJourney(test.info(), `Select ${prn.number} (${prn.material})`)
           await prnsListPage.selectPrn(prn.number)

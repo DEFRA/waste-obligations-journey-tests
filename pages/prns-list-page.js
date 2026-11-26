@@ -224,8 +224,56 @@ export class PrnsListPage extends BasePage {
     }))
   }
 
+  // The list saves each tick in the session as it is made. Wait for that
+  // save, so a link followed straight afterwards doesn't race it. A list from
+  // before ticks were saved has no save address on its form.
+  async #whileSaving(change) {
+    const saves = await this.page.locator('form[data-selection-url]').count()
+
+    if (saves === 0) {
+      await change()
+      return
+    }
+
+    await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          new URL(response.url()).pathname.endsWith('/prns/selection')
+      ),
+      change()
+    ])
+  }
+
   async selectPrn(number) {
-    await this.page.getByRole('checkbox', { name: `Select ${number}` }).check()
+    const checkbox = this.page.getByRole('checkbox', {
+      name: `Select ${number}`
+    })
+
+    // Already ticked: checking it changes nothing, so nothing is saved.
+    if (await checkbox.isChecked()) {
+      return
+    }
+
+    await this.#whileSaving(() => checkbox.check())
+  }
+
+  // The PRN numbers ticked on this page of the list.
+  async readSelectedNumbers() {
+    return this.page
+      .locator('table.app-prns-table tbody tr')
+      .filter({ has: this.page.locator('input[type="checkbox"]:checked') })
+      .evaluateAll((rows) =>
+        rows.map((row) => row.querySelector('td a')?.textContent?.trim() || '')
+      )
+  }
+
+  // The sort and material filter the list is shown with.
+  async readSortAndFilter() {
+    return {
+      sort: await this.sortSelect.inputValue(),
+      material: await this.materialSelect.inputValue()
+    }
   }
 
   async clickAcceptSelected() {

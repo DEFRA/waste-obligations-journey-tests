@@ -17,6 +17,11 @@ export class BasePage {
     await this.page.getByRole(role, { name }).click()
   }
 
+  // The GOV.UK back link at the top of the page.
+  async clickBackLink() {
+    await this.page.getByRole('link', { name: 'Back', exact: true }).click()
+  }
+
   // The cookie banner covers the top of the page on a small screen, so a user
   // would dismiss it before using a control underneath it. It is absent once
   // the choice has been saved.
