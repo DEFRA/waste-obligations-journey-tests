@@ -24,6 +24,7 @@ import {
   skipUnlessPrnsConfigured
 } from '../utils/environment-features.js'
 import {
+  findAwaitingNoteOfType,
   findStandardSelectablePrn,
   findStandardSelectablePrnsByMaterial,
   noteType,
@@ -718,17 +719,11 @@ test.describe('Accessibility testing — PRNs list', () => {
   }
 })
 
-// A standard note of the type awaiting acceptance, other than the one the
-// reject journey rejects.
 async function findAwaitingNote({ account, prnType, request }) {
-  const prns = await listAwaitingPrns(request, getOrgId(account))
-
-  return findStandardSelectablePrn(
-    prns.filter(
-      (candidate) =>
-        noteType(candidate) === prnType &&
-        candidate.number !== REJECT_JOURNEY_PRN_NUMBERS[account]
-    )
+  return findAwaitingNoteOfType(
+    await listAwaitingPrns(request, getOrgId(account)),
+    account,
+    prnType
   )
 }
 

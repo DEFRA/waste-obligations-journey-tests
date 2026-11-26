@@ -170,7 +170,7 @@ npm run test:local:security      # PROFILE=security (headed, local config)
 
 #### Security profile (OWASP ZAP)
 
-`PROFILE=security` walks the same CSOC journey as the other profiles but through an OWASP ZAP daemon that runs **inside the test container** — no extra services to spin up. `entrypoint.sh` starts ZAP, points Playwright at it via `HTTP_PROXY`, and after the journey writes an HTML report to `./security-report/index.html`.
+`PROFILE=security` walks the CSOC journey and the CDP rebuild pages (Choose a year, Manage obligations, a material calculation, the compliance record and its download, the PRNs list, a PRN or PERN and the accept and reject questions; on LOCAL also accepting, rejecting and accepting selected notes) through an OWASP ZAP daemon that runs **inside the test container** — no extra services to spin up. `entrypoint.sh` starts ZAP, points Playwright at it via `HTTP_PROXY`, and after the journey writes an HTML report to `./security-report/index.html`.
 
 High or Medium ZAP alerts fail the security profile, as do journey failures. Low and Informational alerts are reported without failing the scan.
 
@@ -183,6 +183,8 @@ Run an active scan locally:
 ```bash
 ZAP_ACTIVE=1 PROFILE=security npm run docker:test:local
 ```
+
+The ZAP scope holds the Azure host and the CDP rebuild frontend (`WASTE_OBLIGATIONS_FRONTEND_BASE_URL`, or the CDP entry point with `JOURNEY_ENTRY_POINT=waste-obligations`), and an active scan attacks each in turn.
 
 Active scans send attack payloads at the target environment — only enable against shared envs (`tst1`/`dev9`) after the security team has signed off.
 

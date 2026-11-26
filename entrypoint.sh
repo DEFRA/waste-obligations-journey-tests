@@ -21,6 +21,28 @@ target_base_url() {
   fi
 }
 
+# The CDP rebuild frontend the journeys reach from Azure (the public proxy URL,
+# with its path prefix), or the CDP entry point itself.
+cdp_frontend_base_url() {
+  if [ -n "${WASTE_OBLIGATIONS_FRONTEND_BASE_URL:-}" ]; then
+    printf '%s' "${WASTE_OBLIGATIONS_FRONTEND_BASE_URL%/}"
+  elif [ "${JOURNEY_ENTRY_POINT:-}" = "waste-obligations" ]; then
+    if [ "${ENVIRONMENT:-}" = "dev" ]; then
+      printf 'https://waste-obligations.dev.cdp-int.defra.cloud'
+    else
+      printf 'https://waste-obligations.test.cdp-int.defra.cloud'
+    fi
+  fi
+}
+
+# Every application host ZAP scans: Azure Packaging and the CDP rebuild frontend.
+scan_base_urls() {
+  target_base_url
+  echo
+  cdp_frontend_base_url
+  echo
+}
+
 start_zap() {
   echo "starting ZAP daemon on ${ZAP_BASE}"
   mkdir -p security-report
@@ -82,22 +104,24 @@ exclude_third_parties() {
 # the active scan actually means something. Without this, ZAP has no concept
 # of scope and inScopeOnly silently scans nothing.
 configure_scope() {
-  base=$(target_base_url)
   curl -sf --get \
     --data-urlencode "contextName=${ZAP_CONTEXT}" \
     "${ZAP_BASE}/JSON/context/action/newContext/" >/dev/null || true
-  resp=$(curl -sf --get \
-    --data-urlencode "contextName=${ZAP_CONTEXT}" \
-    --data-urlencode "regex=${base}.*" \
-    "${ZAP_BASE}/JSON/context/action/includeInContext/")
-  if ! zap_ok "$resp"; then
-    echo "ERROR: failed to add ${base} to ZAP context: ${resp:-<no response>}" >&2
-    return 1
-  fi
+  for base in $(scan_base_urls); do
+    resp=$(curl -sf --get \
+      --data-urlencode "contextName=${ZAP_CONTEXT}" \
+      --data-urlencode "regex=${base}.*" \
+      "${ZAP_BASE}/JSON/context/action/includeInContext/")
+    if ! zap_ok "$resp"; then
+      echo "ERROR: failed to add ${base} to ZAP context: ${resp:-<no response>}" >&2
+      return 1
+    fi
+    echo "ZAP scope: ${base}"
+  done
 }
 
-run_active_scan() {
-  base=$(target_base_url)
+active_scan() {
+  base=$1
   echo "ZAP_ACTIVE=1 — triggering active scan against ${base} (in-scope only)"
   resp=$(curl -sf --get \
     --data-urlencode "url=${base}" \
@@ -109,7 +133,7 @@ run_active_scan() {
     : > security-report/SCAN_INCOMPLETE
     return 0
   fi
-  # 30-minute cap stays well clear of the 2-hour CDP container timeout.
+  # A 30-minute cap per host keeps both scans clear of the 2-hour CDP container timeout.
   i=0
   while [ $i -lt 360 ]; do
     status=$(curl -sf "${ZAP_BASE}/JSON/ascan/view/status/?scanId=${scan_id}" \
@@ -124,6 +148,12 @@ run_active_scan() {
   echo "WARNING: ZAP active scan exceeded 30-minute cap (scanId=${scan_id})" >&2
   curl -sf "${ZAP_BASE}/JSON/ascan/action/stop/?scanId=${scan_id}" >/dev/null || true
   : > security-report/SCAN_INCOMPLETE
+}
+
+run_active_scan() {
+  for base in $(scan_base_urls); do
+    active_scan "$base"
+  done
 }
 
 # Block until ZAP's passive scanner has finished processing the proxy traffic

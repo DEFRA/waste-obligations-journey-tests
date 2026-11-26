@@ -1,4 +1,5 @@
 import { getComplianceYear, getJourneyNow } from './journey-clock.js'
+import { REJECT_JOURNEY_PRN_NUMBERS } from '../data/prns.data.js'
 
 // Each login opens one note type, so a run covers both the PRN and PERN wording.
 export const PRN_ACCOUNTS = [
@@ -34,6 +35,18 @@ export function findStandardSelectablePrn(prns, date = getJourneyNow()) {
 
 // One standard selectable PRN for each of `materials` (API material names),
 // keyed by material. A material with no such PRN is left out.
+// A standard note of the account's type awaiting acceptance, other than the
+// one the reject journey rejects.
+export function findAwaitingNoteOfType(prns, account, prnType) {
+  return findStandardSelectablePrn(
+    prns.filter(
+      (candidate) =>
+        noteType(candidate) === prnType &&
+        candidate.number !== REJECT_JOURNEY_PRN_NUMBERS[account]
+    )
+  )
+}
+
 export function findStandardSelectablePrnsByMaterial(
   prns,
   materials,
