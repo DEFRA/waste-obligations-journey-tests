@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/pages.fixture.js'
 import { DECLARATION_STATUS, TEST_USER_NAME } from '../data/csoc.data.js'
 import {
   getOrgId,
+  listAwaitingPrns,
   setDeclarationStatus
 } from '../utils/waste-obligations-api.js'
 import {
@@ -10,12 +11,33 @@ import {
 } from '../utils/test-setup.js'
 import {
   getJourneyBaseUrl,
+  getObligationMaterialUrl,
+  getObligationsChooseYearUrl,
+  getObligationsUrl,
+  getPrnsListUrl,
+  getWasteObligationsFrontendBaseUrl,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
 import {
+  FEATURE_MANAGE_OBLIGATIONS,
+  isFeatureFlagEnabled,
   skipUnlessCsocEnabled,
+  skipUnlessPrnsConfigured,
   usesMultiYearObligations
 } from '../utils/environment-features.js'
+import {
+  findAwaitingNoteOfType,
+  findStandardSelectablePrn,
+  PRN_ACCOUNTS
+} from '../utils/prn-selection.js'
+import { getComplianceYear } from '../utils/journey-clock.js'
+import {
+  resetAwaitingPrns,
+  seedAwaitingPrns,
+  seedsOwnPrns
+} from '../utils/awaiting-prns.js'
+import { reportSkippedSteps } from '../utils/skipped-steps.js'
+import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
 
 // Single worker owns each org's declaration state across submit → cancel.
 test.describe.configure({ mode: 'serial' })
@@ -224,4 +246,202 @@ test.describe('Security scan — CSOC journey', () => {
       })()
     })
   })
+})
+
+// 2025's obligations were met outside the service, so its year opens the
+// compliance record and its PRN and PERN download.
+const COMPLIANCE_RECORD_YEAR = 2025
+
+// A CDP rebuild page opened directly. On WebKit the proxy session is warmed
+// first, as the PRN page object does, so the goto is a single hop.
+async function openCdpPage(page, url) {
+  const href = new URL(
+    url.toString(),
+    getWasteObligationsFrontendBaseUrl()
+  ).toString()
+  await ensureProxySessionForWebKit(page, href)
+  await page.goto(href, { timeout: 60_000 })
+  await expect(page).toHaveURL(APP_HOST)
+}
+
+test.describe('Security scan — Manage obligations and PRNs', () => {
+  // Pure navigation, as for CSoC: ZAP records every request and response of
+  // the CDP rebuild pages. Data-changing steps run only where the run seeds and
+  // removes its own notes (LOCAL outside CI).
+  /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect -- steps follow the flags and the notes the environment has */
+  for (const { account, label, storageState, prnType } of PRN_ACCOUNTS) {
+    test.describe(label, () => {
+      test.use({ storageState })
+
+      // Local stack only: seed the awaiting notes before the walk and remove them after,
+      // which also undoes the accepts and the reject.
+      test.beforeEach(() => {
+        seedAwaitingPrns(account)
+      })
+
+      test.afterEach(async ({ request }) => {
+        await resetAwaitingPrns(account, request)
+      })
+
+      test('walk the obligations and PRN pages so ZAP sees the full traffic', async ({
+        page,
+        request,
+        chooseYearPage,
+        obligationsPage,
+        materialCalculationPage,
+        complianceRecordPage,
+        prnsListPage,
+        prnPage,
+        prnConfirmAcceptPage,
+        prnConfirmRejectPage,
+        prnsCheckSelectionPage,
+        prnsAcceptedSelectionPage
+      }) => {
+        // As for the CSoC walk: every request adds ZAP overhead.
+        test.setTimeout(600_000)
+        const year = getComplianceYear()
+
+        if (isFeatureFlagEnabled(FEATURE_MANAGE_OBLIGATIONS)) {
+          await test.step(`${label} > Choose a year and its error`, async () => {
+            await openCdpPage(page, getObligationsChooseYearUrl(account))
+            await chooseYearPage.expectLoaded()
+            await chooseYearPage.clickContinue()
+            await chooseYearPage.expectSelectYearError()
+          })
+
+          await test.step(`${label} > Manage your ${year} recycling obligations`, async () => {
+            await chooseYearPage.selectYear(year)
+            await chooseYearPage.clickContinue()
+            await obligationsPage.expectLoadedForYear(year)
+            await expect(page).toHaveURL(APP_HOST)
+          })
+
+          await test.step(`${label} > Aluminium calculation page`, async () => {
+            await openCdpPage(
+              page,
+              getObligationMaterialUrl(account, 'aluminium', year)
+            )
+            await materialCalculationPage.expectLoadedFor(year, 'aluminium')
+          })
+
+          await test.step(`${label} > ${COMPLIANCE_RECORD_YEAR} compliance record and its download`, async () => {
+            await openCdpPage(
+              page,
+              getObligationsUrl(account, COMPLIANCE_RECORD_YEAR)
+            )
+            await complianceRecordPage.expectLoadedFor(
+              COMPLIANCE_RECORD_YEAR,
+              account
+            )
+            const href = await complianceRecordPage
+              .downloadLink(COMPLIANCE_RECORD_YEAR)
+              .getAttribute('href')
+            const response = await page.request.get(
+              new URL(href, page.url()).href
+            )
+            expect(response.status()).toBe(200)
+          })
+        } else {
+          await reportSkippedSteps(
+            'Choose a year, Manage obligations, a material calculation and the compliance record',
+            'FEATURE_MANAGE_OBLIGATIONS is false for this environment'
+          )
+        }
+
+        skipUnlessPrnsConfigured()
+
+        await test.step(`${label} > PRNs list, sorted, filtered and cleared`, async () => {
+          await prnsListPage.goto(getPrnsListUrl(account, year).href)
+          await prnsListPage.expectLoaded()
+          await expect(page).toHaveURL(APP_HOST)
+          await prnsListPage.selectSort('Tonnage: (heaviest first)')
+          await prnsListPage.selectMaterial('Aluminium')
+          await prnsListPage.clickClearAll()
+          await prnsListPage.expectLoaded()
+        })
+
+        const awaiting = await listAwaitingPrns(request, getOrgId(account))
+        const prn = findAwaitingNoteOfType(awaiting, account, prnType)
+
+        if (prn) {
+          await test.step(`${label} > Accept selected with nothing ticked`, async () => {
+            await prnsListPage.goto(getPrnsListUrl(account, year).href)
+            await prnsListPage.clickAcceptSelected()
+            await prnsListPage.expectSelectOneOrMoreError()
+          })
+
+          await test.step(`${label} > ${prnType} awaiting acceptance, then the accept question`, async () => {
+            await prnPage.goto(account, prn)
+            await prnPage.expectLoadedForAwaitingPrn(prn)
+            await prnPage.acceptButton(prn).click()
+            await prnConfirmAcceptPage.expectLoaded(prn)
+            await prnConfirmAcceptPage.goBackButton.click()
+            await prnPage.expectLoadedForAwaitingPrn(prn)
+          })
+
+          await test.step(`${label} > Reject question and its error`, async () => {
+            await prnPage.rejectButton(prn).click()
+            await prnConfirmRejectPage.expectLoaded(prn)
+            await prnConfirmRejectPage.continueWithoutChoosing()
+            await prnConfirmRejectPage.expectChooseOptionError()
+            await prnConfirmRejectPage.goBack()
+            await prnPage.expectLoadedForAwaitingPrn(prn)
+          })
+        } else {
+          await reportSkippedSteps(
+            `The ${prnType} page, the accept and reject questions and the nothing-selected error`,
+            `no standard ${prnType} is awaiting acceptance on this environment`
+          )
+        }
+
+        if (!seedsOwnPrns()) {
+          await reportSkippedSteps(
+            'Accept, reject and accept selected',
+            'they change PRN data, so they run only where the run seeds and removes its own notes'
+          )
+          return
+        }
+
+        const [toAccept, toReject, ...rest] = [
+          prn,
+          ...awaiting.filter((candidate) => candidate.id !== prn?.id)
+        ].filter((candidate) => findStandardSelectablePrn([candidate]))
+        const toSelect = rest.slice(0, 2)
+        expect(
+          toSelect,
+          'The local seed must hold four standard notes awaiting acceptance.'
+        ).toHaveLength(2)
+
+        await test.step(`${label} > Accept ${toAccept.number}`, async () => {
+          await prnPage.goto(account, toAccept)
+          await prnPage.accept(toAccept)
+          await prnPage.expectAcceptedConfirmation(
+            toAccept,
+            toAccept.obligationYear
+          )
+        })
+
+        await test.step(`${label} > Reject ${toReject.number}`, async () => {
+          await prnPage.goto(account, toReject)
+          await prnPage.rejectButton(toReject).click()
+          await prnConfirmRejectPage.expectLoaded(toReject)
+          await prnConfirmRejectPage.reject(toReject)
+          await prnConfirmRejectPage.expectRejectionConfirmation(toReject)
+        })
+
+        await test.step(`${label} > Accept two selected notes`, async () => {
+          await prnsListPage.goto(getPrnsListUrl(account, year).href)
+          for (const selected of toSelect) {
+            await prnsListPage.selectPrn(selected.number)
+          }
+          await prnsListPage.clickAcceptSelected()
+          await prnsCheckSelectionPage.expectLoaded()
+          await prnsCheckSelectionPage.clickAccept()
+          await prnsAcceptedSelectionPage.expectLoaded(2, year)
+          await expect(page).toHaveURL(APP_HOST)
+        })
+      })
+    })
+  }
+  /* eslint-enable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 })
