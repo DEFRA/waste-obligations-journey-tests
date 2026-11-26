@@ -340,6 +340,12 @@ test.describe('Security scan — Manage obligations and PRNs', () => {
               new URL(href, page.url()).href
             )
             expect(response.status()).toBe(200)
+            expect(
+              await complianceRecordPage.findDownloadProblems(
+                response,
+                COMPLIANCE_RECORD_YEAR
+              )
+            ).toEqual([])
           })
         } else {
           await reportSkippedSteps(
