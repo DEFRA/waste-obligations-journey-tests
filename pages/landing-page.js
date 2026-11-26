@@ -9,6 +9,7 @@ import {
   getJourneyStartPath,
   usesPackagingEntryPoint
 } from '../utils/journey-entry-point.js'
+import { ensureProxySessionForWebKit } from '../utils/proxy-session.js'
 
 export class LandingPage extends BasePage {
   constructor(page) {
@@ -55,6 +56,14 @@ export class LandingPage extends BasePage {
         'The waste-obligations entry point opens the CSOC about page directly.'
       )
     }
+    // With PRNs on CDP the tile leaves Azure for the CDP proxy. Without a proxy
+    // session that click bounces through B2C sign-in, which crashes Playwright's
+    // WebKit backend, as the CSoC handoff and the PRN links would.
+    const href = await this.manageRecyclingObligationsLink.getAttribute('href')
+    await ensureProxySessionForWebKit(
+      this.page,
+      new URL(href, this.page.url()).href
+    )
     await this.manageRecyclingObligationsLink.click()
   }
 
