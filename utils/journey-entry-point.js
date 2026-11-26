@@ -211,6 +211,12 @@ export function getObligationsUrl(account, year) {
   return accountUrl(account, '/obligations', year)
 }
 
+// The CDP Choose a year page, which leads on to that year's obligations page,
+// for the producer or the compliance scheme.
+export function getObligationsChooseYearUrl(account) {
+  return accountUrl(account, '/obligations/choose-year')
+}
+
 // The page that explains how one material's obligation was calculated, for the
 // producer or the compliance scheme. material is the page's slug ('aluminium',
 // 'glass', 'paper', 'plastic', 'steel' or 'wood').

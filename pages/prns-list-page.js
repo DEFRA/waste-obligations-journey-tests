@@ -250,6 +250,17 @@ export class PrnsListPage extends BasePage {
     await this.page.getByRole('link', { name: prn.number, exact: true }).click()
   }
 
+  // Accept selected PRNs and PERNs pressed with nothing ticked.
+  async expectSelectOneOrMoreError() {
+    const summary = this.page.locator('.govuk-error-summary')
+    await expect(summary).toBeVisible()
+    await expect(
+      summary.getByRole('link', {
+        name: 'To accept multiple PRNs or PERNs select one or more using the check boxes'
+      })
+    ).toBeVisible()
+  }
+
   async expectAcceptSelectedButtonVisible() {
     await expect(this.acceptSelectedButton).toBeVisible()
   }
